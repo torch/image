@@ -1,0 +1,405 @@
+----------------------------------------------------------------------
+--
+-- Copyright (c) 2011 Ronan Collobert, Clement Farabet
+-- 
+-- Permission is hereby granted, free of charge, to any person obtaining
+-- a copy of this software and associated documentation files (the
+-- "Software"), to deal in the Software without restriction, including
+-- without limitation the rights to use, copy, modify, merge, publish,
+-- distribute, sublicense, and/or sell copies of the Software, and to
+-- permit persons to whom the Software is furnished to do so, subject to
+-- the following conditions:
+-- 
+-- The above copyright notice and this permission notice shall be
+-- included in all copies or substantial portions of the Software.
+-- 
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+-- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+-- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+-- NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+-- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+-- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+-- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-- 
+----------------------------------------------------------------------
+-- description:
+--     image - an image toolBox, for Torch
+--
+-- history: 
+--     July  1, 2011, 7:42PM - import from Torch5 - Clement Farabet
+----------------------------------------------------------------------
+
+require 'torch'
+require 'sys'
+require 'xlua'
+require 'libimage'
+
+----------------------------------------------------------------------
+-- save/load
+----------------------------------------------------------------------
+local function loadPng(filename,type,depth)
+   xlua.error('loading PNG is not supported yet','image.loadPNG')
+end
+rawset(image, 'loadPNG', loadPng)
+
+local function savePng(filename,x)
+   xlua.error('saving PNG is not supported yet','image.savePNG')
+end  
+rawset(image, 'loadPNG', savePng)
+
+local function loadJPG(filename, mode)
+   if not xlua.require 'libjpeg' then
+      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor().libjpeg.load(filename)
+   a:mul(1/MAXVAL)
+   if mode and mode == 1 then
+      if a:nDimension() == 2 then
+         -- all good
+      elseif a:size(3) == 3 then
+         local b = torch.Tensor(a:size(1), a:size(2))
+         image.rgb2y(a,b)
+         a = b
+      elseif a:size(3) ~= 1 then
+         xlua.error('image loaded has wrong #chanels','image.loadJPG')
+      end
+   elseif mode and mode == 3 then
+      if a:size(1) ~= 3 then
+         xlua.error('image loaded has wrong #chanels','image.loadJPG')
+      end
+   end
+   return a
+end
+rawset(image, 'loadJPG', loadJPG)
+
+function image.getJPGsize(filename)
+   if not xlua.require 'libjpeg' then
+      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+   end
+   return torch.Tensor().libjpeg.size(filename)
+end
+rawset(image, 'getJPGsize', getJPGsize)
+
+local function load(filename,mode)
+   local ext = string.match(filename,'%.(%a+)$')
+   local tensor
+   if ext == 'jpg' or ext == 'JPG' then
+      tensor = image.loadJPG(filename,mode)
+   elseif ext == 'png' or ext == 'PNG' then
+      tensor = image.loadPNG(filename,mode)
+   elseif ext == 'pnm' or ext == 'pgm' then
+      tensor = image.loadPPM(filename,mode)
+   else
+      xlua.error('unknown image type: ' .. ext, 'image.load')
+   end
+   return tensor
+end
+rawset(image, 'load', load)
+
+local function save(filename, x)
+   local ext = string.match(filename,'%.(%a+)$')
+   if ext == 'jpg' or ext == 'JPG' then
+      xlua.error('saving JPG is not supported yet','image.save')
+   elseif ext == 'png' or ext == 'PNG' then
+      image.savePNG(filename,x)
+   elseif ext == 'pnm' or ext == 'pgm' then
+      image.savePPM(filename,x)
+   else
+      xlua.error('unknown image type: ' .. ext, 'image.save')
+   end
+end
+rawset(image, 'save', save)
+
+----------------------------------------------------------------------
+-- crop
+----------------------------------------------------------------------
+local function crop(src,dst,startx,starty,endx,endy)
+   xlua.error('not adapted to Torch7 yet', 'image.crop')
+   if endx==nil then
+      return src.image.cropNoScale(src,dst,startx,starty);
+   else
+      local depth=0;
+      if src:nDimension()>2 then
+         depth=src:size(3);
+      end
+      local x=torch.Tensor(endx-startx,endy-starty,depth);
+      src.image.cropNoScale(src,x,startx,starty);
+      image.scale(x,dst);
+   end
+end
+rawset(image, 'crop', crop)
+
+----------------------------------------------------------------------
+-- scale
+----------------------------------------------------------------------
+local function scale(src,dst,type)
+   if type=='bilinear' then
+      src.image.scaleBilinear(src,dst);
+   else
+      xlua.error('not adapted to Torch7 yet', 'image.scaleSimple')
+      src.image.scaleSimple(src,dst);
+   end
+   
+end
+rawset(image, 'scale', scale)
+
+----------------------------------------------------------------------
+-- translate
+----------------------------------------------------------------------
+local function translate(src,dst,x,y)
+   xlua.error('not adapted to Torch7 yet', 'image.translate')
+   src.image.translate(src,dst,x,y);   
+end
+rawset(image, 'translate', translate)
+
+----------------------------------------------------------------------
+-- rotate
+----------------------------------------------------------------------
+local function rotate(src,dst,theta)
+   xlua.error('not adapted to Torch7 yet', 'image.rotate')
+   src.image.rotate(src,dst,theta);   
+end
+rawset(image, 'rotate', rotate)
+
+----------------------------------------------------------------------
+-- convolve routine
+----------------------------------------------------------------------
+local function convolveInPlace(mysrc,kernel,pad_const)
+   local kH=kernel:size(1);  
+   local kW=kernel:size(2); 
+   local stepW=1; 
+   local stepH=1;  
+   
+   local inputHeight =mysrc:size(1); 
+   local outputHeight = (inputHeight-kH)/stepH + 1
+   local inputWidth = mysrc:size(2);  
+   local outputWidth = (inputWidth-kW)/stepW + 1
+
+   -- create destination so it is the same size as input,
+   -- and pad input so convolution makes the same size
+   outputHeight=inputHeight; 
+   outputWidth=inputWidth;
+   inputWidth=((outputWidth-1)*stepW)+kW; 
+   inputHeight=((outputHeight-1)*stepH)+kH; 
+   local src;
+   src=torch.Tensor(inputHeight,inputWidth);
+   src:zero(); src=src + pad_const;
+   src.image.translate(mysrc,src,math.floor(kW/2),math.floor(kH/2));
+   
+   mysrc:zero(); 
+
+   mysrc:addT4dotT2(1,
+                    src:unfold(2, kW, stepW):unfold(1, kH, stepH),
+                    kernel)
+   return mysrc;
+end 
+rawset(image, 'convolveInPlace', convolveInPlace) 
+
+----------------------------------------------------------------------
+-- convolve dest
+----------------------------------------------------------------------
+local function convolveToDst(src,dst,kernel)
+   local kH=kernel:size(1);  
+   local kW=kernel:size(2); 
+   local stepW=1; 
+   local stepH=1; 
+   
+   local inputHeight =src:size(1); 
+   local outputHeight = (inputHeight-kH)/stepH + 1
+   local inputWidth = src:size(2);  
+   local outputWidth = (inputWidth-kW)/stepW + 1
+   
+   if dst==nil then
+      dst=torch.Tensor(outputHeight,outputWidth); 
+      dst:zero();
+   end  
+   
+   dst:addT4dotT2(1,
+                  src:unfold(2, kW, stepW):unfold(1, kH, stepH),
+                  kernel)
+   return dst;
+end 
+rawset(image, 'convolveToDst', convolveToDst) 
+
+----------------------------------------------------------------------
+-- main convolve
+----------------------------------------------------------------------
+local function convolve(p1,p2,p3)
+   if type(p3)=="number" then
+      image.convolveInPlace(p1,p2,p3)
+   else
+      image.convolveToDst(p1,p2,p3)
+   end
+end
+rawset(image, 'convolve', convolve) 
+
+----------------------------------------------------------------------
+-- compresses an image between min and max
+----------------------------------------------------------------------
+local function minmax(args)
+   local tensor = args.tensor
+   local min = args.min
+   local max = args.max 
+   local inplace = args.inplace or false
+   local tensorOut = args.tensorOut or (inplace and tensor) 
+      or torch.Tensor(tensor:size()):copy(tensor)
+
+   -- resize
+   if args.tensorOut then
+      tensorOut:resizeAs(tensor):copy(tensor)
+   end
+
+   -- rescale min
+   if (min == nil) then
+      min = tensorOut:min()
+   end
+   if (min ~= 0) then tensorOut:add(-min) end
+
+   -- rescale for max
+   if (max == nil) then
+      max = tensorOut:max()
+   else
+      max = max - min
+   end
+   if (max ~= 0) then tensorOut:div(max) end
+      
+   -- saturate
+   tensorOut.image.saturate(tensorOut)
+
+   -- and return
+   return tensorOut
+end
+rawset(image, 'minmax', minmax) 
+
+----------------------------------------------------------------------
+-- super generic display function
+----------------------------------------------------------------------
+local function display(...)
+   -- usage
+   local _, input, zoom, min, max, legend, w, wx, wy, w2, gui = xlua.unpack(
+      {...},
+      'image.display',
+      'displays a single image, with optional saturation/zoom;\n'
+         .. 'if the nb of channels is other than 1 or 3, then image.displayList() is called',
+      {arg='image', type='torch.Tensor', help='image, (WxHx1 or WxHx3 or WxH)', req=true},
+      {arg='zoom', type='number', help='display zoom', default=1},
+      {arg='min', type='number', help='lower-bound for range'},
+      {arg='max', type='number', help='upper-bound for range'},
+      {arg='legend', type='string', help='legend', default='image.display'},
+      {arg='win', type='gfx.Window', help='window descriptor'},
+      {arg='win_w', type='number', help='window width [default = auto]'},
+      {arg='win_h', type='number', help='window height [default = auto]'},
+      {arg='window', type='gfx.Window', help='window descriptor (same as win, for compatibility)'},
+      {arg='gui', type='boolean', help='use a QT gui to visualize data', default=true}
+   )
+   -- get painter
+   w = w or w2
+
+   -- if single image, blit, else transfer over to displayList
+   if input:nDimension() == 2 
+   or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
+      -- Rescale range
+      local mminput = image.minmax{tensor=input, min=min, max=max}
+
+      -- Compute width
+      local x = wx or input:size(1)*zoom
+      local y = wy or input:size(2)*zoom
+
+      -- if gui active, then create interactive window (with zoom, clicks and so on)
+      if gui then
+         -- create window context
+         local closure = w
+         local hook_resize, hook_mouse
+         if closure and closure.window and closure.image then
+            closure.image = mminput
+            closure.refresh(x,y)
+         else
+            closure = {image=mminput}
+            hook_resize = function(wi,he)
+                             local qtimg = qt.QImage.fromTensor(closure.image)
+                             closure.painter:image(0,0,wi,he,qtimg)
+                             collectgarbage()
+                          end
+            hook_mouse = function(x,y,button)
+                            local size = closure.window.frame.size:totable()
+                            if button == 'LeftButton' then
+                               size.width = size.width * 1.2
+                                  size.height = size.height * 1.2
+                            elseif button == 'RightButton' then
+                               size.width = size.width / 1.2
+                               size.height = size.height / 1.2
+                            end
+                            closure.window.frame.size = qt.QSize(size)
+                         end
+            closure.window, closure.painter = image.window(hook_resize,hook_mouse)
+            closure.refresh = hook_resize
+         end
+         closure.window.size = qt.QSize{width=x,height=y}
+         closure.window.windowTitle = legend
+         hook_resize(x,y)
+         closure.window:show()
+         return closure
+      else
+         -- if no gui, create plain window, and blit
+         w = w or qtwidget.newwindow(x,y,legend)
+         local qtimg = qt.QImage.fromTensor(mminput)
+         w:image(0,0,x*zoom,y*zoom,qtimg)
+      end
+   else 
+      xerror('only supports 1 or 3 channels','image.display')
+   end
+   -- return painter
+   return w
+end
+rawset(image, 'display', display)
+
+----------------------------------------------------------------------
+-- creates a window context for images
+----------------------------------------------------------------------
+local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
+   require 'qtuiloader'
+   require 'qtwidget'
+   require 'qt'
+   local pathui = sys.concat(sys.fpath(), 'win.ui')
+   local win = qtuiloader.load(pathui)
+   local painter = qt.QtLuaPainter(win.frame)
+   if hook_resize then
+      qt.connect(qt.QtLuaListener(win.frame), 
+                 'sigResize(int,int)', 
+                 hook_resize)
+   end
+   if hook_mousepress then
+      qt.connect(qt.QtLuaListener(win.frame),
+                 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)', 
+                 hook_mousepress)
+   end
+   if hook_mousedoublepress then
+      qt.connect(qt.QtLuaListener(win.frame),
+                 'sigMouseDoubleClick(int,int,QByteArray,QByteArray,QByteArray)',
+                 hook_mousedoublepress)
+   end
+   local ctrl = false
+   qt.connect(qt.QtLuaListener(win),
+              'sigKeyPress(QString,QByteArray,QByteArray)',
+              function (str, s2)
+                 if s2 and s2 == 'Key_Control' then
+                    ctrl = true
+                 elseif s2 and s2 == 'Key_W' and ctrl then
+                    win:close()
+                 else
+                    ctrl = false
+                 end
+              end)
+   return win,painter
+end
+rawset(image, 'window', window)
+
+----------------------------------------------------------------------
+-- lena is always useful
+----------------------------------------------------------------------
+local function lena()
+   local lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
+   return lena
+end
+rawset(image, 'lena', lena)
