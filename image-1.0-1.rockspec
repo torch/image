@@ -49,7 +49,7 @@ build = {
          link_directories (${TORCH_LIBRARY_DIR})
          target_link_libraries (image ${TORCH_LIBRARIES})
 
-         install_files(/share/lua/5.1/ image.lua)
+         install_files(/share/lua/5.1/ image.lua lena.jpg lena.png win.ui)
          install_targets(/lib/lua/5.1/ image)
    ]],
 
