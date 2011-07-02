@@ -403,3 +403,181 @@ local function lena()
    return lena
 end
 rawset(image, 'lena', lena)
+
+----------------------------------------------------------------------
+-- image.rgb2yuv(image)
+-- converts a RGB image to YUV
+--
+function image.rgb2yuv(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize
+   output:resizeAs(input)
+   
+   -- input chanels
+   local inputRed = input:select(3,1,1)
+   local inputGreen = input:select(3,2,1)
+   local inputBlue = input:select(3,3,1)
+   
+   -- output chanels
+   local outputY = output:select(3,1,1)
+   local outputU = output:select(3,2,1)
+   local outputV = output:select(3,3,1)
+   
+   -- convert
+   outputY:copy( inputRed*0.299 + inputGreen*0.587 + inputBlue*0.114 )
+   outputU:copy( inputRed*(-0.14713) 
+              + inputGreen*(-0.28886) 
+           + inputBlue*0.436 )
+   outputV:copy( inputRed*0.615 
+                 + inputGreen*(-0.51499) 
+              + inputBlue*(-0.10001) )
+   
+   -- return YUV image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.yuv2rgb(image)
+-- converts a YUV image to RGB
+--
+function image.yuv2rgb(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize
+   output:resizeAs(input)
+   
+   -- input chanels
+   local inputY = input:select(3,1,1)
+   local inputU = input:select(3,2,1)
+   local inputV = input:select(3,3,1)
+   
+   -- output chanels
+   local outputRed = output:select(3,1,1)
+   local outputGreen = output:select(3,2,1)
+   local outputBlue = output:select(3,3,1)
+   
+   -- convert
+   outputRed:copy(inputY):add(1.13983, inputV)
+   outputGreen:copy(inputY):add(-0.39465, inputU):add(-0.58060, inputV)      
+   outputBlue:copy(inputY):add(2.03211, inputU)
+   
+   -- return RGB image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.rgb2y(image)
+-- converts a RGB image to Y (discards U/V)
+--
+function image.rgb2y(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize
+   output:resize(input:size(1), input:size(2), 1)
+   
+   -- input chanels
+   local inputRed = input:select(3,1,1)
+   local inputGreen = input:select(3,2,1)
+   local inputBlue = input:select(3,3,1)
+   
+   -- output chanels
+   local outputY = output:select(3,1,1)
+   
+   -- convert
+   outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
+   
+   -- return YUV image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.rgb2hsl(image)
+-- converts an RGB image to HSL
+--
+function image.rgb2hsl(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize and compute
+   output:resizeAs(input)
+   input.image.rgb2hsl(input,output)
+   
+   -- return HSL image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.hsl2rgb(image)
+-- converts an HSL image to RGB
+--
+function image.hsl2rgb(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize and compute
+   output:resizeAs(input)
+   input.image.hsl2rgb(input,output)
+   
+   -- return HSL image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.rgb2hsv(image)
+-- converts an RGB image to HSV
+--
+function image.rgb2hsv(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize and compute
+   output:resizeAs(input)
+   input.image.rgb2hsv(input,output)
+   
+   -- return HSV image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.hsv2rgb(image)
+-- converts an HSV image to RGB
+--
+function image.hsv2rgb(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   
+   -- resize and compute
+   output:resizeAs(input)
+   input.image.hsv2rgb(input,output)
+   
+   -- return HSV image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.rgb2nrgb(image)
+-- converts an RGB image to normalized-RGB
+--
+function image.rgb2nrgb(input, ...)
+   local arg = {...}
+   local output = arg[1] or torch.Tensor()
+   local sum = torch.Tensor()
+   
+   -- resize tensors
+   output:resizeAs(input)
+   sum:resize(input:size(1), input:size(2))
+   
+   -- compute sum and normalize
+   sum:copy(input:select(3,1)):add(input:select(3,2)):add(input:select(3,3)):add(1e-6)
+   output:copy(input)
+   output:select(3,1):cdiv(sum)
+   output:select(3,2):cdiv(sum)
+   output:select(3,3):cdiv(sum)
+   
+   -- return HSV image
+   return output
+end
