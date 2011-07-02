@@ -18,7 +18,8 @@ additions/tuning for Torch7...
  + convolve***()      TODO     (missing addT4dotT2)
  + display()          TODO     (missing qt.QImage.fromTensor)
  + rgb2yuv() and all  TODO     (import from xlearn package and major->row mode)
- + gaussian/laplacian TODO     (import from xlearn package)
+ + gaussians          DONE     (verify ?)
+ + laplacian          TODO     (verify and replace args API)
 
 USE:
 $ lua

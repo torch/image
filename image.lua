@@ -608,7 +608,7 @@ function image.gaussian(...)
    local center_y = math.ceil(width_y/2)
    
    -- generate kernel
-   local gauss = torch.Tensor(width_x, width_y)
+   local gauss = torch.Tensor(width_y, width_x)
    for i=1,width_y do
       for j=1,width_x do
          gauss[i][j] = amplitude * math.exp(-(math.pow((i-center_x)
@@ -686,7 +686,7 @@ function image.laplacian(args)
    local center_x = args.center_x or args.center or math.ceil(width_x/2)
    local center_y = args.center_y or args.center or math.ceil(width_y/2)
    
-   local logauss = torch.Tensor(width_x,width_y)
+   local logauss = torch.Tensor(width_y,width_x)
    for i=1,width_y do
       for j=1,width_x do
          local xsq = math.pow((i-center_x)/(sigma_x*width_x),2)/2
