@@ -91,9 +91,9 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
     for (y=0; y<height; y++) {
       png_byte* row = row_pointers[y];
       for (x=0; x<width; x++) {
-        //*tensor_data++ = (real)row[x*4+k];
-        png_byte val = row[x*depth+k];
-        THTensor_(set3d)(tensor, k, y, x, (real)val);
+        *tensor_data++ = (real)row[x*depth+k];
+        //png_byte val = row[x*depth+k];
+        //THTensor_(set3d)(tensor, k, y, x, (real)val);
       }
     }
   }
@@ -185,8 +185,8 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
     for (y=0; y<height; y++) {
       png_byte* row = row_pointers[y];
       for (x=0; x<width; x++) {
-        row[x*depth+k] = (png_byte)THTensor_(get3d)(tensor, k, y, x);
-        //row[x*4+k] = *tensor_data++;
+        //row[x*depth+k] = (png_byte)THTensor_(get3d)(tensor, k, y, x);
+        row[x*depth+k] = *tensor_data++;
       }
     }
   }
