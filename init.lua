@@ -367,10 +367,11 @@ local function display(...)
          closure.window.windowTitle = legend
          hook_resize(x,y)
          closure.window:show()
+         closure.isclosure = true
          return closure
       else
          w = w or qtwidget.newwindow(x,y,legend)
-         if w.painter then
+         if w.isclosure then
             -- window was created with gui, just update closure
             local closure = w
             closure.image = mminput
