@@ -7,7 +7,7 @@ source = {
 }
 
 description = {
-   summary = "An image processing toolbox, for Torch.",
+   summary = "An image processing toolbox, for Torch7",
    detailed = [[
          An image processing toolbox: to load/save images,
          rescale/rotate, remap colorspaces, ...
