@@ -158,11 +158,13 @@ rawset(image, 'crop', crop)
 -- scale
 --
 local function scale(src,dst,type)
-   if type=='bilinear' then
-      src.image.scaleBilinear(src,dst);
-   else
+   if not type or type=='bilinear' then
+      src.image.scaleBilinear(src,dst)
+   elseif type=='simple' then
       xlua.error('not adapted to Torch7 yet', 'image.scaleSimple')
-      src.image.scaleSimple(src,dst);
+      src.image.scaleSimple(src,dst)
+   else
+      xlua.error('type must be one of: simple | bilinear', 'image.scale')
    end
    
 end
@@ -431,7 +433,13 @@ rawset(image, 'window', window)
 -- lena is always useful
 --
 local function lena()
-   local lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
+   if xlua.require 'libpng' then
+      lena = image.load(sys.concat(sys.fpath(), 'lena.png'), 3)
+   elseif xlua.require 'libjpg' then
+      lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
+   else
+      xlua.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
+   end
    return lena
 end
 rawset(image, 'lena', lena)
