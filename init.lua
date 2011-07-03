@@ -35,8 +35,8 @@ require 'xlua'
 require 'libimage'
 
 ----------------------------------------------------------------------
--- save/load
-----------------------------------------------------------------------
+-- save/load in multiple formats
+--
 local function loadPng(filename,type,depth)
    xlua.error('loading PNG is not supported yet','image.loadPNG')
 end
@@ -113,7 +113,7 @@ rawset(image, 'save', save)
 
 ----------------------------------------------------------------------
 -- crop
-----------------------------------------------------------------------
+--
 local function crop(src,dst,startx,starty,endx,endy)
    xlua.error('not adapted to Torch7 yet', 'image.crop')
    if endx==nil then
@@ -132,7 +132,7 @@ rawset(image, 'crop', crop)
 
 ----------------------------------------------------------------------
 -- scale
-----------------------------------------------------------------------
+--
 local function scale(src,dst,type)
    if type=='bilinear' then
       src.image.scaleBilinear(src,dst);
@@ -146,7 +146,7 @@ rawset(image, 'scale', scale)
 
 ----------------------------------------------------------------------
 -- translate
-----------------------------------------------------------------------
+--
 local function translate(src,dst,x,y)
    xlua.error('not adapted to Torch7 yet', 'image.translate')
    src.image.translate(src,dst,x,y);   
@@ -155,7 +155,7 @@ rawset(image, 'translate', translate)
 
 ----------------------------------------------------------------------
 -- rotate
-----------------------------------------------------------------------
+--
 local function rotate(src,dst,theta)
    xlua.error('not adapted to Torch7 yet', 'image.rotate')
    src.image.rotate(src,dst,theta);   
@@ -164,7 +164,7 @@ rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
 -- convolve routine
-----------------------------------------------------------------------
+--
 local function convolveInPlace(mysrc,kernel,pad_const)
    local kH=kernel:size(1);  
    local kW=kernel:size(2); 
@@ -198,7 +198,7 @@ rawset(image, 'convolveInPlace', convolveInPlace)
 
 ----------------------------------------------------------------------
 -- convolve dest
-----------------------------------------------------------------------
+--
 local function convolveToDst(src,dst,kernel)
    local kH=kernel:size(1);  
    local kW=kernel:size(2); 
@@ -224,7 +224,7 @@ rawset(image, 'convolveToDst', convolveToDst)
 
 ----------------------------------------------------------------------
 -- main convolve
-----------------------------------------------------------------------
+--
 local function convolve(p1,p2,p3)
    if type(p3)=="number" then
       image.convolveInPlace(p1,p2,p3)
@@ -236,7 +236,7 @@ rawset(image, 'convolve', convolve)
 
 ----------------------------------------------------------------------
 -- compresses an image between min and max
-----------------------------------------------------------------------
+--
 local function minmax(args)
    local tensor = args.tensor
    local min = args.min
@@ -274,7 +274,7 @@ rawset(image, 'minmax', minmax)
 
 ----------------------------------------------------------------------
 -- super generic display function
-----------------------------------------------------------------------
+--
 local function display(...)
    -- usage
    local _, input, zoom, min, max, legend, w, wx, wy, w2, gui = xlua.unpack(
@@ -356,7 +356,7 @@ rawset(image, 'display', display)
 
 ----------------------------------------------------------------------
 -- creates a window context for images
-----------------------------------------------------------------------
+--
 local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
    require 'qtuiloader'
    require 'qtwidget'
@@ -397,7 +397,7 @@ rawset(image, 'window', window)
 
 ----------------------------------------------------------------------
 -- lena is always useful
-----------------------------------------------------------------------
+--
 local function lena()
    local lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
    return lena
@@ -416,14 +416,14 @@ function image.rgb2yuv(input, ...)
    output:resizeAs(input)
    
    -- input chanels
-   local inputRed = input:select(3,1,1)
-   local inputGreen = input:select(3,2,1)
-   local inputBlue = input:select(3,3,1)
+   local inputRed = input[1]
+   local inputGreen = input[2]
+   local inputBlue = input[3]
    
    -- output chanels
-   local outputY = output:select(3,1,1)
-   local outputU = output:select(3,2,1)
-   local outputV = output:select(3,3,1)
+   local outputY = output[1]
+   local outputU = output[2]
+   local outputV = output[3]
    
    -- convert
    outputY:copy( inputRed*0.299 + inputGreen*0.587 + inputBlue*0.114 )
@@ -450,14 +450,14 @@ function image.yuv2rgb(input, ...)
    output:resizeAs(input)
    
    -- input chanels
-   local inputY = input:select(3,1,1)
-   local inputU = input:select(3,2,1)
-   local inputV = input:select(3,3,1)
+   local inputY = input[1]
+   local inputU = input[2]
+   local inputV = input[3]
    
    -- output chanels
-   local outputRed = output:select(3,1,1)
-   local outputGreen = output:select(3,2,1)
-   local outputBlue = output:select(3,3,1)
+   local outputRed = output[1]
+   local outputGreen = output[2]
+   local outputBlue = output[3]
    
    -- convert
    outputRed:copy(inputY):add(1.13983, inputV)
@@ -477,15 +477,15 @@ function image.rgb2y(input, ...)
    local output = arg[1] or torch.Tensor()
    
    -- resize
-   output:resize(input:size(1), input:size(2), 1)
+   output:resize(1, input:size(2), input:size(3))
    
    -- input chanels
-   local inputRed = input:select(3,1,1)
-   local inputGreen = input:select(3,2,1)
-   local inputBlue = input:select(3,3,1)
+   local inputRed = input[1]
+   local inputGreen = input[2]
+   local inputBlue = input[3]
    
    -- output chanels
-   local outputY = output:select(3,1,1)
+   local outputY = output[1]
    
    -- convert
    outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
@@ -569,14 +569,14 @@ function image.rgb2nrgb(input, ...)
    
    -- resize tensors
    output:resizeAs(input)
-   sum:resize(input:size(1), input:size(2))
+   sum:resize(input:size(2), input:size(3))
    
    -- compute sum and normalize
-   sum:copy(input:select(3,1)):add(input:select(3,2)):add(input:select(3,3)):add(1e-6)
+   sum:copy(input[1]):add(input[2]):add(input[3]):add(1e-6)
    output:copy(input)
-   output:select(3,1):cdiv(sum)
-   output:select(3,2):cdiv(sum)
-   output:select(3,3):cdiv(sum)
+   output[1]:cdiv(sum)
+   output[2]:cdiv(sum)
+   output[3]:cdiv(sum)
    
    -- return HSV image
    return output
