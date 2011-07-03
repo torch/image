@@ -32,6 +32,7 @@ build = {
 
          find_package (Torch REQUIRED)
          find_package (jpeg QUIET)
+         find_package (png QUIET)
 
          set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
@@ -41,8 +42,17 @@ build = {
              target_link_libraries (jpeg ${TORCH_LIBRARIES} ${JPEG_LIBRARIES})
              install_targets (/lib jpeg)
          else (JPEG_FOUND)
-             message ("WARNING: Could not find JPEG libraries, jpeg wrapper will not be installed")
+             message ("WARNING: Could not find JPEG libraries, JPEG wrapper will not be installed")
          endif (JPEG_FOUND)
+
+         if (PNG_FOUND)
+             include_directories (${PNG_INCLUDE_DIR} ${TORCH_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
+             add_library (png SHARED png.c)
+             target_link_libraries (png ${TORCH_LIBRARIES} ${PNG_LIBRARIES})
+             install_targets (/lib png)
+         else (PNG_FOUND)
+             message ("WARNING: Could not find PNG libraries, PNG wrapper will not be installed")
+         endif (PNG_FOUND)
 
          include_directories (${TORCH_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
          add_library (image SHARED image.c)

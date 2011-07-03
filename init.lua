@@ -37,24 +37,14 @@ require 'libimage'
 ----------------------------------------------------------------------
 -- save/load in multiple formats
 --
-local function loadPng(filename,type,depth)
-   xlua.error('loading PNG is not supported yet','image.loadPNG')
-end
-rawset(image, 'loadPNG', loadPng)
-
-local function savePng(filename,x)
-   xlua.error('saving PNG is not supported yet','image.savePNG')
-end  
-rawset(image, 'loadPNG', savePng)
-
-local function loadJPG(filename, mode)
-   if not xlua.require 'libjpeg' then
-      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+local function loadPNG(filename, depth)
+   if not xlua.require 'libpng' then
+      xlua.error('libpng package not found, please install libpng','image.loadPNG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor().libjpeg.load(filename)
+   local a = torch.Tensor().libpng.load(filename)
    a:mul(1/MAXVAL)
-   if mode and mode == 1 then
+   if depth and depth == 1 then
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(3) == 3 then
@@ -62,11 +52,49 @@ local function loadJPG(filename, mode)
          image.rgb2y(a,b)
          a = b
       elseif a:size(3) ~= 1 then
-         xlua.error('image loaded has wrong #chanels','image.loadJPG')
+         xlua.error('image loaded has wrong #channels','image.loadPNG')
       end
-   elseif mode and mode == 3 then
+   elseif depth and depth == 3 then
       if a:size(1) ~= 3 then
-         xlua.error('image loaded has wrong #chanels','image.loadJPG')
+         xlua.error('image loaded has wrong #channels','image.loadPNG')
+      end
+   end
+   return a
+end
+rawset(image, 'loadPNG', loadPNG)
+
+local function savePNG(filename, tensor)
+   if not xlua.require 'libpng' then
+      xlua.error('libpng package not found, please install libpng','image.loadPNG')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(MAXVAL)       -- remap to [0..255]
+   a.libpng.save(filename, a)
+end  
+rawset(image, 'savePNG', savePNG)
+
+local function loadJPG(filename, depth)
+   if not xlua.require 'libjpeg' then
+      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor().libjpeg.load(filename)
+   a:mul(1/MAXVAL)
+   if depth and depth == 1 then
+      if a:nDimension() == 2 then
+         -- all good
+      elseif a:size(3) == 3 then
+         local b = torch.Tensor(a:size(1), a:size(2))
+         image.rgb2y(a,b)
+         a = b
+      elseif a:size(3) ~= 1 then
+         xlua.error('image loaded has wrong #channels','image.loadJPG')
+      end
+   elseif depth and depth == 3 then
+      if a:size(1) ~= 3 then
+         xlua.error('image loaded has wrong #channels','image.loadJPG')
       end
    end
    return a
@@ -81,15 +109,13 @@ function image.getJPGsize(filename)
 end
 rawset(image, 'getJPGsize', getJPGsize)
 
-local function load(filename,mode)
+local function load(filename, depth)
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
    if ext == 'jpg' or ext == 'JPG' then
-      tensor = image.loadJPG(filename,mode)
+      tensor = image.loadJPG(filename,depth)
    elseif ext == 'png' or ext == 'PNG' then
-      tensor = image.loadPNG(filename,mode)
-   elseif ext == 'pnm' or ext == 'pgm' then
-      tensor = image.loadPPM(filename,mode)
+      tensor = image.loadPNG(filename,depth)
    else
       xlua.error('unknown image type: ' .. ext, 'image.load')
    end
@@ -97,14 +123,12 @@ local function load(filename,mode)
 end
 rawset(image, 'load', load)
 
-local function save(filename, x)
+local function save(filename, tensor)
    local ext = string.match(filename,'%.(%a+)$')
    if ext == 'jpg' or ext == 'JPG' then
       xlua.error('saving JPG is not supported yet','image.save')
    elseif ext == 'png' or ext == 'PNG' then
-      image.savePNG(filename,x)
-   elseif ext == 'pnm' or ext == 'pgm' then
-      image.savePPM(filename,x)
+      image.savePNG(filename, tensor)
    else
       xlua.error('unknown image type: ' .. ext, 'image.save')
    end
