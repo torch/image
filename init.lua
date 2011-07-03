@@ -301,24 +301,25 @@ rawset(image, 'minmax', minmax)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, wx, wy, w2, gui = xlua.unpack(
+   local _, input, zoom, min, max, legend, w, gui = xlua.unpack(
       {...},
       'image.display',
-      'displays a single image, with optional saturation/zoom;\n'
-         .. 'if the nb of channels is other than 1 or 3, then image.displayList() is called',
+      'displays a single image, with optional saturation/zoom',
       {arg='image', type='torch.Tensor', help='image, (WxHx1 or WxHx3 or WxH)', req=true},
       {arg='zoom', type='number', help='display zoom', default=1},
       {arg='min', type='number', help='lower-bound for range'},
       {arg='max', type='number', help='upper-bound for range'},
       {arg='legend', type='string', help='legend', default='image.display'},
       {arg='win', type='gfx.Window', help='window descriptor'},
-      {arg='win_w', type='number', help='window width [default = auto]'},
-      {arg='win_h', type='number', help='window height [default = auto]'},
-      {arg='window', type='gfx.Window', help='window descriptor (same as win, for compatibility)'},
-      {arg='gui', type='boolean', help='use a QT gui to visualize data', default=true}
+      {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
+       default=true}
    )
-   -- get painter
-   w = w or w2
+
+   -- dependencies
+   require 'qt'
+   require 'qttorch'
+   require 'qtwidget'
+   require 'qtuiloader'
 
    -- if single image, blit, else transfer over to displayList
    if input:nDimension() == 2 
@@ -327,11 +328,12 @@ local function display(...)
       local mminput = image.minmax{tensor=input, min=min, max=max}
 
       -- Compute width
-      local x = wx or input:size(1)*zoom
-      local y = wy or input:size(2)*zoom
+      local d = input:nDimension()
+      local x = wx or input:size(d)*zoom
+      local y = wy or input:size(d-1)*zoom
 
       -- if gui active, then create interactive window (with zoom, clicks and so on)
-      if gui then
+      if gui and not w then
          -- create window context
          local closure = w
          local hook_resize, hook_mouse
@@ -365,10 +367,19 @@ local function display(...)
          closure.window:show()
          return closure
       else
-         -- if no gui, create plain window, and blit
          w = w or qtwidget.newwindow(x,y,legend)
-         local qtimg = qt.QImage.fromTensor(mminput)
-         w:image(0,0,x*zoom,y*zoom,qtimg)
+         if w.painter then
+            -- window was created with gui, just update closure
+            local closure = w
+            closure.image = mminput
+            closure.window.size = qt.QSize{width=x,height=y}
+            closure.window.windowTitle = legend
+            closure.refresh(x,y)
+         else
+            -- if no gui, create plain window, and blit
+            local qtimg = qt.QImage.fromTensor(mminput)
+            w:image(0,0,x*zoom,y*zoom,qtimg)
+         end
       end
    else 
       xerror('only supports 1 or 3 channels','image.display')
@@ -382,9 +393,6 @@ rawset(image, 'display', display)
 -- creates a window context for images
 --
 local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
-   require 'qtuiloader'
-   require 'qtwidget'
-   require 'qt'
    local pathui = sys.concat(sys.fpath(), 'win.ui')
    local win = qtuiloader.load(pathui)
    local painter = qt.QtLuaPainter(win.frame)

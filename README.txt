@@ -21,9 +21,9 @@ additions/tuning for Torch7...
  + rgb2hsv()          DONE
  + hsl2rgb()          DONE
  + hsv2rgb()          DONE
+ + display()          DONE
 
 in order of priority:
- + display()          TODO     (missing qt.QImage.fromTensor)
  + scaleSimple()      TODO     (fix C code: major->row mode)
  + rotate()           TODO     (fix C code: major->row mode)
  + translate()        TODO     (fix C code: major->row mode)
