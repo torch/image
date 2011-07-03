@@ -39,7 +39,7 @@ build = {
              include_directories (${JPEG_INCLUDE_DIR} ${TORCH_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
              add_library (jpeg SHARED jpeg.c)
              target_link_libraries (jpeg ${TORCH_LIBRARIES} ${JPEG_LIBRARIES})
-             install_targets (/lib/lua/5.1/ jpeg)
+             install_targets (/lib jpeg)
          else (JPEG_FOUND)
              message ("WARNING: Could not find JPEG libraries, jpeg wrapper will not be installed")
          endif (JPEG_FOUND)
@@ -49,11 +49,11 @@ build = {
          link_directories (${TORCH_LIBRARY_DIR})
          target_link_libraries (image ${TORCH_LIBRARIES})
 
-         install_files(/share/lua/5.1/ image.lua)
-         install_files(/share/lua/5.1/ lena.jpg)
-         install_files(/share/lua/5.1/ lena.png)
-         install_files(/share/lua/5.1/ win.ui)
-         install_targets(/lib/lua/5.1/ image)
+         install_files(/lua/image init.lua)
+         install_files(/lua/image lena.jpg)
+         install_files(/lua/image lena.png)
+         install_files(/lua/image win.ui)
+         install_targets(/lib image)
    ]],
 
    variables = {
