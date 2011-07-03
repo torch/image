@@ -11,6 +11,8 @@ additions/tuning for Torch7...
  + gaussian1D()       DONE
  + laplacian()        DONE
  + loadJPG()          DONE
+ + loadPNG()          DONE
+ + savePNG()          DONE
  + rgb2yuv()          DONE
  + yuv2rgb()          DONE
  + rgb2y()            DONE
@@ -20,15 +22,14 @@ additions/tuning for Torch7...
  + hsl2rgb()          DONE
  + hsv2rgb()          DONE
 
- + rotate()           TODO     (fix C code: major->row mode)
+in order of priority:
+ + display()          TODO     (missing qt.QImage.fromTensor)
  + scaleSimple()      TODO     (fix C code: major->row mode)
+ + rotate()           TODO     (fix C code: major->row mode)
  + translate()        TODO     (fix C code: major->row mode)
- + loadPNG()          TODO     (wrap libpng)
- + savePNG()          TODO     (wrap libpng)
- + saveJPG()          TODO     (add call in libjpeg wrapper)
  + crop()             TODO     (fix C code: major->row mode)
  + convolve***()      TODO     (missing addT4dotT2)
- + display()          TODO     (missing qt.QImage.fromTensor)
+ + saveJPG()          TODO     (add call in libjpeg wrapper)
 
 USE:
 $ lua
