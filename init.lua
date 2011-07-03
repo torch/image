@@ -588,33 +588,33 @@ end
 --
 function image.gaussian(...)
    -- process args
-   local _, width, sigma, amplitude, normalize, 
-   width_x, width_y, sigma_x, sigma_y = xlua.unpack(
+   local _, size, sigma, amplitude, normalize, 
+   width, height, sigma_horz, sigma_vert = xlua.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
-      {arg='width', type='number', help='Width and Height of the kernel', default=3},
-      {arg='sigma', type='number', help='Sigma (x and y)', default=0.25},
-      {arg='amplitude', type='number', help='Amplitute of the gaussian (max value)', default=1},
-      {arg='normalize', type='number', help='Normalize kernel (exc Amplitude)', default=false},
-      {arg='width_x', type='number', help='Width of the kernel', defaulta='width'},
-      {arg='width_y', type='number', help='Height of the kernel', defaulta='width'},
-      {arg='sigma_x', type='number', help='Sigma, x', defaulta='sigma'},
-      {arg='sigma_y', type='number', help='Sigma, y', defaulta='sigma'}
+      {arg='size', type='number', help='kernel size (size x size)', default=3},
+      {arg='sigma', type='number', help='sigma (horizontal and vertical)', default=0.25},
+      {arg='amplitude', type='number', help='amplitute of the gaussian (max value)', default=1},
+      {arg='normalize', type='number', help='normalize kernel (exc Amplitude)', default=false},
+      {arg='width', type='number', help='kernel width', defaulta='size'},
+      {arg='height', type='number', help='kernel height', defaulta='size'},
+      {arg='sigma_horz', type='number', help='horizontal sigma', defaulta='sigma'},
+      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'}
    )
    
    -- local vars
-   local center_x = math.ceil(width_x/2)
-   local center_y = math.ceil(width_y/2)
+   local center_x = width/2 + 0.5
+   local center_y = height/2 + 0.5
    
    -- generate kernel
-   local gauss = torch.Tensor(width_y, width_x)
-   for i=1,width_y do
-      for j=1,width_x do
+   local gauss = torch.Tensor(height, width)
+   for i=1,height do
+      for j=1,width do
          gauss[i][j] = amplitude * math.exp(-(math.pow((i-center_x)
-                                                    /(sigma_x*width_x),2)/2 
+                                                    /(sigma_horz*width),2)/2 
                                            + math.pow((j-center_y)
-                                                   /(sigma_y*width_y),2)/2))
+                                                   /(sigma_vert*height),2)/2))
       end
    end
    if normalize then
@@ -637,7 +637,7 @@ function image.gaussian1D(...)
    )
 
    -- local vars
-   local center = math.ceil(size/2)
+   local center = size/2 + 0.5
    
    -- generate kernel
    local gauss = torch.Tensor(size)
@@ -655,42 +655,33 @@ end
 --- Returns a Laplacian kernel.
 -- The default parameters generate that occupies the entire kernel.
 --
-function image.laplacian(args)
-   -- usage
-   if not image._laplacian_usage then
-      image._laplacian_usage = 
-         xlua.usage('image.laplacian',
-                       'returns a 2D laplacian kernel',
-                       nil,
-            {arg='amplitude', type='number', help='Amplitute of the laplacian (max value)'},
-            {arg='normalize', type='number', help='Normalize kernel (cannot be used with Amplitude)'},
-            {arg='width', type='number', help='Width and Height of the kernel'},
-            {arg='width_x', type='number', help='Width of the kernel'},
-            {arg='width_y', type='number', help='Height of the kernel'},
-            {arg='sigma', type='number', help='Sigma (x and y)'},
-            {arg='sigma_x', type='number', help='Sigma, x'},
-            {arg='sigma_y', type='number', help='Sigma, y'},
-            {arg='center', type='number', help='Center of the laplacian'},
-            {arg='center_x', type='number', help='Center (x) of the laplacian.'},
-            {arg='center_y', type='number', help='Center (y) of the laplacian.'})
-   end
+function image.laplacian(...)
+   -- process args
+   local _, size, sigma, amplitude, normalize, 
+   width, height, sigma_horz, sigma_vert = xlua.unpack(
+      {...},
+      'image.gaussian',
+      'returns a 2D gaussian kernel',
+      {arg='size', type='number', help='kernel size (size x size)', default=3},
+      {arg='sigma', type='number', help='sigma (horizontal and vertical)', default=0.25},
+      {arg='amplitude', type='number', help='amplitute of the gaussian (max value)', default=1},
+      {arg='normalize', type='number', help='normalize kernel (exc Amplitude)', default=false},
+      {arg='width', type='number', help='kernel width', defaulta='size'},
+      {arg='height', type='number', help='kernel height', defaulta='size'},
+      {arg='sigma_horz', type='number', help='horizontal sigma', defaulta='sigma'},
+      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'}
+   )
 
-   -- parse args
-   local args = args or error(image._laplacian_usage)
-   local amplitude = args.amplitude or 1
-   local normalize = args.normalize or false
-   local width_x = args.width_x or args.width or 3
-   local width_y = args.width_y or args.width or 3
-   local sigma_x = args.sigma_x or args.sigma or 1/6
-   local sigma_y = args.sigma_y or args.sigma or 1/6
-   local center_x = args.center_x or args.center or math.ceil(width_x/2)
-   local center_y = args.center_y or args.center or math.ceil(width_y/2)
+   -- local vars
+   local center_x = width/2 + 0.5
+   local center_y = height/2 + 0.5
    
-   local logauss = torch.Tensor(width_y,width_x)
-   for i=1,width_y do
-      for j=1,width_x do
-         local xsq = math.pow((i-center_x)/(sigma_x*width_x),2)/2
-         local ysq = math.pow((j-center_y)/(sigma_y*width_y),2)/2
+   -- generate kernel
+   local logauss = torch.Tensor(height,width)
+   for i=1,height do
+      for j=1,width do
+         local xsq = math.pow((i-center_x)/(sigma_horz*width),2)/2
+         local ysq = math.pow((j-center_y)/(sigma_vert*height),2)/2
          local derivCoef = 1 - (xsq + ysq)
          logauss[i][j] = derivCoef * amplitude * math.exp(-(xsq + ysq))
       end
