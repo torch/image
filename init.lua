@@ -203,18 +203,56 @@ end
 rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
--- convolve
+-- convolve(dst,src,ker,type)
+-- convolve(dst,src,ker)
+-- dst = convolve(src,ker,type)
+-- dst = convolve(src,ker)
 --
-local function convolve(src,dst,kernel,type)
+local function convolve(...)
    require 'lab'
-   if type and type ~= 'valid' and type ~= 'same' then
-      xlua.error('type has to be one of: same | valid', 'image.convolve')
-   end
-   type = ((type == 'same') and 's') or 'v'
-   if dst then
-      lab.conv2(dst,src,kernel,type)
+   local dst,src,ker,mode
+   local args = {...}
+   if select('#',...) == 4 then
+      dst = args[1]
+      src = args[2]
+      kernel = args[3]
+      mode = args[4]
+   elseif select('#',...) == 3 then
+      if type(args[3]) == 'string' then
+         src = args[1]
+         kernel = args[2]
+         mode = args[3]
+      else
+         dst = args[1]
+         src = args[2]
+         kernel = args[3]
+      end
+   elseif select('#',...) == 2 then      
+      src = args[1]
+      kernel = args[2]
    else
-      dst = lab.conv2(src,kernel,type)
+      print( xlua.usage('image.convolve',
+                        'convolves an input image with a kernel, returns the result', nil,
+                        {type='torch.Tensor', help='input image', req=true},
+                        {type='torch.Tensor', help='kernel', req=true},
+                        {type='string', help='type: same | valid'},
+                        '',
+                        {type='torch.Tensor', help='destination', req=true},
+                        {type='torch.Tensor', help='input image', req=true},
+                        {type='torch.Tensor', help='kernel', req=true},
+                        {type='string', help='type: same | valid'}
+                     ) 
+          )
+      xlua.error('incorrect arguments', 'image.convolve')
+   end
+   if mode and mode ~= 'valid' and mode ~= 'full' then
+      xlua.error('mode has to be one of: full | valid', 'image.convolve')
+   end
+   mode = ((mode == 'full') and 'f') or 'v'
+   if dst then
+      lab.conv2(dst,src,kernel,mode)
+   else
+      dst = lab.conv2(src,kernel,mode)
    end
    return dst
 end
@@ -692,3 +730,8 @@ function image.laplacian(...)
    end
    return logauss
 end
+
+----------------------------------------------------------------------
+--- Contains a table with the usage strings
+--
+image._usage = {}
