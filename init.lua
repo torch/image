@@ -122,6 +122,13 @@ end
 rawset(image, 'getJPGsize', getJPGsize)
 
 local function load(filename, depth)
+   if not filename then
+      print(xlua.usage('image.load',
+                       'loads an image into a torch.Tensor', nil,
+                       {type='string', help='path to file', req=true},
+                       {type='number', help='force destination depth: 1 | 3'}))
+      xlua.error('missing file name', 'image.load')
+   end
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
    if ext == 'jpg' or ext == 'JPG' then
@@ -136,6 +143,13 @@ end
 rawset(image, 'load', load)
 
 local function save(filename, tensor)
+   if not filename or not tensor then
+      print(xlua.usage('image.save',
+                       'saves a torch.Tensor to a disk', nil,
+                       {type='string', help='path to file', req=true},
+                       {type='torch.Tensor', help='tensor to save (NxHxW, N = 1 | 3)'}))
+      xlua.error('missing file name | tensor to save', 'image.save')
+   end
    local ext = string.match(filename,'%.(%a+)$')
    if ext == 'jpg' or ext == 'JPG' then
       image.saveJPG(filename, tensor)
@@ -168,21 +182,6 @@ end
 rawset(image, 'crop', crop)
 
 ----------------------------------------------------------------------
--- scale
---
-local function scale(src,dst,type)
-   if not type or type=='bilinear' then
-      src.image.scaleBilinear(src,dst)
-   elseif type=='simple' then
-      src.image.scaleSimple(src,dst)
-   else
-      xlua.error('type must be one of: simple | bilinear', 'image.scale')
-   end
-   return dst
-end
-rawset(image, 'scale', scale)
-
-----------------------------------------------------------------------
 -- translate
 --
 local function translate(src,dst,x,y)
@@ -193,9 +192,79 @@ end
 rawset(image, 'translate', translate)
 
 ----------------------------------------------------------------------
+-- scale
+--
+local function scale(...)
+   local dst,src,width,height,mode
+   local args = {...}
+   if select('#',...) == 4 then
+      src = args[1]
+      width = args[2]
+      height = args[3]
+      mode = args[4]
+   elseif select('#',...) == 3 then
+      if type(args[3]) == 'string' then
+         src = args[1]
+         dst = args[2]
+         mode = args[3]
+      else
+         src = args[1]
+         width = args[2]
+         height = args[3]
+      end
+   elseif select('#',...) == 2 then
+      src = args[1]
+      dst = args[2]
+   else
+      print(xlua.usage('image.scale',
+                       'convolves an input image with a kernel, returns the result', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='destination width', req=true},
+                       {type='number', help='destination height', req=true},
+                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       '',
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='torch.Tensor', help='destination image', req=true},
+                       {type='string', help='mode: bilinear | simple', default='bilinear'}))
+      xlua.error('incorrect arguments', 'image.scale')
+   end
+   dst = dst or torch.Tensor(src:size(1), height, width)
+   mode = mode or 'bilinear'
+   if mode=='bilinear' then
+      src.image.scaleBilinear(src,dst)
+   elseif mode=='simple' then
+      src.image.scaleSimple(src,dst)
+   else
+      xlua.error('mode must be one of: simple | bilinear', 'image.scale')
+   end
+   return dst
+end
+rawset(image, 'scale', scale)
+
+----------------------------------------------------------------------
 -- rotate
 --
-local function rotate(src,dst,theta)
+local function rotate(...)
+   local dst,src,theta
+   local args = {...}
+   if select('#',...) == 3 then
+      dst = args[1]
+      src = args[2]
+      theta = args[3]
+   elseif select('#',...) == 2 then
+      src = args[1]
+      theta = args[2]
+   else
+      print(xlua.usage('image.rotate',
+                       'convolves an input image with a kernel, returns the result', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='rotation angle (in radians)', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='rotation angle (in radians)', req=true}))
+      xlua.error('incorrect arguments', 'image.rotate')
+   end
    dst = dst or torch.Tensor():resizeAs(src)
    src.image.rotate(src,dst,theta)
    return dst  
@@ -231,18 +300,16 @@ local function convolve(...)
       src = args[1]
       kernel = args[2]
    else
-      print( xlua.usage('image.convolve',
-                        'convolves an input image with a kernel, returns the result', nil,
-                        {type='torch.Tensor', help='input image', req=true},
-                        {type='torch.Tensor', help='kernel', req=true},
-                        {type='string', help='type: same | valid'},
-                        '',
-                        {type='torch.Tensor', help='destination', req=true},
-                        {type='torch.Tensor', help='input image', req=true},
-                        {type='torch.Tensor', help='kernel', req=true},
-                        {type='string', help='type: same | valid'}
-                     ) 
-          )
+      print(xlua.usage('image.convolve',
+                       'convolves an input image with a kernel, returns the result', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='torch.Tensor', help='kernel', req=true},
+                       {type='string', help='type: full | valid', default='valid'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='torch.Tensor', help='kernel', req=true},
+                       {type='string', help='type: full | valid', default='valid'}))
       xlua.error('incorrect arguments', 'image.convolve')
    end
    if mode and mode ~= 'valid' and mode ~= 'full' then
