@@ -27,9 +27,7 @@ additions/tuning for Torch7...
  + translate()        DONE
  + rotate()           DONE
  + crop()             DONE
-
-in order of priority:
- + convolve***()      TODO     (missing addT4dotT2, waiting for lab.conv())
+ + convolve()         DONE
 
 USE:
 $ lua
