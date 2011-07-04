@@ -164,8 +164,48 @@ rawset(image, 'save', save)
 ----------------------------------------------------------------------
 -- crop
 --
-local function crop(src,dst,startx,starty,endx,endy)
-   dst = dst or torch.Tensor():resizeAs(src)
+local function crop(...)
+   local dst,src,startx,starty,endx,endy
+   local args = {...}
+   if select('#',...) == 6 then
+      dst = args[1]
+      src = args[2]
+      startx = args[3]
+      starty = args[4]
+      endx = args[5]
+      endy = args[6]
+   elseif select('#',...) == 5 then
+      src = args[1]
+      startx = args[2]
+      starty = args[3]
+      endx = args[4]
+      endy = args[5]
+   elseif select('#',...) == 4 then
+      dst = args[1]
+      src = args[2]
+      startx = args[3]
+      starty = args[4]
+   elseif select('#',...) == 3 then
+      src = args[1]
+      startx = args[2]
+      starty = args[3]
+   else
+      print(xlua.usage('image.crop',
+                       'crop an image', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='start x', req=true},
+                       {type='number', help='start y', req=true},
+                       {type='number', help='end x'},
+                       {type='number', help='end y'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='start x', req=true},
+                       {type='number', help='start y', req=true},
+                       {type='number', help='end x'},
+                       {type='number', help='end y'}))
+      xlua.error('incorrect arguments', 'image.crop')
+   end
    if endx==nil then
       return src.image.cropNoScale(src,dst,startx,starty)
    else
@@ -175,6 +215,7 @@ local function crop(src,dst,startx,starty,endx,endy)
       end
       local x=torch.Tensor(depth,endy-starty,endx-startx)
       src.image.cropNoScale(src,x,startx,starty)
+      dst = dst or torch.Tensor():resizeAs(x)
       image.scale(x,dst)
    end
    return dst
