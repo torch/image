@@ -7,6 +7,7 @@ the package was imported from Torch5, and needs lots of
 additions/tuning for Torch7...
 
  + scaleBilinear()    DONE
+ + scaleSimple()      DONE
  + gaussian()         DONE
  + gaussian1D()       DONE
  + laplacian()        DONE
@@ -25,11 +26,10 @@ additions/tuning for Torch7...
  + display()          DONE
 
 in order of priority:
- + scaleSimple()      TODO     (fix C code: major->row mode)
  + rotate()           TODO     (fix C code: major->row mode)
  + translate()        TODO     (fix C code: major->row mode)
  + crop()             TODO     (fix C code: major->row mode)
- + convolve***()      TODO     (missing addT4dotT2)
+ + convolve***()      TODO     (missing addT4dotT2, will it get there ?)
 
 USE:
 $ lua

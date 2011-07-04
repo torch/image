@@ -173,44 +173,39 @@ static int image_(Main_scaleSimple)(lua_State *L)
   long i, j, k;
   real scx, scy;
 
-  luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "rotate: src not 2 or 3 dimensional");
-  luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "rotate: dst not 2 or 3 dimensional");
+  luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "image.scale: src not 2 or 3 dimensional");
+  luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "image.scale: dst not 2 or 3 dimensional");
 
   src= THTensor_(data)(Tsrc);
   dst= THTensor_(data)(Tdst);
 
-  dst_stride0= Tdst->stride[0];
-  dst_stride1= Tdst->stride[1];
-  dst_stride2 = 0;
-  dst_width=   Tdst->size[0];
-  dst_height=  Tdst->size[1];
+  dst_stride0 = 0;
+  dst_stride1 = Tdst->stride[Tdst->nDimension-2];
+  dst_stride2 = Tdst->stride[Tdst->nDimension-1];
   dst_depth =  0;
-  if(Tdst->nDimension == 3)
-    {
-      dst_stride2 = Tdst->stride[2];
-      dst_depth = Tdst->size[2];
-    }
+  dst_height = Tdst->size[Tdst->nDimension-2];
+  dst_width = Tdst->size[Tdst->nDimension-1];
+  if(Tdst->nDimension == 3) {
+    dst_stride0 = Tdst->stride[0];
+    dst_depth = Tdst->size[0];
+  }
 
-  src_stride0= Tsrc->stride[0];
-  src_stride1= Tsrc->stride[1];
-  src_stride2 = 0;
-  src_width=   Tsrc->size[0];
-  src_height=  Tsrc->size[1];
-  src_depth = 0;
-
-  if(Tsrc->nDimension == 3)
-    {
-      src_stride2 = Tsrc->stride[2];
-      src_depth =  Tsrc->size[2];
-    }
+  src_stride0 = 0;
+  src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
+  src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
+  src_depth =  0;
+  src_height = Tsrc->size[Tsrc->nDimension-2];
+  src_width = Tsrc->size[Tsrc->nDimension-1];
+  if(Tsrc->nDimension == 3) {
+    src_stride0 = Tsrc->stride[0];
+    src_depth = Tsrc->size[0];
+  }
 
   if( (Tdst->nDimension==3 && ( src_depth!=dst_depth)) ||
-      (Tdst->nDimension!=Tsrc->nDimension)
-      )
-    {
-      printf("image.scale:%d,%d,%ld,%ld\n",Tsrc->nDimension,Tdst->nDimension,src_depth,dst_depth);
-      luaL_error(L, "image.scale: src and dst depths do not match");
-    }
+      (Tdst->nDimension!=Tsrc->nDimension) ) {
+    printf("image.scale:%d,%d,%ld,%ld\n",Tsrc->nDimension,Tdst->nDimension,src_depth,dst_depth);
+    luaL_error(L, "image.scale: src and dst depths do not match");
+  }
 
   if( Tdst->nDimension==3 && ( src_depth!=dst_depth) )
     luaL_error(L, "image.scale: src and dst depths do not match");
@@ -229,15 +224,15 @@ static int image_(Main_scaleSimple)(lua_State *L)
 
       if(Tsrc->nDimension==2)
         {
-          val=src[ii*src_stride0+jj*src_stride1];
-          dst[i*dst_stride0+j*dst_stride1] = val;
+          val=src[ii*src_stride2+jj*src_stride1];
+          dst[i*dst_stride2+j*dst_stride1] = val;
         }
       else
         {
           for(k=0;k<src_depth;k++)
             {
-              val=src[ii*src_stride0+jj*src_stride1+k*src_stride2];
-              dst[i*dst_stride0+j*dst_stride1+k*dst_stride2] = val;
+              val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
+              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
             }
         }
     }

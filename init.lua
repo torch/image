@@ -173,7 +173,6 @@ local function scale(src,dst,type)
    if not type or type=='bilinear' then
       src.image.scaleBilinear(src,dst)
    elseif type=='simple' then
-      xlua.error('not adapted to Torch7 yet', 'image.scaleSimple')
       src.image.scaleSimple(src,dst)
    else
       xlua.error('type must be one of: simple | bilinear', 'image.scale')
