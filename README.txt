@@ -11,6 +11,7 @@ additions/tuning for Torch7...
  + gaussian1D()       DONE
  + laplacian()        DONE
  + loadJPG()          DONE
+ + saveJPG()          DONE
  + loadPNG()          DONE
  + savePNG()          DONE
  + rgb2yuv()          DONE
@@ -29,7 +30,6 @@ in order of priority:
  + translate()        TODO     (fix C code: major->row mode)
  + crop()             TODO     (fix C code: major->row mode)
  + convolve***()      TODO     (missing addT4dotT2)
- + saveJPG()          TODO     (add call in libjpeg wrapper)
 
 USE:
 $ lua

@@ -310,36 +310,108 @@ static int libjpeg_(Main_load)(lua_State *L)
   return 1;
 }
 
-
 /*
- * SOME FINE POINTS:
+ * save function
  *
- * In the above code, we ignored the return value of jpeg_read_scanlines,
- * which is the number of scanlines actually read.  We could get away with
- * this because we asked for only one line at a time and we weren't using
- * a suspending data source.  See libjpeg.doc for more info.
- *
- * We cheated a bit by calling alloc_sarray() after jpeg_start_decompress();
- * we should have done it beforehand to ensure that the space would be
- * counted against the JPEG max_memory setting.  In some systems the above
- * code would risk an out-of-memory error.  However, in general we don't
- * know the output image dimensions before jpeg_start_decompress(), unless we
- * call jpeg_calc_output_dimensions().  See libjpeg.doc for more about this.
- *
- * Scanlines are returned in the same order as they appear in the JPEG file,
- * which is standardly top-to-bottom.  If you must emit data bottom-to-top,
- * you can use one of the virtual arrays provided by the JPEG memory manager
- * to invert the data.  See wrbmp.c for an example.
- *
- * As with compression, some operating modes may require temporary files.
- * On some systems you may need to set up a signal handler to ensure that
- * temporary files are deleted if the program is interrupted.  See libjpeg.doc.
  */
+int libjpeg_(Main_save)(lua_State *L) {
+  /* get args */
+  const char *filename = luaL_checkstring(L, 1);
+  THTensor *tensor = luaT_checkudata(L, 2, torch_(Tensor_id));  
+  THTensor *tensorc = THTensor_(newContiguous)(tensor,0);
+  real *tensor_data = THTensor_(data)(tensorc);
+
+  /* jpeg struct */
+  struct jpeg_compress_struct cinfo;
+  struct jpeg_error_mgr jerr;
+
+  /* pointer to raw image */
+  unsigned char *raw_image = NULL;
+
+  /* dimensions of the image we want to write */
+  int width, height, bytes_per_pixel;
+  int color_space;
+  if (tensorc->nDimension == 3) {
+    bytes_per_pixel = tensorc->size[0];
+    height = tensorc->size[1];
+    width = tensorc->size[2];
+    if (bytes_per_pixel == 3) {
+      color_space = JCS_RGB;
+    } else if (bytes_per_pixel == 1) {
+      color_space = JCS_GRAYSCALE;
+    } else {
+      luaL_error(L, "tensor should have 1 or 3 channels (gray or RGB)");
+    }
+  } else if (tensorc->nDimension == 2) {
+    bytes_per_pixel = 1;
+    height = tensorc->size[0];
+    width = tensorc->size[1];
+    color_space = JCS_GRAYSCALE;
+  } else {
+    luaL_error(L, "supports only 1 or 3 dimension tensors");
+  }
+
+  /* alloc raw image data */
+  raw_image = (unsigned char *)malloc((sizeof (unsigned char))*width*height*bytes_per_pixel);
+
+  /* convert tensor to raw bytes */
+  int x,y,k;
+  for (k=0; k<bytes_per_pixel; k++) {
+    for (y=0; y<height; y++) {
+      for (x=0; x<width; x++) {
+        raw_image[(y*width+x)*bytes_per_pixel+k] = *tensor_data++;
+      }
+    }
+  }
+
+  /* this is a pointer to one row of image data */
+  JSAMPROW row_pointer[1];
+  FILE *outfile = fopen( filename, "wb" );
+
+  if ( !outfile ) {
+    printf("Error opening output jpeg file %s\n!", filename );
+    return -1;
+  }
+  cinfo.err = jpeg_std_error( &jerr );
+  jpeg_create_compress(&cinfo);
+  jpeg_stdio_dest(&cinfo, outfile);
+
+  /* Setting the parameters of the output file here */
+  cinfo.image_width = width;	
+  cinfo.image_height = height;
+  cinfo.input_components = bytes_per_pixel;
+  cinfo.in_color_space = color_space;
+
+  /* default compression parameters, we shouldn't be worried about these */
+  jpeg_set_defaults( &cinfo );
+
+  /* Now do the compression .. */
+  jpeg_start_compress( &cinfo, TRUE );
+
+  /* like reading a file, this time write one row at a time */
+  while( cinfo.next_scanline < cinfo.image_height ) {
+    row_pointer[0] = &raw_image[ cinfo.next_scanline * cinfo.image_width *  cinfo.input_components];
+    jpeg_write_scanlines( &cinfo, row_pointer, 1 );
+  }
+
+  /* similar to read file, clean up after we're done compressing */
+  jpeg_finish_compress( &cinfo );
+  jpeg_destroy_compress( &cinfo );
+  fclose( outfile );
+
+  /* some cleanup */
+  free(raw_image);
+  THTensor_(free)(tensorc);
+
+  /* success code is 1! */
+  return 1;
+}
 
 static const luaL_reg libjpeg_(Main__)[] =
 {
   {"size", libjpeg_(Main_size)},
   {"load", libjpeg_(Main_load)},
+  {"save", libjpeg_(Main_save)},
   {NULL, NULL}
 };
 

@@ -65,7 +65,7 @@ rawset(image, 'loadPNG', loadPNG)
 
 local function savePNG(filename, tensor)
    if not xlua.require 'libpng' then
-      xlua.error('libpng package not found, please install libpng','image.loadPNG')
+      xlua.error('libpng package not found, please install libpng','image.savePNG')
    end
    local MAXVAL = 255
    local a = torch.Tensor():resizeAs(tensor):copy(tensor)
@@ -101,6 +101,18 @@ local function loadJPG(filename, depth)
 end
 rawset(image, 'loadJPG', loadJPG)
 
+local function saveJPG(filename, tensor)
+   if not xlua.require 'libjpeg' then
+      xlua.error('libjpeg package not found, please install libjpeg','image.saveJPG')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(MAXVAL)       -- remap to [0..255]
+   a.libjpeg.save(filename, a)
+end
+rawset(image, 'saveJPG', saveJPG)
+
 function image.getJPGsize(filename)
    if not xlua.require 'libjpeg' then
       xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
@@ -126,7 +138,7 @@ rawset(image, 'load', load)
 local function save(filename, tensor)
    local ext = string.match(filename,'%.(%a+)$')
    if ext == 'jpg' or ext == 'JPG' then
-      xlua.error('saving JPG is not supported yet','image.save')
+      image.saveJPG(filename, tensor)
    elseif ext == 'png' or ext == 'PNG' then
       image.savePNG(filename, tensor)
    else
