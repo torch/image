@@ -24,12 +24,12 @@ additions/tuning for Torch7...
  + hsl2rgb()          DONE
  + hsv2rgb()          DONE
  + display()          DONE
+ + translate()        DONE
+ + rotate()           DONE
+ + crop()             DONE
 
 in order of priority:
- + rotate()           TODO     (fix C code: major->row mode)
- + translate()        TODO     (fix C code: major->row mode)
- + crop()             TODO     (fix C code: major->row mode)
- + convolve***()      TODO     (missing addT4dotT2, will it get there ?)
+ + convolve***()      TODO     (missing addT4dotT2, waiting for lab.conv())
 
 USE:
 $ lua

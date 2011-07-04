@@ -151,18 +151,22 @@ rawset(image, 'save', save)
 -- crop
 --
 local function crop(src,dst,startx,starty,endx,endy)
-   xlua.error('not adapted to Torch7 yet', 'image.crop')
    if endx==nil then
-      return src.image.cropNoScale(src,dst,startx,starty);
+      return src.image.cropNoScale(src,dst,startx,starty)
    else
-      local depth=0;
-      if src:nDimension()>2 then
-         depth=src:size(3);
+      local depth=1
+      if src:nDimension() > 2 then
+         depth=src:size(1)
       end
-      local x=torch.Tensor(endx-startx,endy-starty,depth);
-      src.image.cropNoScale(src,x,startx,starty);
-      image.scale(x,dst);
+      local x=torch.Tensor(depth,endy-starty,endx-startx)
+      src.image.cropNoScale(src,x,startx,starty)
+      if dst then
+         image.scale(x,dst)
+      else
+         dst = x
+      end
    end
+   return dst
 end
 rawset(image, 'crop', crop)
 
@@ -177,7 +181,7 @@ local function scale(src,dst,type)
    else
       xlua.error('type must be one of: simple | bilinear', 'image.scale')
    end
-   
+   return dst
 end
 rawset(image, 'scale', scale)
 
@@ -185,8 +189,8 @@ rawset(image, 'scale', scale)
 -- translate
 --
 local function translate(src,dst,x,y)
-   xlua.error('not adapted to Torch7 yet', 'image.translate')
-   src.image.translate(src,dst,x,y);   
+   src.image.translate(src,dst,x,y)
+   return dst
 end
 rawset(image, 'translate', translate)
 
@@ -194,8 +198,8 @@ rawset(image, 'translate', translate)
 -- rotate
 --
 local function rotate(src,dst,theta)
-   xlua.error('not adapted to Torch7 yet', 'image.rotate')
-   src.image.rotate(src,dst,theta);   
+   src.image.rotate(src,dst,theta)
+   return dst  
 end
 rawset(image, 'rotate', rotate)
 
