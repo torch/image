@@ -307,7 +307,7 @@ local function display(...)
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
-      {arg='image', type='torch.Tensor', help='image, (WxHx1 or WxHx3 or WxH)', req=true},
+      {arg='image', type='torch.Tensor', help='image, (1xHxW or 3xHxW or HxW)', req=true},
       {arg='zoom', type='number', help='display zoom', default=1},
       {arg='min', type='number', help='lower-bound for range'},
       {arg='max', type='number', help='upper-bound for range'},
