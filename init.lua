@@ -203,74 +203,20 @@ end
 rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
--- convolve routine
+-- convolve
 --
-local function convolveInPlace(mysrc,kernel,pad_const)
-   local kH=kernel:size(1);  
-   local kW=kernel:size(2); 
-   local stepW=1; 
-   local stepH=1;  
-   
-   local inputHeight =mysrc:size(1); 
-   local outputHeight = (inputHeight-kH)/stepH + 1
-   local inputWidth = mysrc:size(2);  
-   local outputWidth = (inputWidth-kW)/stepW + 1
-
-   -- create destination so it is the same size as input,
-   -- and pad input so convolution makes the same size
-   outputHeight=inputHeight; 
-   outputWidth=inputWidth;
-   inputWidth=((outputWidth-1)*stepW)+kW; 
-   inputHeight=((outputHeight-1)*stepH)+kH; 
-   local src;
-   src=torch.Tensor(inputHeight,inputWidth);
-   src:zero(); src=src + pad_const;
-   src.image.translate(mysrc,src,math.floor(kW/2),math.floor(kH/2));
-   
-   mysrc:zero(); 
-
-   mysrc:addT4dotT2(1,
-                    src:unfold(2, kW, stepW):unfold(1, kH, stepH),
-                    kernel)
-   return mysrc;
-end 
-rawset(image, 'convolveInPlace', convolveInPlace) 
-
-----------------------------------------------------------------------
--- convolve dest
---
-local function convolveToDst(src,dst,kernel)
-   local kH=kernel:size(1);  
-   local kW=kernel:size(2); 
-   local stepW=1; 
-   local stepH=1; 
-   
-   local inputHeight =src:size(1); 
-   local outputHeight = (inputHeight-kH)/stepH + 1
-   local inputWidth = src:size(2);  
-   local outputWidth = (inputWidth-kW)/stepW + 1
-   
-   if dst==nil then
-      dst=torch.Tensor(outputHeight,outputWidth); 
-      dst:zero();
-   end  
-   
-   dst:addT4dotT2(1,
-                  src:unfold(2, kW, stepW):unfold(1, kH, stepH),
-                  kernel)
-   return dst;
-end 
-rawset(image, 'convolveToDst', convolveToDst) 
-
-----------------------------------------------------------------------
--- main convolve
---
-local function convolve(p1,p2,p3)
-   if type(p3)=="number" then
-      image.convolveInPlace(p1,p2,p3)
-   else
-      image.convolveToDst(p1,p2,p3)
+local function convolve(src,dst,kernel,type)
+   require 'lab'
+   if type and type ~= 'valid' and type ~= 'same' then
+      xlua.error('type has to be one of: same | valid', 'image.convolve')
    end
+   type = ((type == 'same') and 's') or 'v'
+   if dst then
+      lab.conv2(dst,src,kernel,type)
+   else
+      dst = lab.conv2(src,kernel,type)
+   end
+   return dst
 end
 rawset(image, 'convolve', convolve) 
 
