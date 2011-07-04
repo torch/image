@@ -31,8 +31,8 @@ build = {
          set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
          find_package (Torch REQUIRED)
-         find_package (jpeg QUIET)
-         find_package (png QUIET)
+         find_package (JPEG QUIET)
+         find_package (PNG QUIET)
 
          set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
