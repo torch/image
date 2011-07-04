@@ -151,6 +151,7 @@ rawset(image, 'save', save)
 -- crop
 --
 local function crop(src,dst,startx,starty,endx,endy)
+   dst = dst or torch.Tensor():resizeAs(src)
    if endx==nil then
       return src.image.cropNoScale(src,dst,startx,starty)
    else
@@ -160,11 +161,7 @@ local function crop(src,dst,startx,starty,endx,endy)
       end
       local x=torch.Tensor(depth,endy-starty,endx-startx)
       src.image.cropNoScale(src,x,startx,starty)
-      if dst then
-         image.scale(x,dst)
-      else
-         dst = x
-      end
+      image.scale(x,dst)
    end
    return dst
 end
@@ -189,6 +186,7 @@ rawset(image, 'scale', scale)
 -- translate
 --
 local function translate(src,dst,x,y)
+   dst = dst or torch.Tensor():resizeAs(src)
    src.image.translate(src,dst,x,y)
    return dst
 end
@@ -198,6 +196,7 @@ rawset(image, 'translate', translate)
 -- rotate
 --
 local function rotate(src,dst,theta)
+   dst = dst or torch.Tensor():resizeAs(src)
    src.image.rotate(src,dst,theta)
    return dst  
 end
