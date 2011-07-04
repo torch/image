@@ -184,7 +184,31 @@ rawset(image, 'crop', crop)
 ----------------------------------------------------------------------
 -- translate
 --
-local function translate(src,dst,x,y)
+local function translate(...)
+   local dst,src,x,y
+   local args = {...}
+   if select('#',...) == 4 then
+      dst = args[1]
+      src = args[2]
+      x = args[3]
+      y = args[4]
+   elseif select('#',...) == 3 then
+      src = args[1]
+      x = args[2]
+      y = args[3]
+   else
+      print(xlua.usage('image.translate',
+                       'translate an image', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='horizontal translation', req=true},
+                       {type='number', help='vertical translation', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='horizontal translation', req=true},
+                       {type='number', help='vertical translation', req=true}))
+      xlua.error('incorrect arguments', 'image.translate')
+   end
    dst = dst or torch.Tensor():resizeAs(src)
    src.image.translate(src,dst,x,y)
    return dst
@@ -217,7 +241,7 @@ local function scale(...)
       dst = args[2]
    else
       print(xlua.usage('image.scale',
-                       'convolves an input image with a kernel, returns the result', nil,
+                       'rescale an image (geometry)', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='destination width', req=true},
                        {type='number', help='destination height', req=true},
@@ -256,7 +280,7 @@ local function rotate(...)
       theta = args[2]
    else
       print(xlua.usage('image.rotate',
-                       'convolves an input image with a kernel, returns the result', nil,
+                       'rotate an image by theta radians', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='rotation angle (in radians)', req=true},
                        '',
