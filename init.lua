@@ -664,7 +664,7 @@ function image.laplacian(...)
       'image.gaussian',
       'returns a 2D gaussian kernel',
       {arg='size', type='number', help='kernel size (size x size)', default=3},
-      {arg='sigma', type='number', help='sigma (horizontal and vertical)', default=0.25},
+      {arg='sigma', type='number', help='sigma (horizontal and vertical)', default=0.1},
       {arg='amplitude', type='number', help='amplitute of the gaussian (max value)', default=1},
       {arg='normalize', type='number', help='normalize kernel (exc Amplitude)', default=false},
       {arg='width', type='number', help='kernel width', defaulta='size'},
