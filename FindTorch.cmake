@@ -2,7 +2,7 @@
 # Find Torch (luaT+TH)
 
 if (TORCH_PREFIX)
-   find_program (TORCH_EXECUTABLE lua ${TORCH_PREFIX} PATH)
+   find_program (TORCH_EXECUTABLE lua ${TORCH_PREFIX}/bin PATH)
 endif (TORCH_PREFIX)
 
 if (NOT TORCH_EXECUTABLE)
