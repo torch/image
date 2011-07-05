@@ -864,6 +864,11 @@ function image.laplacian(...)
 end
 
 ----------------------------------------------------------------------
---- Contains a table with the usage strings
+--- Defines a help string for the module
 --
-image._usage = {}
+local mt = {}
+setmetatable(image,mt)
+mt.__tostring = function()
+                   return xlua.usage_module(image, 'image',
+                                            'An image toolbox for Torch7.')
+                end

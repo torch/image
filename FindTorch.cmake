@@ -1,7 +1,13 @@
 
 # Find Torch (luaT+TH)
 
-find_program (TORCH_EXECUTABLE lua $ENV{PATH} PATH)
+if (TORCH_PREFIX)
+   find_program (TORCH_EXECUTABLE lua ${TORCH_PREFIX} PATH)
+endif (TORCH_PREFIX)
+
+if (NOT TORCH_EXECUTABLE)
+   find_program (TORCH_EXECUTABLE lua $ENV{PATH} PATH)
+endif (NOT TORCH_EXECUTABLE)
 
 if (TORCH_EXECUTABLE)
   get_filename_component (TORCH_BIN_DIR ${TORCH_EXECUTABLE} PATH)
