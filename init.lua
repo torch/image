@@ -35,6 +35,25 @@ require 'xlua'
 require 'libimage'
 
 ----------------------------------------------------------------------
+-- help string
+--
+local help = [[
+An image processing package for Torch7. Most functions provide
+online help. 
+
+Here is a short example of what can be done:
+> require 'image'
+> lena = image.lena()
+> kernel = image.gaussian{width=7}
+> res = image.convolve(lena,kernel)
+> image.display(res)
+> img_hsl = image.rgb2hsl(res)
+> hue = img_hsl[1]
+> image.display(hue) ]]
+
+xlua.usage_module(image, 'image', help)
+
+----------------------------------------------------------------------
 -- save/load in multiple formats
 --
 local function loadPNG(filename, depth)
@@ -862,13 +881,3 @@ function image.laplacian(...)
    end
    return logauss
 end
-
-----------------------------------------------------------------------
---- Defines a help string for the module
---
-local mt = {}
-setmetatable(image,mt)
-mt.__tostring = function()
-                   return xlua.usage_module(image, 'image',
-                                            'An image toolbox for Torch7.')
-                end
