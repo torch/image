@@ -138,7 +138,6 @@ function image.getJPGsize(filename)
    end
    return torch.Tensor().libjpeg.size(filename)
 end
-rawset(image, 'getJPGsize', getJPGsize)
 
 local function load(filename, depth)
    if not filename then
