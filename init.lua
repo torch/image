@@ -881,3 +881,48 @@ function image.laplacian(...)
    end
    return logauss
 end
+
+----------------------------------------------------------------------
+--- Creates a random color mapping
+--
+function image.colormap(nbColor)
+   -- note: the best way of obtaining optimally-spaced
+   -- colors is to generate them around the HSV wheel,
+   -- by varying the Hue component
+   local map = torch.Tensor(nbColor,3)
+   local huef = 0
+   local satf = 0
+   for i = 1,nbColor do         
+      -- HSL
+      local hue = math.mod(huef,360)
+      local sat = math.mod(satf,0.7) + 0.3
+      local light = 0.5
+      huef = huef + 39
+      satf = satf + 1/9
+      -- HSL -> RGB
+      local c = (1 - math.abs(2*light-1))*sat
+      local huep = hue/60
+      local x = c*(1-math.abs(math.mod(huep,2)-1))
+      local redp
+      local greenp
+      local bluep
+      if huep < 1 then
+         redp = c; greenp = x; bluep = 0
+      elseif huep < 2 then
+         redp = x; greenp = c; bluep = 0            
+      elseif huep < 3 then
+         redp = 0; greenp = c; bluep = x
+      elseif huep < 4 then
+            redp = 0; greenp = x; bluep = c
+      elseif huep < 5 then
+         redp = x; greenp = 0; bluep = c
+      else
+         redp = c; greenp = 0; bluep = x
+      end
+      local m = light - c/2
+      map[i][1] = redp + m
+      map[i][2] = greenp + m
+      map[i][3] = bluep + m
+   end
+   return map
+end
