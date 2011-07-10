@@ -556,7 +556,6 @@ local function display(...)
       for y = 1,ymaps do
          for x = 1,xmaps do
             if k > nmaps then break end
-            print((y-1)*height, (x-1)*width)
             grid:narrow(1,(y-1)*height+1,height):narrow(2,(x-1)*width+1,width):copy(input[k])
             k = k + 1
          end
