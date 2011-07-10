@@ -593,6 +593,10 @@ rawset(image, 'display', display)
 -- creates a window context for images
 --
 local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
+   require 'qt'
+   require 'qttorch'
+   require 'qtwidget'
+   require 'qtuiloader'
    local pathui = sys.concat(sys.fpath(), 'win.ui')
    local win = qtuiloader.load(pathui)
    local painter = qt.QtLuaPainter(win.frame)
