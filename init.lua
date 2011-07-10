@@ -455,7 +455,7 @@ local function display(...)
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
-      {arg='image', type='torch.Tensor', help='image, (1xHxW or 3xHxW or HxW)', req=true},
+      {arg='image', type='torch.Tensor | table', help='image (HxW or KxHxW or Kx3xHxW or list)', req=true},
       {arg='zoom', type='number', help='display zoom', default=1},
       {arg='min', type='number', help='lower-bound for range'},
       {arg='max', type='number', help='upper-bound for range'},
@@ -471,8 +471,21 @@ local function display(...)
    require 'qtwidget'
    require 'qtuiloader'
 
-   -- if single image, blit, else transfer over to displayList
-   if input:nDimension() == 2 
+   -- if image is a table, then we treat if as a list of images
+   if type(input) == 'table' then
+      -- pack images in single tensor
+      local ndims = input[1]:dim()
+      local channels = ((ndims == 2) and 1) or input[1]:size(1)
+      local height = input[1]:size(ndims-1)
+      local width = input[1]:size(ndims)
+      local packed = torch.Tensor(#input,channels,height,width)
+      for i,img in ipairs(input) do
+         packed[i]:copy(input[i])
+      end
+      image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+
+   -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
+   elseif input:nDimension() == 2 
    or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
       -- Rescale range
       local mminput = image.minmax{tensor=input, min=min, max=max}
@@ -498,15 +511,13 @@ local function display(...)
                              collectgarbage()
                           end
             hook_mouse = function(x,y,button)
-                            local size = closure.window.frame.size:totable()
+                            --local size = closure.window.frame.size:totable()
+                            --size.width = 
+                            --size.height = 
                             if button == 'LeftButton' then
-                               size.width = size.width * 1.2
-                                  size.height = size.height * 1.2
                             elseif button == 'RightButton' then
-                               size.width = size.width / 1.2
-                               size.height = size.height / 1.2
                             end
-                            closure.window.frame.size = qt.QSize(size)
+                            --closure.window.frame.size = qt.QSize(size)
                          end
             closure.window, closure.painter = image.window(hook_resize,hook_mouse)
             closure.refresh = hook_resize
@@ -532,8 +543,46 @@ local function display(...)
             w:image(0,0,x*zoom,y*zoom,qtimg)
          end
       end
-   else 
-      xerror('only supports 1 or 3 channels','image.display')
+
+   elseif input:nDimension() == 3 then
+      -- arbitrary number of channels: lay them out on a grid
+      local nmaps = input:size(1)
+      local xmaps = math.min(6, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = input:size(2)
+      local width = input:size(3)
+      local grid = torch.Tensor(height*ymaps, width*xmaps):zero()
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            print((y-1)*height, (x-1)*width)
+            grid:narrow(1,(y-1)*height+1,height):narrow(2,(x-1)*width+1,width):copy(input[k])
+            k = k + 1
+         end
+      end
+      image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+
+   elseif input:nDimension() == 4 and input:size(2) == 3 then
+      -- arbitrary number of color images: lay them out on a grid
+      local nmaps = input:size(1)
+      local xmaps = math.min(6, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = input:size(3)
+      local width = input:size(4)
+      local grid = torch.Tensor(3, height*ymaps, width*xmaps):zero()
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            grid:narrow(2,(y-1)*height+1,height):narrow(3,(x-1)*width+1,width):copy(input[k])
+            k = k + 1
+         end
+      end
+      image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+
+   else
+      xerror('image must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.display')
    end
    -- return painter
    return w
