@@ -534,9 +534,9 @@ local function display(...)
             -- window was created with gui, just update closure
             local closure = w
             closure.image = mminput
-            closure.window.size = qt.QSize{width=x,height=y}
+            local size = closure.window.size:totable()
             closure.window.windowTitle = legend
-            closure.refresh(x,y)
+            closure.refresh(size.width, size.height)
          else
             -- if no gui, create plain window, and blit
             local qtimg = qt.QImage.fromTensor(mminput)
