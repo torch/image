@@ -451,7 +451,7 @@ rawset(image, 'minmax', minmax)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, gui = xlua.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, gui = xlua.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -460,7 +460,9 @@ local function display(...)
       {arg='min', type='number', help='lower-bound for range'},
       {arg='max', type='number', help='upper-bound for range'},
       {arg='legend', type='string', help='legend', default='image.display'},
-      {arg='win', type='gfx.Window', help='window descriptor'},
+      {arg='win', type='qt window', help='window descriptor'},
+      {arg='x', type='number', help='x offset (only if win is given)', default=0},
+      {arg='y', type='number', help='y offset (only if win is given)', default=0},
       {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
        default=true}
    )
@@ -540,7 +542,7 @@ local function display(...)
          else
             -- if no gui, create plain window, and blit
             local qtimg = qt.QImage.fromTensor(mminput)
-            w:image(0,0,x*zoom,y*zoom,qtimg)
+            w:image(ox,oy,x,y,qtimg)
          end
       end
 
