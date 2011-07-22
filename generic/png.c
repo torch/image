@@ -122,7 +122,7 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   png_bytep * row_pointers;
 
   /* get dims and contiguous tensor */
-  THTensor *tensorc = THTensor_(newContiguous)(tensor);
+  THTensor *tensorc = THTensor_(newContiguous)(tensor,0);
   real *tensor_data = THTensor_(data)(tensorc);
   long depth=0;
   if (tensorc->nDimension == 3) {
