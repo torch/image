@@ -318,7 +318,7 @@ int libjpeg_(Main_save)(lua_State *L) {
   /* get args */
   const char *filename = luaL_checkstring(L, 1);
   THTensor *tensor = luaT_checkudata(L, 2, torch_(Tensor_id));  
-  THTensor *tensorc = THTensor_(newContiguous)(tensor,0);
+  THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *tensor_data = THTensor_(data)(tensorc);
 
   /* jpeg struct */
