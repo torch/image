@@ -484,7 +484,7 @@ local function display(...)
       for i,img in ipairs(input) do
          packed[i]:copy(input[i])
       end
-      image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
 
    -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
    elseif input:nDimension() == 2 
@@ -562,7 +562,7 @@ local function display(...)
             k = k + 1
          end
       end
-      image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
 
    elseif input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
       -- arbitrary number of color images: lay them out on a grid
@@ -580,7 +580,7 @@ local function display(...)
             k = k + 1
          end
       end
-      image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
 
    else
       xerror('image must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.display')
