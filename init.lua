@@ -526,8 +526,8 @@ local function display(...)
          end
          closure.window.size = qt.QSize{width=x,height=y}
          closure.window.windowTitle = legend
-         hook_resize(x,y)
          closure.window:show()
+         hook_resize(x,y)
          closure.isclosure = true
          return closure
       else
