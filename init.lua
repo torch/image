@@ -451,7 +451,7 @@ rawset(image, 'minmax', minmax)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, gui = xlua.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui = xlua.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -463,6 +463,7 @@ local function display(...)
       {arg='win', type='qt window', help='window descriptor'},
       {arg='x', type='number', help='x offset (only if win is given)', default=0},
       {arg='y', type='number', help='y offset (only if win is given)', default=0},
+      {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
       {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
        default=true}
    )
@@ -482,7 +483,11 @@ local function display(...)
       local width = input[1]:size(ndims)
       local packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
-         packed[i]:copy(input[i])
+         if scaleeach then
+            packed[i] = image.minmax{tensor=input[i]}
+         else
+            packed[i]:copy(input[i])
+         end
       end
       w = image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
 
