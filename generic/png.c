@@ -65,6 +65,10 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
     depth = 3;
   else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_GRAY)
     depth = 1;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_GA)
+    depth = 2;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_PALETTE)
+    abort_("[read_png_file] unsupported type: PALETTE");
   else
     abort_("[read_png_file] Unknown color space");
 

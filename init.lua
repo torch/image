@@ -70,6 +70,8 @@ local function loadPNG(filename, depth)
          local b = torch.Tensor(a:size(2), a:size(3))
          image.rgb2y(a:narrow(1,1,3),b)
          a = b
+      elseif a:size(1) == 2 then
+         a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
          xlua.error('image loaded has wrong #channels','image.loadPNG')
       end
@@ -108,6 +110,8 @@ local function loadJPG(filename, depth)
          local b = torch.Tensor(a:size(2), a:size(3))
          image.rgb2y(a:narrow(1,1,3),b)
          a = b
+      elseif a:size(1) == 2 then
+         a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
          xlua.error('image loaded has wrong #channels','image.loadJPG')
       end
