@@ -76,7 +76,11 @@ local function loadPNG(filename, depth)
          xlua.error('image loaded has wrong #channels','image.loadPNG')
       end
    elseif depth and depth == 3 then
-      if a:size(1) ~= 3 then
+      if a:size(1) == 3 then
+         -- all good
+      elseif a:size(1) == 4 then
+         a = a:narrow(1,1,3)
+      else
          xlua.error('image loaded has wrong #channels','image.loadPNG')
       end
    end
@@ -116,7 +120,11 @@ local function loadJPG(filename, depth)
          xlua.error('image loaded has wrong #channels','image.loadJPG')
       end
    elseif depth and depth == 3 then
-      if a:size(1) ~= 3 then
+      if a:size(1) == 3 then
+         -- all good
+      elseif a:size(1) == 4 then
+         a = a:narrow(1,1,3)
+      else
          xlua.error('image loaded has wrong #channels','image.loadJPG')
       end
    end
