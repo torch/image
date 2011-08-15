@@ -374,7 +374,7 @@ rawset(image, 'rotate', rotate)
 --
 local function convolve(...)
    require 'lab'
-   local dst,src,ker,mode
+   local dst,src,kernel,mode
    local args = {...}
    if select('#',...) == 4 then
       dst = args[1]
@@ -399,22 +399,29 @@ local function convolve(...)
                        'convolves an input image with a kernel, returns the result', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='torch.Tensor', help='kernel', req=true},
-                       {type='string', help='type: full | valid', default='valid'},
+                       {type='string', help='type: full | valid | same', default='valid'},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
                        {type='torch.Tensor', help='input image', req=true},
                        {type='torch.Tensor', help='kernel', req=true},
-                       {type='string', help='type: full | valid', default='valid'}))
+                       {type='string', help='type: full | valid | same', default='valid'}))
       xlua.error('incorrect arguments', 'image.convolve')
    end
-   if mode and mode ~= 'valid' and mode ~= 'full' then
+   if mode and mode ~= 'valid' and mode ~= 'full' and mode ~= 'same' then
       xlua.error('mode has to be one of: full | valid', 'image.convolve')
    end
-   mode = ((mode == 'full') and 'f') or 'v'
+   local md = (((mode == 'full') or (mode == 'same')) and 'f') or 'v'
    if dst then
-      lab.conv2(dst,src,kernel,mode)
+      lab.conv2(dst,src,kernel,md)
    else
-      dst = lab.conv2(src,kernel,mode)
+      dst = lab.conv2(src,kernel,md)
+   end
+   if mode == 'same' then
+      local cx = dst:dim()
+      local cy = cx-1
+      local ofy = math.ceil(kernel:size(1)/2)
+      local ofx = math.ceil(kernel:size(2)/2)
+      dst = dst:narrow(cy, ofy, src:size(cy)):narrow(cx, ofx, src:size(cx))
    end
    return dst
 end
