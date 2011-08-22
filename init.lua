@@ -323,7 +323,13 @@ local function scale(...)
                        {type='string', help='mode: bilinear | simple', default='bilinear'}))
       xlua.error('incorrect arguments', 'image.scale')
    end
-   dst = dst or torch.Tensor(src:size(1), height, width)
+   if not dst then
+      if src:nDimension() == 3 then
+         dst = torch.Tensor(src:size(1), height, width)
+      else
+         dst = torch.Tensor(height, width)
+      end
+   end
    mode = mode or 'bilinear'
    if mode=='bilinear' then
       src.image.scaleBilinear(src,dst)
