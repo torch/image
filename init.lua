@@ -100,6 +100,13 @@ local function savePNG(filename, tensor)
 end  
 rawset(image, 'savePNG', savePNG)
 
+function image.getPNGsize(filename)
+   if not xlua.require 'libpng' then
+      xlua.error('libpng package not found, please install libpng','image.getPNGsize')
+   end
+   return torch.Tensor().libpng.size(filename)
+end
+
 local function loadJPG(filename, depth)
    if not xlua.require 'libjpeg' then
       xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
@@ -146,7 +153,7 @@ rawset(image, 'saveJPG', saveJPG)
 
 function image.getJPGsize(filename)
    if not xlua.require 'libjpeg' then
-      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+      xlua.error('libjpeg package not found, please install libjpeg','image.getJPGsize')
    end
    return torch.Tensor().libjpeg.size(filename)
 end
@@ -597,8 +604,10 @@ local function display(...)
    elseif input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
       -- arbitrary number of color images: lay them out on a grid
       local nmaps = input:size(1)
-      local xmaps = math.min(6, nmaps)
-      local ymaps = math.ceil(nmaps / xmaps)
+      --local xmaps = math.min(6, nmaps)
+      --local ymaps = math.ceil(nmaps / xmaps)
+      local ymaps = math.floor(math.sqrt(nmaps))
+      local xmaps = math.ceil(nmaps/2)
       local height = input:size(3)
       local width = input:size(4)
       local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):zero()

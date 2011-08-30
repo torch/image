@@ -11,6 +11,7 @@
  * Clement: modified for Torch7.
  */
 
+
 static THTensor * libpng_(read_png_file)(const char *file_name)
 {
   char header[8];    // 8 is the maximum size that can be checked
@@ -217,6 +218,78 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   THTensor_(free)(tensorc);
 }
 
+static THTensor * libpng_(Main_size)(lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  char header[8];    // 8 is the maximum size that can be checked
+
+  int width, height;
+  png_byte color_type;
+  png_byte bit_depth;
+
+  png_structp png_ptr;
+  png_infop info_ptr;
+  int number_of_passes;
+  png_bytep * row_pointers;
+
+  /* open file and test for it being a png */
+  FILE *fp = fopen(filename, "rb");
+  if (!fp)
+    abort_("[read_png_file] File %s could not be opened for reading", filename);
+  fread(header, 1, 8, fp);
+  if (png_sig_cmp(header, 0, 8))
+    abort_("[read_png_file] File %s is not recognized as a PNG file", filename);
+
+  /* initialize stuff */
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+  if (!png_ptr)
+    abort_("[read_png_file] png_create_read_struct failed");
+
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr)
+    abort_("[read_png_file] png_create_info_struct failed");
+
+  if (setjmp(png_jmpbuf(png_ptr)))
+    abort_("[read_png_file] Error during init_io");
+
+  png_init_io(png_ptr, fp);
+  png_set_sig_bytes(png_ptr, 8);
+
+  png_read_info(png_ptr, info_ptr);
+
+  width = png_get_image_width(png_ptr, info_ptr);
+  height = png_get_image_height(png_ptr, info_ptr);
+  color_type = png_get_color_type(png_ptr, info_ptr);
+  bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+  number_of_passes = png_set_interlace_handling(png_ptr);
+  png_read_update_info(png_ptr, info_ptr);
+
+  /* get depth */
+  int depth;
+  if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_RGBA)
+    depth = 4;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_RGB)
+    depth = 3;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_GRAY)
+    depth = 1;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_GA)
+    depth = 2;
+  else if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_PALETTE)
+    abort_("[read_png_file] unsupported type: PALETTE");
+  else
+    abort_("[read_png_file] Unknown color space");
+
+  /* read file */
+  if (setjmp(png_jmpbuf(png_ptr)))
+    abort_("[read_png_file] Error during read_image");
+
+  lua_pushnumber(L, depth);
+  lua_pushnumber(L, height);
+  lua_pushnumber(L, width);
+
+  return 3;
+}
+
 static int libpng_(Main_load)(lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   THTensor *tensor = libpng_(read_png_file)(filename);
@@ -234,6 +307,7 @@ static int libpng_(Main_save)(lua_State *L) {
 static const luaL_reg libpng_(Main__)[] =
 {
   {"load", libpng_(Main_load)},
+  {"size", libpng_(Main_size)},
   {"save", libpng_(Main_save)},
   {NULL, NULL}
 };
