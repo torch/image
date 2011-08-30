@@ -13,9 +13,9 @@ if (TORCH_EXECUTABLE)
   get_filename_component (TORCH_BIN_DIR ${TORCH_EXECUTABLE} PATH)
 endif (TORCH_EXECUTABLE)
 
-find_library (TORCH_TH TH ${TORCH_BIN_DIR}/../lib)
-find_library (TORCH_luaT luaT ${TORCH_BIN_DIR}/../lib)
-find_library (TORCH_lua lua ${TORCH_BIN_DIR}/../lib)
+find_library (TORCH_TH TH ${TORCH_BIN_DIR}/../lib NO_DEFAULT_PATH)
+find_library (TORCH_luaT luaT ${TORCH_BIN_DIR}/../lib NO_DEFAULT_PATH)
+find_library (TORCH_lua lua ${TORCH_BIN_DIR}/../lib NO_DEFAULT_PATH)
 
 set (TORCH_LIBRARIES ${TORCH_TH} ${TORCH_luaT} ${TORCH_lua})
 
