@@ -2,11 +2,17 @@ cmake_minimum_required(VERSION 2.8)
 
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 
-# infer path for Torch7
-string (REGEX REPLACE "(.*)lib/luarocks/rocks.*" "\\1" TORCH_PREFIX "${CMAKE_INSTALL_PREFIX}" )
-message (STATUS "Found Torch7, installed in: " ${TORCH_PREFIX})
+IF(${CMAKE_PROJECT_NAME} STREQUAL "Torch")
+  SET(TORCH_LIBRARIES TH luaT)
+  SET(TORCH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+ELSE(${CMAKE_PROJECT_NAME} STREQUAL "Torch")
+  # infer path for Torch7
+  string (REGEX REPLACE "(.*)lib/luarocks/rocks.*" "\\1" TORCH_PREFIX "${CMAKE_INSTALL_PREFIX}" )
+  message (STATUS "Found Torch7, installed in: " ${TORCH_PREFIX})
+  
+  find_package (Torch REQUIRED)
+ENDIF(${CMAKE_PROJECT_NAME} STREQUAL "Torch")
 
-find_package (Torch REQUIRED)
 find_package (JPEG QUIET)
 find_package (PNG QUIET)
 
