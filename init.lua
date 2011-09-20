@@ -611,7 +611,6 @@ local function display(...)
       local height = input:size(3)
       local width = input:size(4)
       local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):zero()
-      print(#grid)
       local k = 1
       for y = 1,ymaps do
          for x = 1,xmaps do
