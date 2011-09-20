@@ -604,13 +604,14 @@ local function display(...)
    elseif input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
       -- arbitrary number of color images: lay them out on a grid
       local nmaps = input:size(1)
-      --local xmaps = math.min(6, nmaps)
-      --local ymaps = math.ceil(nmaps / xmaps)
-      local ymaps = math.floor(math.sqrt(nmaps))
-      local xmaps = math.ceil(nmaps/2)
+      local xmaps = math.min(6, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      --local ymaps = math.floor(math.sqrt(nmaps))
+      --local xmaps = math.ceil(nmaps/2)
       local height = input:size(3)
       local width = input:size(4)
       local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):zero()
+      print(#grid)
       local k = 1
       for y = 1,ymaps do
          for x = 1,xmaps do
