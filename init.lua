@@ -447,6 +447,7 @@ local function minmax(args)
    local tensor = args.tensor
    local min = args.min
    local max = args.max 
+   local symm = args.symm or false
    local inplace = args.inplace or false
    local tensorOut = args.tensorOut or (inplace and tensor) 
       or torch.Tensor(tensor:size()):copy(tensor)
@@ -457,14 +458,24 @@ local function minmax(args)
    end
 
    -- rescale min
+   local fmin = 0
    if (min == nil) then
-      min = tensorOut:min()
+      if args.symm then
+	 fmin = math.max(math.abs(tensorOut:min()),math.abs(tensorOut:max()))
+	 min = -fmin
+      else
+	 min = tensorOut:min()
+      end
    end
    if (min ~= 0) then tensorOut:add(-min) end
 
    -- rescale for max
    if (max == nil) then
-      max = tensorOut:max()
+      if args.symm then
+	 max = fmin*2
+      else
+	 max = tensorOut:max()
+      end
    else
       max = max - min
    end
@@ -483,7 +494,7 @@ rawset(image, 'minmax', minmax)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui = xlua.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm = xlua.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -497,7 +508,9 @@ local function display(...)
       {arg='y', type='number', help='y offset (only if win is given)', default=0},
       {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
       {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
-       default=true}
+       default=true},
+      {arg='padding', type='number', help='number of padding pixels between images', default=0},
+      {arg='symmetric',type='boolena',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false}
    )
 
    -- dependencies
@@ -516,19 +529,18 @@ local function display(...)
       local packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
          if scaleeach then
-            packed[i] = image.minmax{tensor=input[i]}
+            packed[i] = image.minmax{tensor=input[i],symm=symm}
          else
             packed[i]:copy(input[i])
          end
       end
-      w = image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, padding=padding, symmetric=symm}
 
    -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
-   elseif input:nDimension() == 2 
-   or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
+   elseif input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
       -- Rescale range
-      local mminput = image.minmax{tensor=input, min=min, max=max}
-
+      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm}
+   
       -- Compute width
       local d = input:nDimension()
       local x = wx or input:size(d)*zoom
@@ -588,18 +600,18 @@ local function display(...)
       local nmaps = input:size(1)
       local xmaps = math.min(6, nmaps)
       local ymaps = math.ceil(nmaps / xmaps)
-      local height = input:size(2)
-      local width = input:size(3)
-      local grid = torch.Tensor(height*ymaps, width*xmaps):zero()
+      local height = input:size(2)+padding
+      local width = input:size(3)+padding
+      local grid = torch.Tensor(height*ymaps, width*xmaps):fill(input:max())
       local k = 1
       for y = 1,ymaps do
          for x = 1,xmaps do
             if k > nmaps then break end
-            grid:narrow(1,(y-1)*height+1,height):narrow(2,(x-1)*width+1,width):copy(input[k])
+            grid:narrow(1,(y-1)*height+1,height-padding):narrow(2,(x-1)*width+1,width-padding):copy(input[k])
             k = k + 1
          end
       end
-      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, symmetric=symm}
 
    elseif input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
       -- arbitrary number of color images: lay them out on a grid
@@ -619,7 +631,7 @@ local function display(...)
             k = k + 1
          end
       end
-      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui}
+      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, symmetric=symm}
 
    else
       xerror('image must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.display')
