@@ -489,12 +489,89 @@ local function minmax(args)
 end
 rawset(image, 'minmax', minmax) 
 
+local function toDisplayTensor(...)
+   -- usage
+   local _, input, padding, nrow, scaleeach, min, max, symm = xlua.unpack(
+      {...},
+      'image.toDisplayTensor',
+      'given a pack of tensors, returns a single tensor that contains a grid of all in the pack',
+      {arg='input',type='torch.Tensor | table', help='input (HxW or KxHxW or Kx3xHxW or list)',req=true},
+      {arg='padding', type='boolean', help='number of padding pixels between images', default=0},
+      {arg='nrow',type='number',help='number of images per row', default=6},
+      {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
+      {arg='min', type='number', help='lower-bound for range'},
+      {arg='max', type='number', help='upper-bound for range'},
+      {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false}
+   )
+
+
+   if type(input) == 'table' then
+      -- pack images in single tensor
+      local ndims = input[1]:dim()
+      local channels = ((ndims == 2) and 1) or input[1]:size(1)
+      local height = input[1]:size(ndims-1)
+      local width = input[1]:size(ndims)
+      local packed = torch.Tensor(#input,channels,height,width)
+      for i,img in ipairs(input) do
+         if scaleeach then
+	    packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm}
+         else
+            packed[i]:copy(input[i])
+         end
+      end
+      return toDisplayTensor{input=packed,padding=padding,nrow=nrow,min=min,max=max,symmetric=symm}
+   end
+
+   if input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
+      -- arbitrary number of color images: lay them out on a grid
+      local nmaps = input:size(1)
+      local xmaps = math.min(nrow, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = input:size(3)+padding
+      local width = input:size(4)+padding
+      local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):fill(input:max())
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            grid:narrow(2,(y-1)*height+1,height-padding):narrow(3,(x-1)*width+1,width-padding):copy(input[k])
+            k = k + 1
+         end
+      end
+      return image.minmax{tensor=grid, min=min, max=max, symm=symm}
+   elseif input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
+      -- Rescale range
+      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm}
+      return mminput
+   elseif input:nDimension() == 3 then
+      -- arbitrary number of channels: lay them out on a grid
+      local nmaps = input:size(1)
+      local xmaps = math.min(nrow, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = input:size(2)+padding
+      local width = input:size(3)+padding
+      local grid = torch.Tensor(height*ymaps, width*xmaps):fill(input:max())
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            grid:narrow(1,(y-1)*height+1,height-padding):narrow(2,(x-1)*width+1,width-padding):copy(input[k])
+            k = k + 1
+         end
+      end
+      return image.minmax{tensor=grid, min=min, max=max, symm=symm}
+   else
+      xerror('input must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
+   end
+end
+rawset(image,'toDisplayTensor',toDisplayTensor)
+
 ----------------------------------------------------------------------
 -- super generic display function
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm = xlua.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow= xlua.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -510,7 +587,8 @@ local function display(...)
       {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
        default=true},
       {arg='padding', type='number', help='number of padding pixels between images', default=0},
-      {arg='symmetric',type='boolena',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false}
+      {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false},
+      {arg='nrow',type='number',help='number of images per row', default=6}
    )
 
    -- dependencies
@@ -519,28 +597,12 @@ local function display(...)
    require 'qtwidget'
    require 'qtuiloader'
 
+   input = image.toDisplayTensor{input=input,padding=padding,nrow=nrow,scaleeach=scaleeach,min=min,max=max,symmetric=symm}
    -- if image is a table, then we treat if as a list of images
-   if type(input) == 'table' then
-      -- pack images in single tensor
-      local ndims = input[1]:dim()
-      local channels = ((ndims == 2) and 1) or input[1]:size(1)
-      local height = input[1]:size(ndims-1)
-      local width = input[1]:size(ndims)
-      local packed = torch.Tensor(#input,channels,height,width)
-      for i,img in ipairs(input) do
-         if scaleeach then
-            packed[i] = image.minmax{tensor=input[i],symm=symm}
-         else
-            packed[i]:copy(input[i])
-         end
-      end
-      w = image.display{image=packed, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, padding=padding, symmetric=symm}
-
    -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
-   elseif input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
+   if input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
       -- Rescale range
-      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm}
-   
+      local mminput = input--image.minmax{tensor=input, min=min, max=max, symm=symm}
       -- Compute width
       local d = input:nDimension()
       local x = wx or input:size(d)*zoom
@@ -594,45 +656,6 @@ local function display(...)
             w:image(ox,oy,x,y,qtimg)
          end
       end
-
-   elseif input:nDimension() == 3 then
-      -- arbitrary number of channels: lay them out on a grid
-      local nmaps = input:size(1)
-      local xmaps = math.min(6, nmaps)
-      local ymaps = math.ceil(nmaps / xmaps)
-      local height = input:size(2)+padding
-      local width = input:size(3)+padding
-      local grid = torch.Tensor(height*ymaps, width*xmaps):fill(input:max())
-      local k = 1
-      for y = 1,ymaps do
-         for x = 1,xmaps do
-            if k > nmaps then break end
-            grid:narrow(1,(y-1)*height+1,height-padding):narrow(2,(x-1)*width+1,width-padding):copy(input[k])
-            k = k + 1
-         end
-      end
-      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, symmetric=symm}
-
-   elseif input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
-      -- arbitrary number of color images: lay them out on a grid
-      local nmaps = input:size(1)
-      local xmaps = math.min(6, nmaps)
-      local ymaps = math.ceil(nmaps / xmaps)
-      --local ymaps = math.floor(math.sqrt(nmaps))
-      --local xmaps = math.ceil(nmaps/2)
-      local height = input:size(3)
-      local width = input:size(4)
-      local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):zero()
-      local k = 1
-      for y = 1,ymaps do
-         for x = 1,xmaps do
-            if k > nmaps then break end
-            grid:narrow(2,(y-1)*height+1,height):narrow(3,(x-1)*width+1,width):copy(input[k])
-            k = k + 1
-         end
-      end
-      w = image.display{image=grid, zoom=zoom, min=min, max=max, legend=legend, win=w, gui=gui, symmetric=symm}
-
    else
       xerror('image must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.display')
    end
