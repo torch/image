@@ -496,7 +496,7 @@ local function toDisplayTensor(...)
       'image.toDisplayTensor',
       'given a pack of tensors, returns a single tensor that contains a grid of all in the pack',
       {arg='input',type='torch.Tensor | table', help='input (HxW or KxHxW or Kx3xHxW or list)',req=true},
-      {arg='padding', type='boolean', help='number of padding pixels between images', default=0},
+      {arg='padding', type='number', help='number of padding pixels between images', default=0},
       {arg='nrow',type='number',help='number of images per row', default=6},
       {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
       {arg='min', type='number', help='lower-bound for range'},
