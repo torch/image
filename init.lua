@@ -250,9 +250,9 @@ local function crop(...)
       if src:nDimension() > 2 then
          depth=src:size(1)
       end
-      local x=torch.Tensor(depth,endy-starty,endx-startx)
+      local x = src.new(depth,endy-starty,endx-startx)
       src.image.cropNoScale(src,x,startx,starty)
-      dst = dst or torch.Tensor():resizeAs(x)
+      dst = dst or src.new():resizeAs(x)
       image.scale(x,dst)
    end
    return dst
@@ -287,7 +287,7 @@ local function translate(...)
                        {type='number', help='vertical translation', req=true}))
       xlua.error('incorrect arguments', 'image.translate')
    end
-   dst = dst or torch.Tensor():resizeAs(src)
+   dst = dst or src.new():resizeAs(src)
    src.image.translate(src,dst,x,y)
    return dst
 end
@@ -332,9 +332,9 @@ local function scale(...)
    end
    if not dst then
       if src:nDimension() == 3 then
-         dst = torch.Tensor(src:size(1), height, width)
+         dst = src.new(src:size(1), height, width)
       else
-         dst = torch.Tensor(height, width)
+         dst = src.new(height, width)
       end
    end
    mode = mode or 'bilinear'
@@ -373,7 +373,7 @@ local function rotate(...)
                        {type='number', help='rotation angle (in radians)', req=true}))
       xlua.error('incorrect arguments', 'image.rotate')
    end
-   dst = dst or torch.Tensor():resizeAs(src)
+   dst = dst or src.new():resizeAs(src)
    src.image.rotate(src,dst,theta)
    return dst  
 end
@@ -727,7 +727,7 @@ rawset(image, 'lena', lena)
 --
 function image.rgb2yuv(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize
    output:resizeAs(input)
@@ -761,7 +761,7 @@ end
 --
 function image.yuv2rgb(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize
    output:resizeAs(input)
@@ -791,7 +791,7 @@ end
 --
 function image.rgb2y(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize
    output:resize(1, input:size(2), input:size(3))
@@ -817,7 +817,7 @@ end
 --
 function image.rgb2hsl(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize and compute
    output:resizeAs(input)
@@ -833,7 +833,7 @@ end
 --
 function image.hsl2rgb(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize and compute
    output:resizeAs(input)
@@ -849,7 +849,7 @@ end
 --
 function image.rgb2hsv(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize and compute
    output:resizeAs(input)
@@ -865,7 +865,7 @@ end
 --
 function image.hsv2rgb(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
+   local output = arg[1] or input.new()
    
    -- resize and compute
    output:resizeAs(input)
@@ -881,8 +881,8 @@ end
 --
 function image.rgb2nrgb(input, ...)
    local arg = {...}
-   local output = arg[1] or torch.Tensor()
-   local sum = torch.Tensor()
+   local output = arg[1] or input.new()
+   local sum = input.new()
    
    -- resize tensors
    output:resizeAs(input)
