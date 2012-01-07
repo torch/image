@@ -982,9 +982,9 @@ function image.gaussian(...)
    local gauss = torch.Tensor(height, width)
    for i=1,height do
       for j=1,width do
-         gauss[i][j] = amplitude * math.exp(-(math.pow((i-center_x)
+         gauss[i][j] = amplitude * math.exp(-(math.pow((j-center_x)
                                                     /(sigma_horz*width),2)/2 
-                                           + math.pow((j-center_y)
+                                           + math.pow((i-center_y)
                                                    /(sigma_vert*height),2)/2))
       end
    end
