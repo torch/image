@@ -32,33 +32,15 @@
 require 'torch'
 require 'sys'
 require 'xlua'
+require 'dok'
 require 'libimage'
-
-----------------------------------------------------------------------
--- help string
---
-local help = [[
-An image processing package for Torch7. Most functions provide
-online help. 
-
-Here is a short example of what can be done:
-> require 'image'
-> lena = image.lena()
-> kernel = image.gaussian{width=7}
-> res = image.convolve(lena,kernel)
-> image.display(res)
-> img_hsl = image.rgb2hsl(res)
-> hue = img_hsl[1]
-> image.display(hue) ]]
-
-xlua.usage_module(image, 'image', help)
 
 ----------------------------------------------------------------------
 -- save/load in multiple formats
 --
 local function loadPNG(filename, depth)
    if not xlua.require 'libpng' then
-      xlua.error('libpng package not found, please install libpng','image.loadPNG')
+      dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
    local MAXVAL = 255
    local a = torch.Tensor().libpng.load(filename)
@@ -73,7 +55,7 @@ local function loadPNG(filename, depth)
       elseif a:size(1) == 2 then
          a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
-         xlua.error('image loaded has wrong #channels','image.loadPNG')
+         dok.error('image loaded has wrong #channels','image.loadPNG')
       end
    elseif depth and depth == 3 then
       if a:size(1) == 3 then
@@ -81,7 +63,7 @@ local function loadPNG(filename, depth)
       elseif a:size(1) == 4 then
          a = a:narrow(1,1,3)
       else
-         xlua.error('image loaded has wrong #channels','image.loadPNG')
+         dok.error('image loaded has wrong #channels','image.loadPNG')
       end
    end
    return a
@@ -90,7 +72,7 @@ rawset(image, 'loadPNG', loadPNG)
 
 local function savePNG(filename, tensor)
    if not xlua.require 'libpng' then
-      xlua.error('libpng package not found, please install libpng','image.savePNG')
+      dok.error('libpng package not found, please install libpng','image.savePNG')
    end
    local MAXVAL = 255
    local a = torch.Tensor():resizeAs(tensor):copy(tensor)
@@ -102,14 +84,14 @@ rawset(image, 'savePNG', savePNG)
 
 function image.getPNGsize(filename)
    if not xlua.require 'libpng' then
-      xlua.error('libpng package not found, please install libpng','image.getPNGsize')
+      dok.error('libpng package not found, please install libpng','image.getPNGsize')
    end
    return torch.Tensor().libpng.size(filename)
 end
 
 local function loadJPG(filename, depth)
    if not xlua.require 'libjpeg' then
-      xlua.error('libjpeg package not found, please install libjpeg','image.loadJPG')
+      dok.error('libjpeg package not found, please install libjpeg','image.loadJPG')
    end
    local MAXVAL = 255
    local a = torch.Tensor().libjpeg.load(filename)
@@ -124,7 +106,7 @@ local function loadJPG(filename, depth)
       elseif a:size(1) == 2 then
          a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
-         xlua.error('image loaded has wrong #channels','image.loadJPG')
+         dok.error('image loaded has wrong #channels','image.loadJPG')
       end
    elseif depth and depth == 3 then
       if a:size(1) == 3 then
@@ -132,7 +114,7 @@ local function loadJPG(filename, depth)
       elseif a:size(1) == 4 then
          a = a:narrow(1,1,3)
       else
-         xlua.error('image loaded has wrong #channels','image.loadJPG')
+         dok.error('image loaded has wrong #channels','image.loadJPG')
       end
    end
    return a
@@ -141,7 +123,7 @@ rawset(image, 'loadJPG', loadJPG)
 
 local function saveJPG(filename, tensor)
    if not xlua.require 'libjpeg' then
-      xlua.error('libjpeg package not found, please install libjpeg','image.saveJPG')
+      dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
    local MAXVAL = 255
    local a = torch.Tensor():resizeAs(tensor):copy(tensor)
@@ -153,18 +135,18 @@ rawset(image, 'saveJPG', saveJPG)
 
 function image.getJPGsize(filename)
    if not xlua.require 'libjpeg' then
-      xlua.error('libjpeg package not found, please install libjpeg','image.getJPGsize')
+      dok.error('libjpeg package not found, please install libjpeg','image.getJPGsize')
    end
    return torch.Tensor().libjpeg.size(filename)
 end
 
 local function load(filename, depth)
    if not filename then
-      print(xlua.usage('image.load',
+      print(dok.usage('image.load',
                        'loads an image into a torch.Tensor', nil,
                        {type='string', help='path to file', req=true},
                        {type='number', help='force destination depth: 1 | 3'}))
-      xlua.error('missing file name', 'image.load')
+      dok.error('missing file name', 'image.load')
    end
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
@@ -173,7 +155,7 @@ local function load(filename, depth)
    elseif ext == 'png' or ext == 'PNG' then
       tensor = image.loadPNG(filename,depth)
    else
-      xlua.error('unknown image type: ' .. ext, 'image.load')
+      dok.error('unknown image type: ' .. ext, 'image.load')
    end
    return tensor
 end
@@ -181,11 +163,11 @@ rawset(image, 'load', load)
 
 local function save(filename, tensor)
    if not filename or not tensor then
-      print(xlua.usage('image.save',
+      print(dok.usage('image.save',
                        'saves a torch.Tensor to a disk', nil,
                        {type='string', help='path to file', req=true},
                        {type='torch.Tensor', help='tensor to save (NxHxW, N = 1 | 3)'}))
-      xlua.error('missing file name | tensor to save', 'image.save')
+      dok.error('missing file name | tensor to save', 'image.save')
    end
    local ext = string.match(filename,'%.(%a+)$')
    if ext == 'jpg' or ext == 'JPG' then
@@ -193,7 +175,7 @@ local function save(filename, tensor)
    elseif ext == 'png' or ext == 'PNG' then
       image.savePNG(filename, tensor)
    else
-      xlua.error('unknown image type: ' .. ext, 'image.save')
+      dok.error('unknown image type: ' .. ext, 'image.save')
    end
 end
 rawset(image, 'save', save)
@@ -227,7 +209,7 @@ local function crop(...)
       startx = args[2]
       starty = args[3]
    else
-      print(xlua.usage('image.crop',
+      print(dok.usage('image.crop',
                        'crop an image', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='start x', req=true},
@@ -241,7 +223,7 @@ local function crop(...)
                        {type='number', help='start y', req=true},
                        {type='number', help='end x'},
                        {type='number', help='end y'}))
-      xlua.error('incorrect arguments', 'image.crop')
+      dok.error('incorrect arguments', 'image.crop')
    end
    if endx==nil then
       return src.image.cropNoScale(src,dst,startx,starty)
@@ -275,7 +257,7 @@ local function translate(...)
       x = args[2]
       y = args[3]
    else
-      print(xlua.usage('image.translate',
+      print(dok.usage('image.translate',
                        'translate an image', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='horizontal translation', req=true},
@@ -285,7 +267,7 @@ local function translate(...)
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='horizontal translation', req=true},
                        {type='number', help='vertical translation', req=true}))
-      xlua.error('incorrect arguments', 'image.translate')
+      dok.error('incorrect arguments', 'image.translate')
    end
    dst = dst or src.new():resizeAs(src)
    src.image.translate(src,dst,x,y)
@@ -318,7 +300,7 @@ local function scale(...)
       src = args[1]
       dst = args[2]
    else
-      print(xlua.usage('image.scale',
+      print(dok.usage('image.scale',
                        'rescale an image (geometry)', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='destination width', req=true},
@@ -328,7 +310,7 @@ local function scale(...)
                        {type='torch.Tensor', help='input image', req=true},
                        {type='torch.Tensor', help='destination image', req=true},
                        {type='string', help='mode: bilinear | simple', default='bilinear'}))
-      xlua.error('incorrect arguments', 'image.scale')
+      dok.error('incorrect arguments', 'image.scale')
    end
    if not dst then
       if src:nDimension() == 3 then
@@ -343,7 +325,7 @@ local function scale(...)
    elseif mode=='simple' then
       src.image.scaleSimple(src,dst)
    else
-      xlua.error('mode must be one of: simple | bilinear', 'image.scale')
+      dok.error('mode must be one of: simple | bilinear', 'image.scale')
    end
    return dst
 end
@@ -363,7 +345,7 @@ local function rotate(...)
       src = args[1]
       theta = args[2]
    else
-      print(xlua.usage('image.rotate',
+      print(dok.usage('image.rotate',
                        'rotate an image by theta radians', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='rotation angle (in radians)', req=true},
@@ -371,7 +353,7 @@ local function rotate(...)
                        {type='torch.Tensor', help='destination', req=true},
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='rotation angle (in radians)', req=true}))
-      xlua.error('incorrect arguments', 'image.rotate')
+      dok.error('incorrect arguments', 'image.rotate')
    end
    dst = dst or src.new():resizeAs(src)
    src.image.rotate(src,dst,theta)
@@ -408,7 +390,7 @@ local function convolve(...)
       src = args[1]
       kernel = args[2]
    else
-      print(xlua.usage('image.convolve',
+      print(dok.usage('image.convolve',
                        'convolves an input image with a kernel, returns the result', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='torch.Tensor', help='kernel', req=true},
@@ -418,10 +400,10 @@ local function convolve(...)
                        {type='torch.Tensor', help='input image', req=true},
                        {type='torch.Tensor', help='kernel', req=true},
                        {type='string', help='type: full | valid | same', default='valid'}))
-      xlua.error('incorrect arguments', 'image.convolve')
+      dok.error('incorrect arguments', 'image.convolve')
    end
    if mode and mode ~= 'valid' and mode ~= 'full' and mode ~= 'same' then
-      xlua.error('mode has to be one of: full | valid', 'image.convolve')
+      dok.error('mode has to be one of: full | valid', 'image.convolve')
    end
    local md = (((mode == 'full') or (mode == 'same')) and 'f') or 'v'
    if dst then
@@ -491,7 +473,7 @@ rawset(image, 'minmax', minmax)
 
 local function toDisplayTensor(...)
    -- usage
-   local _, input, padding, nrow, scaleeach, min, max, symm = xlua.unpack(
+   local _, input, padding, nrow, scaleeach, min, max, symm = dok.unpack(
       {...},
       'image.toDisplayTensor',
       'given a pack of tensors, returns a single tensor that contains a grid of all in the pack',
@@ -571,7 +553,7 @@ rawset(image,'toDisplayTensor',toDisplayTensor)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow= xlua.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow= dok.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -715,7 +697,7 @@ local function lena()
    elseif xlua.require 'libjpg' then
       lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
    else
-      xlua.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
+      dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
    end
    return lena
 end
@@ -725,11 +707,19 @@ rawset(image, 'lena', lena)
 -- image.rgb2yuv(image)
 -- converts a RGB image to YUV
 --
-function image.rgb2yuv(input, ...)
+function image.rgb2yuv(input, ...)   
+   -- arg check
    local arg = {...}
-   local output = arg[1] or input.new()
-   
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from RGB to YUV', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2yuv')
+   end
+
    -- resize
+   local output = arg[1] or input.new()
    output:resizeAs(input)
    
    -- input chanels
@@ -759,11 +749,19 @@ end
 -- image.yuv2rgb(image)
 -- converts a YUV image to RGB
 --
-function image.yuv2rgb(input, ...)
+function image.yuv2rgb(input, ...)      
+   -- arg check
    local arg = {...}
-   local output = arg[1] or input.new()
-   
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from YUV to RGB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.yuv2rgb')
+   end
+
    -- resize
+   local output = arg[1] or input.new()
    output:resizeAs(input)
    
    -- input chanels
@@ -790,10 +788,18 @@ end
 -- converts a RGB image to Y (discards U/V)
 --
 function image.rgb2y(input, ...)
+   -- arg check
    local arg = {...}
-   local output = arg[1] or input.new()
-   
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from RGB to Y', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2y')
+   end
+
    -- resize
+   local output = arg[1] or input.new()
    output:resize(1, input:size(2), input:size(3))
    
    -- input chanels
@@ -815,12 +821,22 @@ end
 -- image.rgb2hsl(image)
 -- converts an RGB image to HSL
 --
-function image.rgb2hsl(input, ...)
+function image.rgb2hsl(input, ...)   
+   -- arg check
    local arg = {...}
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from RGB to HSL', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2hsl')
+   end
+
+   -- resize
    local output = arg[1] or input.new()
-   
-   -- resize and compute
    output:resizeAs(input)
+
+   -- compute
    input.image.rgb2hsl(input,output)
    
    -- return HSL image
@@ -832,11 +848,21 @@ end
 -- converts an HSL image to RGB
 --
 function image.hsl2rgb(input, ...)
+   -- arg check
    local arg = {...}
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from HSL to RGB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.hsl2rgb')
+   end
+
+   -- resize
    local output = arg[1] or input.new()
-   
-   -- resize and compute
    output:resizeAs(input)
+
+   -- compute
    input.image.hsl2rgb(input,output)
    
    -- return HSL image
@@ -848,11 +874,21 @@ end
 -- converts an RGB image to HSV
 --
 function image.rgb2hsv(input, ...)
+   -- arg check
    local arg = {...}
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from RGB to HSV', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2hsv')
+   end
+
+   -- resize
    local output = arg[1] or input.new()
-   
-   -- resize and compute
    output:resizeAs(input)
+
+   -- compute
    input.image.rgb2hsv(input,output)
    
    -- return HSV image
@@ -864,11 +900,21 @@ end
 -- converts an HSV image to RGB
 --
 function image.hsv2rgb(input, ...)
+   -- arg check
    local arg = {...}
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from HSV to RGB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.hsv2rgb')
+   end
+
+   -- resize
    local output = arg[1] or input.new()
-   
-   -- resize and compute
    output:resizeAs(input)
+
+   -- compute
    input.image.hsv2rgb(input,output)
    
    -- return HSV image
@@ -880,12 +926,20 @@ end
 -- converts an RGB image to normalized-RGB
 --
 function image.rgb2nrgb(input, ...)
+   -- arg check
    local arg = {...}
-   local output = arg[1] or input.new()
-   local sum = input.new()
-   
+   if not input then
+      print(dok.usage('image.rgb2yuv',
+                      'transforms an image from RGB to normalized RGB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2nrgb')
+   end
+
    -- resize tensors
+   local output = arg[1] or input.new()
    output:resizeAs(input)
+   local sum = input.new()
    sum:resize(input:size(2), input:size(3))
    
    -- compute sum and normalize
@@ -906,7 +960,7 @@ end
 function image.gaussian(...)
    -- process args
    local _, size, sigma, amplitude, normalize, 
-   width, height, sigma_horz, sigma_vert = xlua.unpack(
+   width, height, sigma_horz, sigma_vert = dok.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
@@ -943,7 +997,7 @@ end
 function image.gaussian1D(...)
    -- process args
    local _, size, sigma, amplitude, normalize
-      = xlua.unpack(
+      = dok.unpack(
       {...},
       'image.gaussian1D',
       'returns a 1D gaussian kernel',
@@ -975,7 +1029,7 @@ end
 function image.laplacian(...)
    -- process args
    local _, size, sigma, amplitude, normalize, 
-   width, height, sigma_horz, sigma_vert = xlua.unpack(
+   width, height, sigma_horz, sigma_vert = dok.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
