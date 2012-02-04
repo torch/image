@@ -368,7 +368,6 @@ rawset(image, 'rotate', rotate)
 -- dst = convolve(src,ker)
 --
 local function convolve(...)
-   require 'lab'
    local dst,src,kernel,mode
    local args = {...}
    if select('#',...) == 4 then
@@ -405,11 +404,18 @@ local function convolve(...)
    if mode and mode ~= 'valid' and mode ~= 'full' and mode ~= 'same' then
       dok.error('mode has to be one of: full | valid', 'image.convolve')
    end
-   local md = (((mode == 'full') or (mode == 'same')) and 'f') or 'v'
+   local md = (((mode == 'full') or (mode == 'same')) and 'F') or 'V'
+   if kernel:nDimension() == 2 and src:nDimension() == 3 then
+      local k3d = torch.Tensor(src:size(1), kernel:size(1), kernel:size(2))
+      for i = 1,src:size(1) do
+         k3d[i]:copy(kernel)
+      end
+      kernel = k3d
+   end
    if dst then
-      lab.conv2(dst,src,kernel,md)
+      torch.conv2(dst,src,kernel,md)
    else
-      dst = lab.conv2(src,kernel,md)
+      dst = torch.conv2(src,kernel,md)
    end
    if mode == 'same' then
       local cx = dst:dim()
