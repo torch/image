@@ -713,6 +713,69 @@ rawset(image, 'lena', lena)
 -- image.rgb2yuv(image)
 -- converts a RGB image to YUV
 --
+function image.rgb2lab(input, ...)   
+   -- arg check
+   local arg = {...}
+   if not input then
+      print(dok.usage('image.rgb2lab',
+                      'transforms an image from RGB to Lab', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      {type='torch.Tensor', help='output image'}))
+      dok.error('missing input', 'image.rgb2lab')
+   end
+
+   -- resize
+   local output = arg[1] or input.new()
+   output:resizeAs(input)
+   
+   -- output chanels
+   local xyz = output:clone()
+   local outputX = xyz[1]
+   local outputY = xyz[2]
+   local outputZ = xyz[3]
+
+   -- output chanels
+   local outputL = output[1]
+   local outputA = output[2]
+   local outputB = output[3]
+
+
+   -- Set a threshold
+   local T = 0.008856;
+
+   local RGB = torch.Tensor():set(input):resize(3,input:size(2)*input:size(3))
+
+   -- RGB to XYZ
+   local MAT = torch.Tensor({{0.412453, 0.357580, 0.180423},
+			     {0.212671, 0.715160, 0.072169},
+			     {0.019334, 0.119193, 0.950227}})
+   local XYZ = MAT * RGB;
+
+   -- Normalize for D65 white point
+   XYZ[1]:div(0.950456);
+   XYZ[3]:div(1.088754);
+   local Y3 = torch.pow(XYZ[2],1/3)
+
+   local thres = function(x) 
+      if x > T then 
+	 return x^(1/3) 
+      else 
+	 return 1/3*(29/6)^2 * x + 16/116 
+      end 
+   end
+   XYZ:apply(thres)
+   
+   outputL:mul(XYZ[2],116):add(-16):div(100)
+   outputA:copy(XYZ[1]):add(-1,XYZ[2]):mul(500):add(110):div(220)
+   outputB:copy(XYZ[2]):add(-1,XYZ[3]):mul(200):add(110):div(220)
+	 
+   -- return LAB image
+   return output
+end
+----------------------------------------------------------------------
+-- image.rgb2yuv(image)
+-- converts a RGB image to YUV
+--
 function image.rgb2yuv(input, ...)   
    -- arg check
    local arg = {...}
