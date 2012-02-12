@@ -698,10 +698,10 @@ rawset(image, 'window', window)
 -- lena is always useful
 --
 local function lena()
-   if xlua.require 'libpng' then
-      lena = image.load(sys.concat(sys.fpath(), 'lena.png'), 3)
-   elseif xlua.require 'libjpg' then
+   if xlua.require 'libjpeg' then
       lena = image.load(sys.concat(sys.fpath(), 'lena.jpg'), 3)
+   elseif xlua.require 'libpng' then
+      lena = image.load(sys.concat(sys.fpath(), 'lena.png'), 3)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
    end
