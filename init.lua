@@ -449,10 +449,10 @@ local function minmax(args)
    local fmin = 0
    if (min == nil) then
       if args.symm then
-	 fmin = math.max(math.abs(tensorOut:min()),math.abs(tensorOut:max()))
-	 min = -fmin
+    fmin = math.max(math.abs(tensorOut:min()),math.abs(tensorOut:max()))
+    min = -fmin
       else
-	 min = tensorOut:min()
+    min = tensorOut:min()
       end
    end
    if (min ~= 0) then tensorOut:add(-min) end
@@ -460,9 +460,9 @@ local function minmax(args)
    -- rescale for max
    if (max == nil) then
       if args.symm then
-	 max = fmin*2
+    max = fmin*2
       else
-	 max = tensorOut:max()
+    max = tensorOut:max()
       end
    else
       max = max - min
@@ -502,7 +502,7 @@ local function toDisplayTensor(...)
       local packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
          if scaleeach then
-	    packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm}
+       packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm}
          else
             packed[i]:copy(input[i])
          end
@@ -747,8 +747,8 @@ function image.rgb2lab(input, ...)
 
    -- RGB to XYZ
    local MAT = torch.Tensor({{0.412453, 0.357580, 0.180423},
-			     {0.212671, 0.715160, 0.072169},
-			     {0.019334, 0.119193, 0.950227}})
+              {0.212671, 0.715160, 0.072169},
+              {0.019334, 0.119193, 0.950227}})
    local XYZ = MAT * RGB;
 
    -- Normalize for D65 white point
@@ -758,9 +758,9 @@ function image.rgb2lab(input, ...)
 
    local thres = function(x) 
       if x > T then 
-	 return x^(1/3) 
+    return x^(1/3) 
       else 
-	 return 1/3*(29/6)^2 * x + 16/116 
+    return 1/3*(29/6)^2 * x + 16/116 
       end 
    end
    XYZ:apply(thres)
@@ -768,7 +768,7 @@ function image.rgb2lab(input, ...)
    outputL:mul(XYZ[2],116):add(-16):div(100)
    outputA:copy(XYZ[1]):add(-1,XYZ[2]):mul(500):add(110):div(220)
    outputB:copy(XYZ[2]):add(-1,XYZ[3]):mul(200):add(110):div(220)
-	 
+    
    -- return LAB image
    return output
 end
@@ -1023,8 +1023,7 @@ function image.rgb2nrgb(input, ...)
 end
 
 ----------------------------------------------------------------------
---- Returns a gaussian The.
--- kernel default parameters generate that occupies the entire kernel.
+--- Returns a gaussian kernel.
 --
 function image.gaussian(...)
    -- process args
@@ -1093,7 +1092,6 @@ end
 
 ----------------------------------------------------------------------
 --- Returns a Laplacian kernel.
--- The default parameters generate that occupies the entire kernel.
 --
 function image.laplacian(...)
    -- process args
@@ -1130,6 +1128,57 @@ function image.laplacian(...)
       logauss:div(logauss:sum())
    end
    return logauss
+end
+
+----------------------------------------------------------------------
+--- Gaussian Pyramid
+--
+function image.gaussianpyramid(...)
+   local dst,src,scales
+   local args = {...}
+   if select('#',...) == 3 then
+      dst = args[1]
+      src = args[2]
+      scales = args[3]
+   elseif select('#',...) == 2 then
+      dst = {}
+      src = args[1]
+      scales = args[2]
+   else
+      print(dok.usage('image.gaussianpyramid',
+                       'construct a Gaussian pyramid from an image', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='table', help='list of scales', req=true},
+                       '',
+                       {type='table', help='destination (list of Tensors)', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='table', help='list of scales', req=true}))
+      dok.error('incorrect arguments', 'image.gaussianpyramid')
+   end
+   if src:nDimension() == 2 then
+      for i = 1,#scales do
+         dst[i] = dst[i] or torch.Tensor()
+         dst[i]:resize(src:size(1)*scales[i], src:size(2)*scales[i])
+      end
+   elseif src:nDimension() == 3 then
+      for i = 1,#scales do
+         dst[i] = dst[i] or torch.Tensor()
+         dst[i]:resize(src:size(1), src:size(2)*scales[i], src:size(3)*scales[i])
+      end
+   else
+      dok.error('src image must be 2D or 3D', 'image.gaussianpyramid')
+   end
+   local k = image.gaussian{width=3, normalize=true}
+   local tmp = src
+   for i = 1,#scales do
+      if scales[i] == 1 then
+         dst[i][{}] = tmp
+      else
+         image.scale(tmp, dst[i], 'simple')
+      end
+      tmp = image.convolve(dst[i], k, 'same')
+   end
+   return dst
 end
 
 ----------------------------------------------------------------------
