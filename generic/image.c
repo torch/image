@@ -2,6 +2,12 @@
 #define TH_GENERIC_FILE "generic/image.c"
 #else
 
+#undef MAX
+#define MAX(a,b) ( ((a)>(b)) ? (a) : (b) )
+
+#undef MIN
+#define MIN(a,b) ( ((a)<(b)) ? (a) : (b) )
+
 #undef TAPI
 #define TAPI __declspec(dllimport)
 
@@ -680,12 +686,94 @@ int image_(Main_hsv2rgb)(lua_State *L) {
   return 0;
 }
 
+/*
+ * Warps an image, according to an (x,y) flow field. The flow
+ * field is in the space of the destination image, each vector
+ * ponts to a source pixel in the original image.
+ */
+int image_(Main_warp)(lua_State *L) {
+  THTensor *dst = luaT_checkudata(L, 1, torch_(Tensor_id));
+  THTensor *src = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *flowfield = luaT_checkudata(L, 3, torch_(Tensor_id));
+  int bilinear = lua_toboolean(L, 4);
+
+  // dims
+  int width = src->size[2];
+  int height = src->size[1];
+  int channels = src->size[0];
+  long *is = src->stride;
+  long *os = dst->stride;
+  long *fs = flowfield->stride;
+
+  // get raw pointers
+  real *dst_data = THTensor_(data)(dst);
+  real *src_data = THTensor_(data)(src);
+  real *flow_data = THTensor_(data)(flowfield);
+
+  // resample
+  long k,x,y;
+  for (y=0; y<height; y++) {
+    for (x=0; x<width; x++) {
+      // subpixel position:
+      real flow_y = flow_data[ 0*fs[0] + y*fs[1] + x*fs[2] ];
+      real flow_x = flow_data[ 1*fs[0] + y*fs[1] + x*fs[2] ];
+      float iy = y + flow_y;
+      float ix = x + flow_x;
+
+      // borders
+      ix = MAX(ix,0); ix = MIN(ix,width-1);
+      iy = MAX(iy,0); iy = MIN(iy,height-1);
+
+      // bilinear?
+      if (bilinear) {
+        // 4 nearest neighbors:
+        long ix_nw = floor(ix);
+        long iy_nw = floor(iy);
+        long ix_ne = ix_nw + 1;
+        long iy_ne = iy_nw;
+        long ix_sw = ix_nw;
+        long iy_sw = iy_nw + 1;
+        long ix_se = ix_nw + 1;
+        long iy_se = iy_nw + 1;
+
+        // get surfaces to each neighbor:
+        real nw = ((real)(ix_se-ix))*(iy_se-iy);
+        real ne = ((real)(ix-ix_sw))*(iy_sw-iy);
+        real sw = ((real)(ix_ne-ix))*(iy-iy_ne);
+        real se = ((real)(ix-ix_nw))*(iy-iy_nw);
+
+        // weighted sum of neighbors:
+        for (k=0; k<channels; k++) {
+          dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 
+              src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
+            + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,width-1)*is[2] ] * ne
+            + src_data[ k*is[0] + MIN(iy_sw,height-1)*is[1] +              ix_sw*is[2] ] * sw
+            + src_data[ k*is[0] + MIN(iy_se,height-1)*is[1] + MIN(ix_se,width-1)*is[2] ] * se;
+        }
+      } else {
+        // 1 nearest neighbor:
+        long ix_n = floor(ix+0.5);
+        long iy_n = floor(iy+0.5);
+
+        // weighted sum of neighbors:
+        for (k=0; k<channels; k++) {
+          dst_data[ k*os[0] + y*os[1] + x*os[2] ] = src_data[ k*is[0] + iy_n*is[1] + ix_n*is[2] ];
+        }
+      }
+    }
+  }
+
+  // done
+  return 0;
+}
+
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
   {"rotate", image_(Main_rotate)},
   {"translate", image_(Main_translate)},
   {"cropNoScale", image_(Main_cropNoScale)},
+  {"warp", image_(Main_warp)},
   {"saturate", image_(Main_saturate)},
   {"rgb2hsv", image_(Main_rgb2hsv)},
   {"rgb2hsl", image_(Main_rgb2hsl)},

@@ -362,6 +362,50 @@ end
 rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
+-- warp
+--
+local function warp(...)
+   local dst,src,field
+   local mode = 'bilinear'
+   local args = {...}
+   if select('#',...) == 4 then
+      dst = args[1]
+      src = args[2]
+      field = args[3]
+      mode = args[4]
+   elseif select('#',...) == 3 then
+      if type(args[3]) == 'string' then
+         src = args[1]
+         field = args[2]
+         mode = args[3]
+      else
+         dst = args[1]
+         src = args[2]
+         field = args[3]
+      end
+   elseif select('#',...) == 2 then
+      src = args[1]
+      field = args[2]
+   else
+      print(dok.usage('image.warp',
+                       'warp an image, according to a flow field', nil,
+                       {type='torch.Tensor', help='input image (KxHxW)', req=true},
+                       {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
+                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image (KxHxW)', req=true},
+                       {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
+                       {type='string', help='mode: bilinear | simple', default='bilinear'}))
+      dok.error('incorrect arguments', 'image.warp')
+   end
+   dst = dst or src.new():resizeAs(src)
+   src.image.warp(dst,src,field,((mode == 'bilinear') and true) or false)
+   return dst
+end
+rawset(image, 'warp', warp)
+
+----------------------------------------------------------------------
 -- convolve(dst,src,ker,type)
 -- convolve(dst,src,ker)
 -- dst = convolve(src,ker,type)
@@ -420,8 +464,8 @@ local function convolve(...)
    if mode == 'same' then
       local cx = dst:dim()
       local cy = cx-1
-      local ofy = math.ceil(kernel:size(1)/2)
-      local ofx = math.ceil(kernel:size(2)/2)
+      local ofy = math.ceil(kernel:size(cy)/2)
+      local ofx = math.ceil(kernel:size(cx)/2)
       dst = dst:narrow(cy, ofy, src:size(cy)):narrow(cx, ofx, src:size(cx))
    end
    return dst
