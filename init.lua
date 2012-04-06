@@ -399,8 +399,16 @@ local function warp(...)
                        {type='string', help='mode: bilinear | simple', default='bilinear'}))
       dok.error('incorrect arguments', 'image.warp')
    end
-   dst = dst or src.new():resizeAs(src)
+   local dim2 = false
+   if src:nDimension() == 2 then
+      dim2 = true
+      src = src:reshape(1,src:size(1),src:size(2))
+   end
+   dst = dst or src.new():resize(src:size(1), field:size(2), field:size(3))
    src.image.warp(dst,src,field,((mode == 'bilinear') and true) or false)
+   if dim2 then
+      dst = dst[1]
+   end
    return dst
 end
 rawset(image, 'warp', warp)
