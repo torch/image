@@ -524,7 +524,6 @@ local function minmax(args)
       
    -- saturate
    if saturate then
-      print('saturating')
       tensorOut.image.saturate(tensorOut)
    end
 
