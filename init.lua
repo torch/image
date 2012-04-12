@@ -498,6 +498,11 @@ local function minmax(args)
       tensorOut:resizeAs(tensor):copy(tensor)
    end
 
+   -- saturate useless if min/max inferred
+   if min == nil and max == nil then
+      saturate = false
+   end
+
    -- rescale min
    local fmin = 0
    if (min == nil) then
