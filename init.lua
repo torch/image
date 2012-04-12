@@ -489,6 +489,7 @@ local function minmax(args)
    local max = args.max 
    local symm = args.symm or false
    local inplace = args.inplace or false
+   local saturate = args.saturate or false
    local tensorOut = args.tensorOut or (inplace and tensor) 
       or torch.Tensor(tensor:size()):copy(tensor)
 
@@ -501,10 +502,10 @@ local function minmax(args)
    local fmin = 0
    if (min == nil) then
       if args.symm then
-    fmin = math.max(math.abs(tensorOut:min()),math.abs(tensorOut:max()))
-    min = -fmin
+         fmin = math.max(math.abs(tensorOut:min()),math.abs(tensorOut:max()))
+         min = -fmin
       else
-    min = tensorOut:min()
+         min = tensorOut:min()
       end
    end
    if (min ~= 0) then tensorOut:add(-min) end
@@ -512,9 +513,9 @@ local function minmax(args)
    -- rescale for max
    if (max == nil) then
       if args.symm then
-    max = fmin*2
+         max = fmin*2
       else
-    max = tensorOut:max()
+         max = tensorOut:max()
       end
    else
       max = max - min
@@ -522,7 +523,10 @@ local function minmax(args)
    if (max ~= 0) then tensorOut:div(max) end
       
    -- saturate
-   tensorOut.image.saturate(tensorOut)
+   if saturate then
+      print('saturating')
+      tensorOut.image.saturate(tensorOut)
+   end
 
    -- and return
    return tensorOut
@@ -531,7 +535,7 @@ rawset(image, 'minmax', minmax)
 
 local function toDisplayTensor(...)
    -- usage
-   local _, input, padding, nrow, scaleeach, min, max, symm = dok.unpack(
+   local _, input, padding, nrow, scaleeach, min, max, symm, saturate = dok.unpack(
       {...},
       'image.toDisplayTensor',
       'given a pack of tensors, returns a single tensor that contains a grid of all in the pack',
@@ -541,9 +545,9 @@ local function toDisplayTensor(...)
       {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
       {arg='min', type='number', help='lower-bound for range'},
       {arg='max', type='number', help='upper-bound for range'},
-      {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false}
+      {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false},
+      {arg='saturate', type='boolean', help='saturate (useful when min/max are lower than actual min/max', default=true}
    )
-
 
    if type(input) == 'table' then
       -- pack images in single tensor
@@ -554,12 +558,12 @@ local function toDisplayTensor(...)
       local packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
          if scaleeach then
-       packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm}
+       packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm, saturate=saturate}
          else
             packed[i]:copy(input[i])
          end
       end
-      return toDisplayTensor{input=packed,padding=padding,nrow=nrow,min=min,max=max,symmetric=symm}
+      return toDisplayTensor{input=packed,padding=padding,nrow=nrow,min=min,max=max,symmetric=symm,saturate=saturate}
    end
 
    if input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
@@ -578,10 +582,11 @@ local function toDisplayTensor(...)
             k = k + 1
          end
       end
-      return image.minmax{tensor=grid, min=min, max=max, symm=symm}
+      local mminput = image.minmax{tensor=grid, min=min, max=max, symm=symm, saturate=saturate}
+      return mminput
    elseif input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
       -- Rescale range
-      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm}
+      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm, saturate=saturate}
       return mminput
    elseif input:nDimension() == 3 then
       -- arbitrary number of channels: lay them out on a grid
@@ -599,7 +604,8 @@ local function toDisplayTensor(...)
             k = k + 1
          end
       end
-      return image.minmax{tensor=grid, min=min, max=max, symm=symm}
+      local mminput = image.minmax{tensor=grid, min=min, max=max, symm=symm, saturate=saturate}
+      return mminput
    else
       xerror('input must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
    end
@@ -611,7 +617,7 @@ rawset(image,'toDisplayTensor',toDisplayTensor)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow= dok.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow, saturate = dok.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -628,16 +634,18 @@ local function display(...)
        default=true},
       {arg='padding', type='number', help='number of padding pixels between images', default=0},
       {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false},
-      {arg='nrow',type='number',help='number of images per row', default=6}
+      {arg='nrow',type='number',help='number of images per row', default=6},
+      {arg='saturate', type='boolean', help='saturate (useful when min/max are lower than actual min/max', default=true}
    )
-
+   
    -- dependencies
    require 'qt'
    require 'qttorch'
    require 'qtwidget'
    require 'qtuiloader'
 
-   input = image.toDisplayTensor{input=input,padding=padding,nrow=nrow,scaleeach=scaleeach,min=min,max=max,symmetric=symm}
+   input = image.toDisplayTensor{input=input, padding=padding, nrow=nrow, saturate=saturate,
+                                 scaleeach=scaleeach, min=min, max=max, symmetric=symm}
    -- if image is a table, then we treat if as a list of images
    -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
    if input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
