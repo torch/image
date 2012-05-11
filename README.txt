@@ -6,6 +6,6 @@ $ torch-pkg install image
 
 USE:
 $ torch
-> require image
+> require 'image'
 > l = image.lena()
 > image.display(l)
