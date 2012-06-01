@@ -229,10 +229,12 @@ local function crop(...)
       return src.image.cropNoScale(src,dst,startx,starty)
    else
       local depth=1
+      local x
       if src:nDimension() > 2 then
-         depth=src:size(1)
+         x = src.new(src:size(1),endy-starty,endx-startx)
+      else
+         x = src.new(endy-starty,endx-startx)
       end
-      local x = src.new(depth,endy-starty,endx-startx)
       src.image.cropNoScale(src,x,startx,starty)
       dst = dst or src.new():resizeAs(x)
       image.scale(x,dst)
