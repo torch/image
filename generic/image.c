@@ -698,9 +698,9 @@ int image_(Main_warp)(lua_State *L) {
   int bilinear = lua_toboolean(L, 4);
 
   // dims
-  int width = src->size[2];
-  int height = src->size[1];
-  int channels = src->size[0];
+  int width = dst->size[2];
+  int height = dst->size[1];
+  int channels = dst->size[0];
   long *is = src->stride;
   long *os = dst->stride;
   long *fs = flowfield->stride;
