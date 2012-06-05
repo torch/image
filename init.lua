@@ -140,6 +140,62 @@ function image.getJPGsize(filename)
    return torch.Tensor().libjpeg.size(filename)
 end
 
+local function loadPPM(filename, depth)
+   require 'libppm'
+   local MAXVAL = 255
+   local a = torch.Tensor().libppm.load(filename)
+   a:mul(1/MAXVAL)
+   if depth and depth == 1 then
+      if a:nDimension() == 2 then
+         -- all good
+      elseif a:size(1) == 3 or a:size(1) == 4 then
+         local b = torch.Tensor(a:size(2), a:size(3))
+         image.rgb2y(a:narrow(1,1,3),b)
+         a = b
+      elseif a:size(1) == 2 then
+         a = a:narrow(1,1,1)
+      elseif a:size(1) ~= 1 then
+         dok.error('image loaded has wrong #channels','image.loadPPM')
+      end
+   elseif depth and depth == 3 then
+      if a:size(1) == 3 then
+         -- all good
+      elseif a:size(1) == 4 then
+         a = a:narrow(1,1,3)
+      else
+         dok.error('image loaded has wrong #channels','image.loadPPM')
+      end
+   end
+   return a
+end
+rawset(image, 'loadPPM', loadPPM)
+
+local function savePPM(filename, tensor)
+   require 'libppm'
+   if tensor:nDimension() ~= 3 or tensor:size(1) ~= 3 then
+      dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(MAXVAL)       -- remap to [0..255]
+   a.libppm.save(filename, a)
+end
+rawset(image, 'savePPM', savePPM)
+
+local function savePGM(filename, tensor)
+   require 'libppm'
+   if tensor:nDimension() == 3 and tensor:size(1) ~= 1 then
+      dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(MAXVAL)       -- remap to [0..255]
+   a.libppm.save(filename, a)
+end
+rawset(image, 'savePGM', savePGM)
+
 local function load(filename, depth)
    if not filename then
       print(dok.usage('image.load',
@@ -154,6 +210,10 @@ local function load(filename, depth)
       tensor = image.loadJPG(filename,depth)
    elseif ext == 'png' or ext == 'PNG' then
       tensor = image.loadPNG(filename,depth)
+   elseif ext == 'ppm' or ext == 'PPM' then
+      tensor = image.loadPPM(filename,depth)
+   elseif ext == 'pgm' or ext == 'PGM' then
+      tensor = image.loadPPM(filename,depth)
    else
       dok.error('unknown image type: ' .. ext, 'image.load')
    end
@@ -174,6 +234,10 @@ local function save(filename, tensor)
       image.saveJPG(filename, tensor)
    elseif ext == 'png' or ext == 'PNG' then
       image.savePNG(filename, tensor)
+   elseif ext == 'ppm' or ext == 'PPM' then
+      image.savePPM(filename, tensor)
+   elseif ext == 'pgm' or ext == 'PGM' then
+      image.savePGM(filename, tensor)
    else
       dok.error('unknown image type: ' .. ext, 'image.save')
    end

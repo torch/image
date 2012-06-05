@@ -4,6 +4,10 @@ FIND_PACKAGE(Torch REQUIRED)
 FIND_PACKAGE(JPEG QUIET)
 FIND_PACKAGE(PNG QUIET)
 
+SET(src ppm.c)
+ADD_TORCH_PACKAGE(ppm "${src}" "${luasrc}" "Image Processing")
+TARGET_LINK_LIBRARIES(ppm luaT TH)
+
 if (JPEG_FOUND)
     SET(src jpeg.c)
     include_directories (${JPEG_INCLUDE_DIR})
