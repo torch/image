@@ -749,9 +749,9 @@ int image_(Main_warp)(lua_State *L) {
         for (k=0; k<channels; k++) {
           dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 
               src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
-            + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,width-1)*is[2] ] * ne
-            + src_data[ k*is[0] + MIN(iy_sw,height-1)*is[1] +              ix_sw*is[2] ] * sw
-            + src_data[ k*is[0] + MIN(iy_se,height-1)*is[1] + MIN(ix_se,width-1)*is[2] ] * se;
+            + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,src_width-1)*is[2] ] * ne
+            + src_data[ k*is[0] + MIN(iy_sw,src_height-1)*is[1] +              ix_sw*is[2] ] * sw
+            + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se;
         }
       } else {
         // 1 nearest neighbor:
