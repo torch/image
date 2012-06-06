@@ -696,10 +696,13 @@ int image_(Main_warp)(lua_State *L) {
   THTensor *src = luaT_checkudata(L, 2, torch_(Tensor_id));
   THTensor *flowfield = luaT_checkudata(L, 3, torch_(Tensor_id));
   int bilinear = lua_toboolean(L, 4);
+  int offset_mode = lua_toboolean(L, 5);
 
   // dims
   int width = dst->size[2];
   int height = dst->size[1];
+  int src_width = src->size[2];
+  int src_height = src->size[1];
   int channels = dst->size[0];
   long *is = src->stride;
   long *os = dst->stride;
@@ -717,12 +720,12 @@ int image_(Main_warp)(lua_State *L) {
       // subpixel position:
       real flow_y = flow_data[ 0*fs[0] + y*fs[1] + x*fs[2] ];
       real flow_x = flow_data[ 1*fs[0] + y*fs[1] + x*fs[2] ];
-      float iy = y + flow_y;
-      float ix = x + flow_x;
+      float iy = offset_mode*y + flow_y;
+      float ix = offset_mode*x + flow_x;
 
       // borders
-      ix = MAX(ix,0); ix = MIN(ix,width-1);
-      iy = MAX(iy,0); iy = MIN(iy,height-1);
+      ix = MAX(ix,0); ix = MIN(ix,src_width-1);
+      iy = MAX(iy,0); iy = MIN(iy,src_height-1);
 
       // bilinear?
       if (bilinear) {

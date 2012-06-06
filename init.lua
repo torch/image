@@ -433,12 +433,26 @@ rawset(image, 'rotate', rotate)
 local function warp(...)
    local dst,src,field
    local mode = 'bilinear'
+   local offset_mode = true
    local args = {...}
-   if select('#',...) == 4 then
+   if select('#',...) == 5 then
       dst = args[1]
       src = args[2]
       field = args[3]
       mode = args[4]
+      offset_mode = args[5]
+   elseif select('#',...) == 4 then
+      if type(args[3]) == 'string' then
+	 src = args[1]
+	 field = args[2]
+         mode = args[3]
+	 offset_mode = args[4]
+      else
+	 dst = args[1]
+	 src = args[2]
+	 field = args[3]
+	 mode = args[4]
+      end
    elseif select('#',...) == 3 then
       if type(args[3]) == 'string' then
          src = args[1]
@@ -458,11 +472,13 @@ local function warp(...)
                        {type='torch.Tensor', help='input image (KxHxW)', req=true},
                        {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
                        {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='offset mode (add (x,y) to flow field)', default=true},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
                        {type='torch.Tensor', help='input image (KxHxW)', req=true},
                        {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'}))
+                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+		       {type='string', help='offset mode (add (x,y) to flow field)', default=true}))
       dok.error('incorrect arguments', 'image.warp')
    end
    local dim2 = false
@@ -470,8 +486,9 @@ local function warp(...)
       dim2 = true
       src = src:reshape(1,src:size(1),src:size(2))
    end
-   dst = dst or src.new():resize(src:size(1), field:size(2), field:size(3))
-   src.image.warp(dst,src,field,((mode == 'bilinear') and true) or false)
+   dst = dst or src.new()
+   dst:resize(src:size(1), field:size(2), field:size(3))
+   src.image.warp(dst,src,field,((mode == 'bilinear') and true) or false, offset_mode)
    if dim2 then
       dst = dst[1]
    end
