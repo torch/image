@@ -696,7 +696,7 @@ int image_(Main_warp)(lua_State *L) {
   THTensor *src = luaT_checkudata(L, 2, torch_(Tensor_id));
   THTensor *flowfield = luaT_checkudata(L, 3, torch_(Tensor_id));
   int bilinear = lua_toboolean(L, 4);
-  int offset_mode = lua_toboolean(L, 5);
+  int offset_mode = 1-lua_toboolean(L, 5);
 
   // dims
   int width = dst->size[2];
