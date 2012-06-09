@@ -335,7 +335,8 @@ local function translate(...)
                        {type='number', help='vertical translation', req=true}))
       dok.error('incorrect arguments', 'image.translate')
    end
-   dst = dst or src.new():resizeAs(src)
+   dst = dst or src.new()
+   dst:resizeAs(src)
    src.image.translate(src,dst,x,y)
    return dst
 end
@@ -421,7 +422,8 @@ local function rotate(...)
                        {type='number', help='rotation angle (in radians)', req=true}))
       dok.error('incorrect arguments', 'image.rotate')
    end
-   dst = dst or src.new():resizeAs(src)
+   dst = dst or src.new()
+   dst:resizeAs(src)
    src.image.rotate(src,dst,theta)
    return dst  
 end
@@ -443,15 +445,15 @@ local function warp(...)
       offset_mode = args[5]
    elseif select('#',...) == 4 then
       if type(args[3]) == 'string' then
-	 src = args[1]
-	 field = args[2]
+    src = args[1]
+    field = args[2]
          mode = args[3]
-	 offset_mode = args[4]
+    offset_mode = args[4]
       else
-	 dst = args[1]
-	 src = args[2]
-	 field = args[3]
-	 mode = args[4]
+    dst = args[1]
+    src = args[2]
+    field = args[3]
+    mode = args[4]
       end
    elseif select('#',...) == 3 then
       if type(args[3]) == 'string' then
@@ -478,7 +480,7 @@ local function warp(...)
                        {type='torch.Tensor', help='input image (KxHxW)', req=true},
                        {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
                        {type='string', help='mode: bilinear | simple', default='bilinear'},
-		       {type='string', help='offset mode (add (x,y) to flow field)', default=true}))
+                       {type='string', help='offset mode (add (x,y) to flow field)', default=true}))
       dok.error('incorrect arguments', 'image.warp')
    end
    local dim2 = false
@@ -495,6 +497,72 @@ local function warp(...)
    return dst
 end
 rawset(image, 'warp', warp)
+
+----------------------------------------------------------------------
+-- hflip
+--
+local function hflip(...)
+   local dst,src
+   local args = {...}
+   if select('#',...) == 2 then
+      dst = args[1]
+      src = args[2]
+   elseif select('#',...) == 1 then
+      src = args[1]
+   else
+      print(dok.usage('image.hflip',
+                       'flips an image horizontally', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true}))
+      dok.error('incorrect arguments', 'image.hflip')
+   end
+   dst = dst or src.new():resizeAs(src)
+   dst:resizeAs(src)
+   if src:nDimension() == 2 then
+      src = src:new():resize(1,src:size(1),src:size(2))
+   end
+   local flow = torch.zeros(2,src:size(2),src:size(3))
+   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(-1,1,src:size(3)) )
+   flow[2]:mul(-src:size(3))
+   dst[{}] = image.warp(src,flow,'simple',false)
+   return dst
+end
+rawset(image, 'hflip', hflip)
+
+----------------------------------------------------------------------
+-- vflip
+--
+local function vflip(...)
+   local dst,src
+   local args = {...}
+   if select('#',...) == 2 then
+      dst = args[1]
+      src = args[2]
+   elseif select('#',...) == 1 then
+      src = args[1]
+   else
+      print(dok.usage('image.vflip',
+                       'flips an image horizontally', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true}))
+      dok.error('incorrect arguments', 'image.vflip')
+   end
+   dst = dst or src.new()
+   dst:resizeAs(src)
+   if src:nDimension() == 2 then
+      src = src:new():resize(1,src:size(1),src:size(2))
+   end
+   local flow = torch.zeros(2,src:size(2),src:size(3))
+   flow[1] = torch.ger( torch.linspace(-1,1,src:size(2)), torch.ones(src:size(3)) )
+   flow[1]:mul(-src:size(2))
+   dst[{}] = image.warp(src,flow,'simple',false)
+   return dst
+end
+rawset(image, 'vflip', vflip)
 
 ----------------------------------------------------------------------
 -- convolve(dst,src,ker,type)
