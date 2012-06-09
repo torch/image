@@ -523,9 +523,9 @@ local function hflip(...)
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
-   local flow = torch.zeros(2,src:size(2),src:size(3))
-   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(-1,1,src:size(3)) )
-   flow[2]:mul(-src:size(3))
+   local flow = src.new(2,src:size(2),src:size(3))
+   flow[1] = torch.ger( torch.linspace(0,src:size(2)-1,src:size(2)), torch.ones(src:size(3)) )
+   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(-(src:size(3)-1),0,src:size(3))*-1 )
    dst[{}] = image.warp(src,flow,'simple',false)
    return dst
 end
@@ -556,9 +556,9 @@ local function vflip(...)
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
-   local flow = torch.zeros(2,src:size(2),src:size(3))
-   flow[1] = torch.ger( torch.linspace(-1,1,src:size(2)), torch.ones(src:size(3)) )
-   flow[1]:mul(-src:size(2))
+   local flow = src.new(2,src:size(2),src:size(3))
+   flow[1] = torch.ger( torch.linspace(-(src:size(2)-1),0,src:size(2))*-1, torch.ones(src:size(3)) )
+   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(0,src:size(3)-1,src:size(3)) )
    dst[{}] = image.warp(src,flow,'simple',false)
    return dst
 end
