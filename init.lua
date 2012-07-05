@@ -733,7 +733,7 @@ local function toDisplayTensor(...)
       for y = 1,ymaps do
          for x = 1,xmaps do
             if k > nmaps then break end
-            grid:narrow(2,(y-1)*height+1,height-padding):narrow(3,(x-1)*width+1,width-padding):copy(input[k])
+            grid:narrow(2,(y-1)*height+1+padding/2,height-padding):narrow(3,(x-1)*width+1+padding/2,width-padding):copy(input[k])
             k = k + 1
          end
       end
@@ -755,7 +755,7 @@ local function toDisplayTensor(...)
       for y = 1,ymaps do
          for x = 1,xmaps do
             if k > nmaps then break end
-            grid:narrow(1,(y-1)*height+1,height-padding):narrow(2,(x-1)*width+1,width-padding):copy(input[k])
+            grid:narrow(1,(y-1)*height+1+padding/2,height-padding):narrow(2,(x-1)*width+1+padding/2,width-padding):copy(input[k])
             k = k + 1
          end
       end
