@@ -772,7 +772,7 @@ rawset(image,'toDisplayTensor',toDisplayTensor)
 --
 local function display(...)
    -- usage
-   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, padding, symm, nrow, saturate = dok.unpack(
+   local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, offscreen, padding, symm, nrow, saturate = dok.unpack(
       {...},
       'image.display',
       'displays a single image, with optional saturation/zoom',
@@ -787,6 +787,8 @@ local function display(...)
       {arg='scaleeach', type='boolean', help='individual scaling for list of images', default=false},
       {arg='gui', type='boolean', help='if on, user can zoom in/out (turn off for faster display)',
        default=true},
+      {arg='offscreen', type='boolean', help='offscreen rendering (to generate images)',
+       default=false},
       {arg='padding', type='number', help='number of padding pixels between images', default=0},
       {arg='symmetric',type='boolean',help='if on, images will be displayed using a symmetric dynamic range, useful for drawing filters', default=false},
       {arg='nrow',type='number',help='number of images per row', default=6},
@@ -812,7 +814,7 @@ local function display(...)
       local y = wy or input:size(d-1)*zoom
 
       -- if gui active, then create interactive window (with zoom, clicks and so on)
-      if gui and not w then
+      if gui and not w and not offscreen then
          -- create window context
          local closure = w
          local hook_resize, hook_mouse
@@ -845,7 +847,11 @@ local function display(...)
          closure.isclosure = true
          return closure
       else
-         w = w or qtwidget.newwindow(x,y,legend)
+         if offscreen then
+            w = w or qt.QtLuaPainter(x,y)
+         else
+            w = w or qtwidget.newwindow(x,y,legend)
+         end
          if w.isclosure then
             -- window was created with gui, just update closure
             local closure = w
