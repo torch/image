@@ -67,7 +67,8 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   else if (color_type == PNG_COLOR_TYPE_GA)
     depth = 2;
   else if (color_type == PNG_COLOR_TYPE_PALETTE)
-    abort_("[read_png_file] unsupported type: PALETTE");
+    depth = 3;
+    //    abort_("[read_png_file] unsupported type: PALETTE %d ",color_type);
   else
     abort_("[read_png_file] Unknown color space");
 
