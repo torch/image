@@ -23,7 +23,8 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   png_infop info_ptr;
   png_bytep * row_pointers;
   size_t fread_ret;
-  /* open file and test for it being a png */
+
+   /* open file and test for it being a png */
   FILE *fp = fopen(file_name, "rb");
   if (!fp)
     abort_("[read_png_file] File %s could not be opened for reading", file_name);
@@ -67,14 +68,17 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   else if (color_type == PNG_COLOR_TYPE_GA)
     depth = 2;
   else if (color_type == PNG_COLOR_TYPE_PALETTE)
-    depth = 3;
-    //    abort_("[read_png_file] unsupported type: PALETTE %d ",color_type);
+    {
+      depth = 3;
+      png_set_expand(png_ptr);
+      png_read_update_info(png_ptr, info_ptr);
+    }
   else
     abort_("[read_png_file] Unknown color space");
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[read_png_file] Error during read_image");
+     abort_("[read_png_file] Error during read_image");
 
   /* alloc tensor */
   THTensor *tensor = THTensor_(newWithSize3d)(depth, height, width);
@@ -101,6 +105,7 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
       }
     }
   }
+
 
   /* cleanup heap allocation */
   for (y=0; y<height; y++)
