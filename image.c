@@ -3,11 +3,8 @@
 #include <luaT.h>
 
 #define torch_(NAME) TH_CONCAT_3(torch_, Real, NAME)
-#define torch_string_(NAME) TH_CONCAT_STRING_3(torch., Real, NAME)
+#define torch_Tensor TH_CONCAT_STRING_3(torch., Real, Tensor)
 #define image_(NAME) TH_CONCAT_3(image_, Real, NAME)
-
-static const void* torch_FloatTensor_id = NULL;
-static const void* torch_DoubleTensor_id = NULL;
 
 #ifdef max
 #undef max
@@ -24,9 +21,6 @@ static const void* torch_DoubleTensor_id = NULL;
 
 DLL_EXPORT int luaopen_libimage(lua_State *L)
 {
-  torch_FloatTensor_id = luaT_checktypename2id(L, "torch.FloatTensor");
-  torch_DoubleTensor_id = luaT_checktypename2id(L, "torch.DoubleTensor");
-
   image_FloatMain_init(L);
   image_DoubleMain_init(L);
 

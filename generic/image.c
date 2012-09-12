@@ -107,8 +107,8 @@ static void image_(Main_scale_rowcol)(THTensor *Tsrc,
 
 static int image_(Main_scaleBilinear)(lua_State *L) {
 
-  THTensor *Tsrc = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *Tdst = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   THTensor *Ttmp;
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height;
   long src_stride0, src_stride1, src_stride2, src_width, src_height;
@@ -171,8 +171,8 @@ static int image_(Main_scaleBilinear)(lua_State *L) {
 
 static int image_(Main_scaleSimple)(lua_State *L)
 {
-  THTensor *Tsrc = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *Tdst = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   real *src, *dst;
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
   long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
@@ -248,8 +248,8 @@ static int image_(Main_scaleSimple)(lua_State *L)
 
 static int image_(Main_rotate)(lua_State *L)
 {
-  THTensor *Tsrc = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *Tdst = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   real theta = luaL_checknumber(L, 3);
   real *src, *dst;
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
@@ -335,8 +335,8 @@ static int image_(Main_rotate)(lua_State *L)
 
 static int image_(Main_cropNoScale)(lua_State *L)
 {
-  THTensor *Tsrc = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *Tdst = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   long startx = luaL_checklong(L, 3);
   long starty = luaL_checklong(L, 4);
   real *src, *dst;
@@ -405,8 +405,8 @@ static int image_(Main_cropNoScale)(lua_State *L)
 
 static int image_(Main_translate)(lua_State *L)
 {
-  THTensor *Tsrc = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *Tdst = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   long shiftx = luaL_checklong(L, 3);
   long shifty = luaL_checklong(L, 4);
   real *src, *dst;
@@ -476,7 +476,7 @@ static int image_(Main_translate)(lua_State *L)
 }
 
 static int image_(Main_saturate)(lua_State *L) {
-  THTensor *input = luaT_checkudata(L, 1, torch_(Tensor_id));
+  THTensor *input = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *output = input;
 
   TH_TENSOR_APPLY2(real, output, real, input,                       \
@@ -492,8 +492,8 @@ static int image_(Main_saturate)(lua_State *L) {
  * returns h, s, and l in the set [0, 1].
  */
 int image_(Main_rgb2hsl)(lua_State *L) {
-  THTensor *rgb = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *hsl = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *rgb = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *hsl = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
   real r,g,b,h,s,l;
@@ -556,8 +556,8 @@ static inline real image_(hue2rgb)(real p, real q, real t) {
  * returns r, g, and b in the set [0, 1].
  */
 int image_(Main_hsl2rgb)(lua_State *L) {
-  THTensor *hsl = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *rgb = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *hsl = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *rgb = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
   real r,g,b,h,s,l;
@@ -600,8 +600,8 @@ int image_(Main_hsl2rgb)(lua_State *L) {
  * returns h, s, and v in the set [0, 1].
  */
 int image_(Main_rgb2hsv)(lua_State *L) {
-  THTensor *rgb = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *hsv = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *rgb = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *hsv = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
   real r,g,b,h,s,v;
@@ -649,8 +649,8 @@ int image_(Main_rgb2hsv)(lua_State *L) {
  * returns r, g, and b in the set [0, 1].
  */
 int image_(Main_hsv2rgb)(lua_State *L) {
-  THTensor *hsv = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *rgb = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *hsv = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *rgb = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
   real r,g,b,h,s,v;
@@ -692,9 +692,9 @@ int image_(Main_hsv2rgb)(lua_State *L) {
  * ponts to a source pixel in the original image.
  */
 int image_(Main_warp)(lua_State *L) {
-  THTensor *dst = luaT_checkudata(L, 1, torch_(Tensor_id));
-  THTensor *src = luaT_checkudata(L, 2, torch_(Tensor_id));
-  THTensor *flowfield = luaT_checkudata(L, 3, torch_(Tensor_id));
+  THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *flowfield = luaT_checkudata(L, 3, torch_Tensor);
   int bilinear = lua_toboolean(L, 4);
   int offset_mode = lua_toboolean(L, 5);
 
@@ -787,7 +787,7 @@ static const struct luaL_Reg image_(Main__) [] = {
 
 void image_(Main_init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, image_(Main__), "image");
 }
 

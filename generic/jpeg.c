@@ -306,7 +306,7 @@ static int libjpeg_(Main_load)(lua_State *L)
    */
 
   /* And we're done! */
-  luaT_pushudata(L, tensor, torch_(Tensor_id));
+  luaT_pushudata(L, tensor, torch_Tensor);
   return 1;
 }
 
@@ -317,7 +317,7 @@ static int libjpeg_(Main_load)(lua_State *L)
 int libjpeg_(Main_save)(lua_State *L) {
   /* get args */
   const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = luaT_checkudata(L, 2, torch_(Tensor_id));  
+  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);  
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *tensor_data = THTensor_(data)(tensorc);
 
@@ -417,7 +417,7 @@ static const luaL_reg libjpeg_(Main__)[] =
 
 DLL_EXPORT int libjpeg_(Main_init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, libjpeg_(Main__), "libjpeg");
   return 1;
 }

@@ -293,13 +293,13 @@ static THTensor * libpng_(Main_size)(lua_State *L) {
 static int libpng_(Main_load)(lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   THTensor *tensor = libpng_(read_png_file)(filename);
-  luaT_pushudata(L, tensor, torch_(Tensor_id));
+  luaT_pushudata(L, tensor, torch_Tensor);
   return 1;
 }
 
 static int libpng_(Main_save)(lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = luaT_checkudata(L, 2, torch_(Tensor_id));
+  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
   libpng_(write_png_file)(filename, tensor);
   return 0;
 }
@@ -314,7 +314,7 @@ static const luaL_reg libpng_(Main__)[] =
 
 DLL_EXPORT int libpng_(Main_init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, libpng_(Main__), "libpng");
   return 1;
 }

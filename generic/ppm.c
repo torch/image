@@ -63,7 +63,7 @@ static int libppm_(Main_load)(lua_State *L)
       r[i] = 255*c / D;
     }
   } else {
-    W=H=0;
+    W=H=C=0;
     fclose ( fp );
     luaL_error(L, "corrupted file");
   }
@@ -83,14 +83,14 @@ static int libppm_(Main_load)(lua_State *L)
   fclose(fp);
 
   // return loaded image
-  luaT_pushudata(L, tensor, torch_(Tensor_id));
+  luaT_pushudata(L, tensor, torch_Tensor);
   return 1;
 }
 
 int libppm_(Main_save)(lua_State *L) {
   // get args
   const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = luaT_checkudata(L, 2, torch_(Tensor_id));  
+  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);  
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *data = THTensor_(data)(tensorc);
 
@@ -105,6 +105,7 @@ int libppm_(Main_save)(lua_State *L) {
     H = tensorc->size[0];
     W = tensorc->size[1];
   } else {
+    C=W=H=0;
     luaL_error(L, "can only export tensor with geometry: HxW or 1xHxW or 3xHxW");
   }
   N = C*H*W;
@@ -152,7 +153,7 @@ static const luaL_reg libppm_(Main__)[] =
 
 DLL_EXPORT int libppm_(Main_init)(lua_State *L)
 {
-  luaT_pushmetaclass(L, torch_(Tensor_id));
+  luaT_pushmetatable(L, torch_Tensor);
   luaT_registeratname(L, libppm_(Main__), "libppm");
   return 1;
 }
