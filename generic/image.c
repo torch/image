@@ -57,9 +57,9 @@ static void image_(Main_scale_rowcol)(THTensor *Tsrc,
 
   if ( dst_len > src_len ){
     long di;
-    real si_f;
+    float si_f;
     long si_i;
-    real scale = (real)(src_len - 1) / (dst_len - 1);
+    float scale = (float)(src_len - 1) / (dst_len - 1);
 
     for( di = 0; di < dst_len - 1; di++ ) {
       long dst_pos = dst_start + di*dst_stride;
@@ -74,11 +74,11 @@ static void image_(Main_scale_rowcol)(THTensor *Tsrc,
   }
   else if ( dst_len < src_len ) {
     long di;
-    long si0_i = 0; real si0_f = 0;
-    long si1_i; real si1_f;
+    long si0_i = 0; float si0_f = 0;
+    long si1_i; float si1_f;
     long si;
-    real scale = (real)src_len / dst_len;
-    real acc, n;
+    float scale = (float)src_len / dst_len;
+    float acc, n;
     for( di = 0; di < dst_len; di++ )
       {
         si1_f = (di + 1) * scale; si1_i = (long)si1_f; si1_f -= si1_i;
@@ -177,7 +177,7 @@ static int image_(Main_scaleSimple)(lua_State *L)
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
   long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
   long i, j, k;
-  real scx, scy;
+  float scx, scy;
 
   luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "image.scale: src not 2 or 3 dimensional");
   luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "image.scale: dst not 2 or 3 dimensional");
@@ -217,14 +217,14 @@ static int image_(Main_scaleSimple)(lua_State *L)
     luaL_error(L, "image.scale: src and dst depths do not match");
 
   /* printf("%d,%d -> %d,%d\n",src_width,src_height,dst_width,dst_height); */
-  scx=((real)src_width)/((real)dst_width);
-  scy=((real)src_height)/((real)dst_height);
+  scx=((float)src_width)/((float)dst_width);
+  scy=((float)src_height)/((float)dst_height);
 
   for(j = 0; j < dst_height; j++) {
     for(i = 0; i < dst_width; i++) {
-      real val = 0.0;
-      long ii=(long) (0.5+((real)i)*scx);
-      long jj=(long) (0.5+((real)j)*scy);
+      float val = 0.0;
+      long ii=(long) (0.5+((float)i)*scx);
+      long jj=(long) (0.5+((float)j)*scy);
       if(ii>src_width-1) ii=src_width-1;
       if(jj>src_height-1) jj=src_height-1;
 
@@ -250,13 +250,13 @@ static int image_(Main_rotate)(lua_State *L)
 {
   THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
-  real theta = luaL_checknumber(L, 3);
+  float theta = luaL_checknumber(L, 3);
   real *src, *dst;
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
   long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
   long i, j, k;
-  real xc, yc;
-  real id,jd;
+  float xc, yc;
+  float id,jd;
   long ii,jj;
 
   luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "rotate: src not 2 or 3 dimensional");
@@ -299,7 +299,7 @@ static int image_(Main_rotate)(lua_State *L)
   for(j = 0; j < dst_height; j++) {
     jd=j;
     for(i = 0; i < dst_width; i++) {
-      real val = -1;
+      float val = -1;
       id= i;
 
       ii=(long)( cos(theta)*(id-xc)-sin(theta)*(jd-yc) );
@@ -380,7 +380,7 @@ static int image_(Main_cropNoScale)(lua_State *L)
 
   for(j = 0; j < dst_height; j++) {
     for(i = 0; i < dst_width; i++) {
-      real val = 0.0;
+      float val = 0.0;
 
       long ii=i+startx;
       long jj=j+starty;
@@ -448,7 +448,7 @@ static int image_(Main_translate)(lua_State *L)
   for(j = 0; j < src_height; j++) {
 
     for(i = 0; i < src_width; i++) {
-      real val = 0.0;
+      float val = 0.0;
 
       long ii=i+shiftx;
       long jj=j+shifty;

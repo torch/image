@@ -17,15 +17,17 @@
 #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
 
 #include "generic/image.c"
-#include "THGenerateFloatTypes.h"
+#include "THGenerateAllTypes.h"
 
 DLL_EXPORT int luaopen_libimage(lua_State *L)
 {
   image_FloatMain_init(L);
   image_DoubleMain_init(L);
+  image_ByteMain_init(L);
 
   luaL_register(L, "image.double", image_DoubleMain__); 
   luaL_register(L, "image.float", image_FloatMain__);
+  luaL_register(L, "image.byte", image_ByteMain__);
 
   return 1;
 }
