@@ -187,7 +187,7 @@ static int libjpeg_(Main_load)(lua_State *L)
   /* More stuff */
   FILE * infile;		/* source file */
   JSAMPARRAY buffer;		/* Output row buffer */
-  int row_stride;		/* physical row width in output buffer */
+  /* int row_stride;		/1* physical row width in output buffer *1/ */
   int i, k;
 
   const char *filename = luaL_checkstring(L, 1);
@@ -329,8 +329,8 @@ int libjpeg_(Main_save)(lua_State *L) {
   unsigned char *raw_image = NULL;
 
   /* dimensions of the image we want to write */
-  int width, height, bytes_per_pixel;
-  int color_space;
+  int width=0, height=0, bytes_per_pixel=0;
+  int color_space=0;
   if (tensorc->nDimension == 3) {
     bytes_per_pixel = tensorc->size[0];
     height = tensorc->size[1];

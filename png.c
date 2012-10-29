@@ -24,15 +24,17 @@ void abort_(const char * s, ...)
 #define libpng_(NAME) TH_CONCAT_3(libpng_, Real, NAME)
 
 #include "generic/png.c"
-#include "THGenerateFloatTypes.h"
+#include "THGenerateAllTypes.h"
 
 DLL_EXPORT int luaopen_libpng(lua_State *L)
 {
   libpng_FloatMain_init(L);
   libpng_DoubleMain_init(L);
+  libpng_ByteMain_init(L);
 
   luaL_register(L, "libpng.double", libpng_DoubleMain__);
   luaL_register(L, "libpng.float", libpng_FloatMain__);
+  luaL_register(L, "libpng.byte", libpng_ByteMain__);
 
   return 1;
 }

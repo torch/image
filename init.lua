@@ -36,20 +36,38 @@ require 'dok'
 require 'libimage'
 
 ----------------------------------------------------------------------
+-- types lookups
+-- 
+local type2tensor = {
+   float = torch.FloatTensor(),
+   double = torch.DoubleTensor(),
+   byte = torch.ByteTensor(),
+}
+local template = function(type)
+   if type then
+      return type2tensor[type]
+   else
+      return torch.Tensor()
+   end
+end
+
+----------------------------------------------------------------------
 -- save/load in multiple formats
 --
-local function loadPNG(filename, depth)
+local function loadPNG(filename, depth, tensortype)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor().libpng.load(filename)
-   a:mul(1/MAXVAL)
+   local a = template(tensortype).libpng.load(filename)
+   if tensortype ~= 'byte' then
+      a:mul(1/MAXVAL)
+   end
    if depth and depth == 1 then
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = torch.Tensor(a:size(2), a:size(3))
+         local b = a.new(a:size(2), a:size(3))
          image.rgb2y(a:narrow(1,1,3),b)
          a = b
       elseif a:size(1) == 2 then
@@ -89,18 +107,20 @@ function image.getPNGsize(filename)
    return torch.Tensor().libpng.size(filename)
 end
 
-local function loadJPG(filename, depth)
+local function loadJPG(filename, depth, tensortype)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.loadJPG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor().libjpeg.load(filename)
-   a:mul(1/MAXVAL)
+   local a = template(tensortype).libjpeg.load(filename)
+   if tensortype ~= 'byte' then
+      a:mul(1/MAXVAL)
+   end
    if depth and depth == 1 then
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = torch.Tensor(a:size(2), a:size(3))
+         local b = a.new(a:size(2), a:size(3))
          image.rgb2y(a:narrow(1,1,3),b)
          a = b
       elseif a:size(1) == 2 then
@@ -140,16 +160,18 @@ function image.getJPGsize(filename)
    return torch.Tensor().libjpeg.size(filename)
 end
 
-local function loadPPM(filename, depth)
+local function loadPPM(filename, depth, tensortype)
    require 'libppm'
    local MAXVAL = 255
-   local a = torch.Tensor().libppm.load(filename)
-   a:mul(1/MAXVAL)
+   local a = template(tensortype).libppm.load(filename)
+   if tensortype ~= 'byte' then
+      a:mul(1/MAXVAL)
+   end
    if depth and depth == 1 then
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = torch.Tensor(a:size(2), a:size(3))
+         local b = a.new(a:size(2), a:size(3))
          image.rgb2y(a:narrow(1,1,3),b)
          a = b
       elseif a:size(1) == 2 then
@@ -196,24 +218,25 @@ local function savePGM(filename, tensor)
 end
 rawset(image, 'savePGM', savePGM)
 
-local function load(filename, depth)
+local function load(filename, depth, tensortype)
    if not filename then
       print(dok.usage('image.load',
                        'loads an image into a torch.Tensor', nil,
                        {type='string', help='path to file', req=true},
-                       {type='number', help='force destination depth: 1 | 3'}))
+                       {type='number', help='force destination depth: 1 | 3'},
+                       {type='string', help='type: byte | float | double'}))
       dok.error('missing file name', 'image.load')
    end
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
-   if ext == 'jpg' or ext == 'JPG' then
-      tensor = image.loadJPG(filename,depth)
+   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
+      tensor = image.loadJPG(filename,depth,tensortype)
    elseif ext == 'png' or ext == 'PNG' then
-      tensor = image.loadPNG(filename,depth)
+      tensor = image.loadPNG(filename,depth,tensortype)
    elseif ext == 'ppm' or ext == 'PPM' then
-      tensor = image.loadPPM(filename,depth)
+      tensor = image.loadPPM(filename,depth,tensortype)
    elseif ext == 'pgm' or ext == 'PGM' then
-      tensor = image.loadPPM(filename,depth)
+      tensor = image.loadPPM(filename,depth,tensortype)
    else
       dok.error('unknown image type: ' .. ext, 'image.load')
    end
@@ -230,7 +253,7 @@ local function save(filename, tensor)
       dok.error('missing file name | tensor to save', 'image.save')
    end
    local ext = string.match(filename,'%.(%a+)$')
-   if ext == 'jpg' or ext == 'JPG' then
+   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
       image.saveJPG(filename, tensor)
    elseif ext == 'png' or ext == 'PNG' then
       image.savePNG(filename, tensor)
