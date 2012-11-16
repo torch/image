@@ -4,10 +4,7 @@
 
 static int libppm_(Main_load)(lua_State *L)
 {
-  // get args
   const char *filename = luaL_checkstring(L, 1);
-
-  // load file
   FILE* fp = fopen ( filename, "r" );
   if ( !fp ) {
     printf ( "Failed to open file '%s'!\n", filename );
@@ -16,36 +13,48 @@ static int libppm_(Main_load)(lua_State *L)
   // parse header
   char hdr[256]={};
   long W,H,C;
-  int l=0;
   char p,n;
-  int D;
-  while ( sscanf ( hdr, "%c%c %ld %ld %d", &p, &n, &W, &H, &D ) < 5 ) {
-    fgets ( hdr+l, 256-l, fp );
-    char * comment = strchr ( hdr, 'p' );
-    if ( comment ) l = hdr - comment;
-    else l = strlen ( hdr );
-    if ( l>=255 ) {
-      W=H=0;
-      fclose ( fp );
-      luaL_error(L, "corrupted file");
-    }
-  }
+  int D, bps, bpc;
+
+  // magic number
+  p = (char)getc(fp);
   if ( p != 'P' ) {
-    W=H=0;
-    fclose ( fp );
+    W = H = 0;
+    fclose(fp);
     luaL_error(L, "corrupted file");
   }
+
+  n = (char)getc(fp);
+
+  // Dimensions
+  W = ppm_get_long(fp);
+  H = ppm_get_long(fp);
+
+  // Max color value
+  D = ppm_get_long(fp);
+
+  // Either 8 or 16 bits per pixel
+  bps = 8;
+  if (D > 255) {
+     bps = 16;
+  }
+  bpc = bps / 8;
+
+  //printf("Loading PPM\nMAGIC: %c%c\nWidth: %ld, Height: %ld\nChannels: %d, Bits-per-pixel: %d\n", p, n, W, H, D, bps);
+
+  // Skip to end of header (newline)
+  fgets(hdr, 256, fp);
 
   // load data
   unsigned char *r = NULL;
   if ( n=='6' ) {
     C = 3;
-    r = (unsigned char *)malloc(W*H*C);
-    fread ( r, 1, W*H*C, fp );
+    r = (unsigned char *)malloc(W*H*C*bpc);
+    fread ( r, 1, W*H*C*bpc, fp );
   } else if ( n=='5' ) {
     C = 1;
-    r = (unsigned char *)malloc(W*H*C);
-    fread ( r, 1, W*H*C, fp );
+    r = (unsigned char *)malloc(W*H*C*bpc);
+    fread ( r, 1, W*H*C*bpc, fp );
   } else if ( n=='3' ) {
     int c,i;
     C = 3;
@@ -72,9 +81,15 @@ static int libppm_(Main_load)(lua_State *L)
   THTensor *tensor = THTensor_(newWithSize3d)(C,H,W);
   real *data = THTensor_(data)(tensor);
   long i,k,j=0;
+  int val;
   for (i=0; i<W*H; i++) {
     for (k=0; k<C; k++) {
-      data[k*H*W+i] = (real)r[j++];
+       if (bpc == 1) {
+          data[k*H*W+i] = (real)r[j++];
+       } else if (bpc == 2) {
+          val = r[j++] | (r[j++] << 8);
+          data[k*H*W+i] = (real)val;
+       }
     }
   }
 
@@ -90,7 +105,7 @@ static int libppm_(Main_load)(lua_State *L)
 int libppm_(Main_save)(lua_State *L) {
   // get args
   const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);  
+  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *data = THTensor_(data)(tensorc);
 
