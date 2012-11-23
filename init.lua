@@ -833,8 +833,8 @@ local function display(...)
       local mminput = input--image.minmax{tensor=input, min=min, max=max, symm=symm}
       -- Compute width
       local d = input:nDimension()
-      local x = wx or input:size(d)*zoom
-      local y = wy or input:size(d-1)*zoom
+      local x = input:size(d)*zoom
+      local y = input:size(d-1)*zoom
 
       -- if gui active, then create interactive window (with zoom, clicks and so on)
       if gui and not w and not offscreen then
