@@ -2,7 +2,8 @@ package = "image"
 version = "1.0-0"
 
 source = {
-   url = "git://github.com/clementfarabet/lua---image"
+   url = "git://github.com/clementfarabet/lua---image",
+   tag = "1.0-0"
 }
 
 description = {
