@@ -1437,7 +1437,7 @@ function image.colormap(nbColor)
    local map = torch.Tensor(nbColor,3)
    local huef = 0
    local satf = 0
-   for i = 1,nbColor do         
+   for i = 1,nbColor do
       -- HSL
       local hue = math.mod(huef,360)
       local sat = math.mod(satf,0.7) + 0.3
@@ -1454,11 +1454,11 @@ function image.colormap(nbColor)
       if huep < 1 then
          redp = c; greenp = x; bluep = 0
       elseif huep < 2 then
-         redp = x; greenp = c; bluep = 0            
+         redp = x; greenp = c; bluep = 0
       elseif huep < 3 then
          redp = 0; greenp = c; bluep = x
       elseif huep < 4 then
-            redp = 0; greenp = x; bluep = c
+         redp = 0; greenp = x; bluep = c
       elseif huep < 5 then
          redp = x; greenp = 0; bluep = c
       else
@@ -1468,6 +1468,20 @@ function image.colormap(nbColor)
       map[i][1] = redp + m
       map[i][2] = greenp + m
       map[i][3] = bluep + m
+   end
+   return map
+end
+
+----------------------------------------------------------------------
+--- Creates a jet colour mapping - Inspired by http://www.metastine.com/?p=7
+--
+function image.jetColormap(nbColour)
+   local map = torch.Tensor(nbColour,3)
+   for i = 1,nbColour do
+      local fourValue = 4 * i / nbColour
+      map[i][1] = math.max(math.min(fourValue - 1.5, -fourValue + 4.5, 1),0)
+      map[i][2] = math.max(math.min(fourValue -  .5, -fourValue + 3.5, 1),0)
+      map[i][3] = math.max(math.min(fourValue +  .5, -fourValue + 2.5, 1),0)
    end
    return map
 end
