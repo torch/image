@@ -218,6 +218,26 @@ local function savePGM(filename, tensor)
 end
 rawset(image, 'savePGM', savePGM)
 
+local filetypes = {
+   jpg = {loader = image.loadJPG, saver = image.saveJPG},
+   png = {loader = image.loadPNG, saver = image.savePNG},
+   ppm = {loader = image.loadPPM, saver = image.savePPM},
+   pgm = {loader = image.loadPGM, saver = image.savePGM}
+}
+
+filetypes['JPG']  = filetypes['jpg']
+filetypes['JPEG'] = filetypes['jpg']
+filetypes['jpeg'] = filetypes['jpg']
+filetypes['PNG']  = filetypes['png']
+filetypes['PPM']  = filetypes['ppm']
+filetypes['PGM']  = filetypes['pgm']
+rawset(image, 'supported_filetypes', filetypes)
+
+local function is_supported(suffix)
+   return filetypes[suffix] ~= nil
+end
+rawset(image, 'is_supported', is_supported)
+
 local function load(filename, depth, tensortype)
    if not filename then
       print(dok.usage('image.load',
@@ -229,17 +249,12 @@ local function load(filename, depth, tensortype)
    end
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
-   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
-      tensor = image.loadJPG(filename,depth,tensortype)
-   elseif ext == 'png' or ext == 'PNG' then
-      tensor = image.loadPNG(filename,depth,tensortype)
-   elseif ext == 'ppm' or ext == 'PPM' then
-      tensor = image.loadPPM(filename,depth,tensortype)
-   elseif ext == 'pgm' or ext == 'PGM' then
-      tensor = image.loadPPM(filename,depth,tensortype)
+   if image.is_supported(ext) then
+      tensor = filetypes[ext].loader(filename, depth, tensortype)
    else
       dok.error('unknown image type: ' .. ext, 'image.load')
    end
+
    return tensor
 end
 rawset(image, 'load', load)
@@ -253,14 +268,8 @@ local function save(filename, tensor)
       dok.error('missing file name | tensor to save', 'image.save')
    end
    local ext = string.match(filename,'%.(%a+)$')
-   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
-      image.saveJPG(filename, tensor)
-   elseif ext == 'png' or ext == 'PNG' then
-      image.savePNG(filename, tensor)
-   elseif ext == 'ppm' or ext == 'PPM' then
-      image.savePPM(filename, tensor)
-   elseif ext == 'pgm' or ext == 'PGM' then
-      image.savePGM(filename, tensor)
+   if image.is_supported(ext) then
+      tensor = filetypes[ext].saver(filename, tensor)
    else
       dok.error('unknown image type: ' .. ext, 'image.save')
    end
