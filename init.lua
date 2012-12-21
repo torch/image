@@ -1494,3 +1494,55 @@ function image.jetColormap(nbColour)
    end
    return map
 end
+
+
+
+------------------------------------------------------------------------
+--- Local contrast normalization of an image
+--
+-- do local contrast normalization on a given image tensor using kernel ker.
+-- of kernel is not given, then a default 9x9 gaussian will be used
+function image.lcn(im,ker)
+
+   ker = ker or image.gaussian({size=9,sigma=1.591/9,normalize=true})
+   local im = im:clone():type('torch.DoubleTensor')
+   if not(im:dim() == 2 or (im:dim() == 3 and im:size(1) == 1)) then
+     error('grayscale image expected')
+   end
+   if im:dim() == 3 then
+      im = im[1]
+   end
+   mn = im:mean()
+   sd = im:std()
+   -- print(ker)
+
+   -- 1. subtract the mean and divide by the standard deviation
+   im:add(-mn)
+   im:div(sd)
+
+   -- 2. calculate local mean and std and normalize each pixel
+
+   -- mean
+   local lmn = torch.conv2(im, ker)
+   -- variance
+   local imsq = im:clone():cmul(im)
+   local lmnsq = torch.conv2(imsq, ker)
+   local lvar = lmn:clone():cmul(lmn)
+   lvar:add(-1,lmnsq):mul(-1)
+   -- avoid numerical errors
+   lvar:apply(function(x) if x < 0 then return 0 end end)
+   -- standard deviation
+   local lstd  = lvar:sqrt()
+   lstd:apply(function (x) if x < 1 then return 1 end end)
+
+   -- apply normalization
+   local shifti = math.floor(ker:size(1)/2)+1
+   local shiftj = math.floor(ker:size(2)/2)+1
+   --print(shifti,shiftj,lstd:size(),im:size())
+   local dim = im:narrow(1,shifti,lstd:size(1)):narrow(2,shiftj,lstd:size(2)):clone()
+   dim:add(-1,lmn)
+   dim:cdiv(lstd)
+   return dim:clone()
+
+end
+
