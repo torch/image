@@ -125,6 +125,10 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
     free(row_pointers[y]);
   free(row_pointers);
 
+  /* cleanup png structs */
+  png_read_end(png_ptr, NULL);
+  png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
   /* done with file */
   fclose(fp);
 
@@ -222,7 +226,9 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   if (setjmp(png_jmpbuf(png_ptr)))
     abort_("[write_png_file] Error during end of write");
 
+  /* cleanup png structs */
   png_write_end(png_ptr, NULL);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
 
   /* cleanup heap allocation */
   for (y=0; y<height; y++)
