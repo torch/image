@@ -93,7 +93,7 @@ local function savePNG(filename, tensor)
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libpng.save(filename, a)
@@ -146,7 +146,7 @@ local function saveJPG(filename, tensor)
       dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libjpeg.save(filename, a)
@@ -198,7 +198,7 @@ local function savePPM(filename, tensor)
       dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
@@ -211,7 +211,7 @@ local function savePGM(filename, tensor)
       dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
@@ -678,7 +678,7 @@ local function minmax(args)
 
    -- resize
    if args.tensorOut then
-      tensorOut:resizeAs(tensor):copy(tensor)
+      tensorOut:resize(tensor:size()):copy(tensor)
    end
 
    -- saturate useless if min/max inferred
