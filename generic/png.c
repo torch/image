@@ -64,7 +64,14 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   else if (color_type == PNG_COLOR_TYPE_RGB)
     depth = 3;
   else if (color_type == PNG_COLOR_TYPE_GRAY)
+  {
+    if(png_get_bit_depth(png_ptr, info_ptr) < 8)
+    {
+      png_set_expand_gray_1_2_4_to_8(png_ptr);
+      png_read_update_info(png_ptr, info_ptr);
+    }
     depth = 1;
+  }
   else if (color_type == PNG_COLOR_TYPE_GA)
     depth = 2;
   else if (color_type == PNG_COLOR_TYPE_PALETTE)
@@ -75,6 +82,12 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
     }
   else
     abort_("[read_png_file] Unknown color space");
+
+  if(png_get_bit_depth(png_ptr, info_ptr) < 8)
+  {
+    png_set_strip_16(png_ptr);
+    png_read_update_info(png_ptr, info_ptr);
+  }
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
@@ -111,6 +124,10 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   for (y=0; y<height; y++)
     free(row_pointers[y]);
   free(row_pointers);
+
+  /* cleanup png structs */
+  png_read_end(png_ptr, NULL);
+  png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
   /* done with file */
   fclose(fp);
@@ -209,7 +226,9 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   if (setjmp(png_jmpbuf(png_ptr)))
     abort_("[write_png_file] Error during end of write");
 
+  /* cleanup png structs */
   png_write_end(png_ptr, NULL);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
 
   /* cleanup heap allocation */
   for (y=0; y<height; y++)

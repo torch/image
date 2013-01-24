@@ -93,7 +93,7 @@ local function savePNG(filename, tensor)
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libpng.save(filename, a)
@@ -146,7 +146,7 @@ local function saveJPG(filename, tensor)
       dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libjpeg.save(filename, a)
@@ -198,7 +198,7 @@ local function savePPM(filename, tensor)
       dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
@@ -211,12 +211,32 @@ local function savePGM(filename, tensor)
       dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
    end
    local MAXVAL = 255
-   local a = torch.Tensor():resizeAs(tensor):copy(tensor)
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
 end
 rawset(image, 'savePGM', savePGM)
+
+local filetypes = {
+   jpg = {loader = image.loadJPG, saver = image.saveJPG},
+   png = {loader = image.loadPNG, saver = image.savePNG},
+   ppm = {loader = image.loadPPM, saver = image.savePPM},
+   pgm = {loader = image.loadPGM, saver = image.savePGM}
+}
+
+filetypes['JPG']  = filetypes['jpg']
+filetypes['JPEG'] = filetypes['jpg']
+filetypes['jpeg'] = filetypes['jpg']
+filetypes['PNG']  = filetypes['png']
+filetypes['PPM']  = filetypes['ppm']
+filetypes['PGM']  = filetypes['pgm']
+rawset(image, 'supported_filetypes', filetypes)
+
+local function is_supported(suffix)
+   return filetypes[suffix] ~= nil
+end
+rawset(image, 'is_supported', is_supported)
 
 local function load(filename, depth, tensortype)
    if not filename then
@@ -229,17 +249,12 @@ local function load(filename, depth, tensortype)
    end
    local ext = string.match(filename,'%.(%a+)$')
    local tensor
-   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
-      tensor = image.loadJPG(filename,depth,tensortype)
-   elseif ext == 'png' or ext == 'PNG' then
-      tensor = image.loadPNG(filename,depth,tensortype)
-   elseif ext == 'ppm' or ext == 'PPM' then
-      tensor = image.loadPPM(filename,depth,tensortype)
-   elseif ext == 'pgm' or ext == 'PGM' then
-      tensor = image.loadPPM(filename,depth,tensortype)
+   if image.is_supported(ext) then
+      tensor = filetypes[ext].loader(filename, depth, tensortype)
    else
       dok.error('unknown image type: ' .. ext, 'image.load')
    end
+
    return tensor
 end
 rawset(image, 'load', load)
@@ -253,14 +268,8 @@ local function save(filename, tensor)
       dok.error('missing file name | tensor to save', 'image.save')
    end
    local ext = string.match(filename,'%.(%a+)$')
-   if ext == 'jpg' or ext == 'JPG' or ext == 'jpeg' or ext == 'JPEG' then
-      image.saveJPG(filename, tensor)
-   elseif ext == 'png' or ext == 'PNG' then
-      image.savePNG(filename, tensor)
-   elseif ext == 'ppm' or ext == 'PPM' then
-      image.savePPM(filename, tensor)
-   elseif ext == 'pgm' or ext == 'PGM' then
-      image.savePGM(filename, tensor)
+   if image.is_supported(ext) then
+      tensor = filetypes[ext].saver(filename, tensor)
    else
       dok.error('unknown image type: ' .. ext, 'image.save')
    end
@@ -670,7 +679,7 @@ local function minmax(args)
 
    -- resize
    if args.tensorOut then
-      tensorOut:resizeAs(tensor):copy(tensor)
+      tensorOut:resize(tensor:size()):copy(tensor)
    end
 
    -- saturate useless if min/max inferred
@@ -1438,7 +1447,7 @@ function image.colormap(nbColor)
    local map = torch.Tensor(nbColor,3)
    local huef = 0
    local satf = 0
-   for i = 1,nbColor do         
+   for i = 1,nbColor do
       -- HSL
       local hue = math.mod(huef,360)
       local sat = math.mod(satf,0.7) + 0.3
@@ -1455,11 +1464,11 @@ function image.colormap(nbColor)
       if huep < 1 then
          redp = c; greenp = x; bluep = 0
       elseif huep < 2 then
-         redp = x; greenp = c; bluep = 0            
+         redp = x; greenp = c; bluep = 0
       elseif huep < 3 then
          redp = 0; greenp = c; bluep = x
       elseif huep < 4 then
-            redp = 0; greenp = x; bluep = c
+         redp = 0; greenp = x; bluep = c
       elseif huep < 5 then
          redp = x; greenp = 0; bluep = c
       else
@@ -1472,3 +1481,69 @@ function image.colormap(nbColor)
    end
    return map
 end
+
+----------------------------------------------------------------------
+--- Creates a jet colour mapping - Inspired by http://www.metastine.com/?p=7
+--
+function image.jetColormap(nbColour)
+   local map = torch.Tensor(nbColour,3)
+   for i = 1,nbColour do
+      local fourValue = 4 * i / nbColour
+      map[i][1] = math.max(math.min(fourValue - 1.5, -fourValue + 4.5, 1),0)
+      map[i][2] = math.max(math.min(fourValue -  .5, -fourValue + 3.5, 1),0)
+      map[i][3] = math.max(math.min(fourValue +  .5, -fourValue + 2.5, 1),0)
+   end
+   return map
+end
+
+
+
+------------------------------------------------------------------------
+--- Local contrast normalization of an image
+--
+-- do local contrast normalization on a given image tensor using kernel ker.
+-- of kernel is not given, then a default 9x9 gaussian will be used
+function image.lcn(im,ker)
+
+   ker = ker or image.gaussian({size=9,sigma=1.591/9,normalize=true})
+   local im = im:clone():type('torch.DoubleTensor')
+   if not(im:dim() == 2 or (im:dim() == 3 and im:size(1) == 1)) then
+     error('grayscale image expected')
+   end
+   if im:dim() == 3 then
+      im = im[1]
+   end
+   mn = im:mean()
+   sd = im:std()
+   -- print(ker)
+
+   -- 1. subtract the mean and divide by the standard deviation
+   im:add(-mn)
+   im:div(sd)
+
+   -- 2. calculate local mean and std and normalize each pixel
+
+   -- mean
+   local lmn = torch.conv2(im, ker)
+   -- variance
+   local imsq = im:clone():cmul(im)
+   local lmnsq = torch.conv2(imsq, ker)
+   local lvar = lmn:clone():cmul(lmn)
+   lvar:add(-1,lmnsq):mul(-1)
+   -- avoid numerical errors
+   lvar:apply(function(x) if x < 0 then return 0 end end)
+   -- standard deviation
+   local lstd  = lvar:sqrt()
+   lstd:apply(function (x) if x < 1 then return 1 end end)
+
+   -- apply normalization
+   local shifti = math.floor(ker:size(1)/2)+1
+   local shiftj = math.floor(ker:size(2)/2)+1
+   --print(shifti,shiftj,lstd:size(),im:size())
+   local dim = im:narrow(1,shifti,lstd:size(1)):narrow(2,shiftj,lstd:size(2)):clone()
+   dim:add(-1,lmn)
+   dim:cdiv(lstd)
+   return dim:clone()
+
+end
+
