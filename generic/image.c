@@ -454,7 +454,6 @@ static int image_(Main_translate)(lua_State *L)
       if(ii<dst_width && jj<dst_height && ii>=0 && jj>=0) {
         for(k=0;k<src_depth;k++) {
           dst[ii*dst_stride2+jj*dst_stride1+k*dst_stride0] = src[i*src_stride2+j*src_stride1+k*src_stride0];
-          printf("val: %f\n", dst[ii*dst_stride2+jj*dst_stride1+k*dst_stride0]);
         }
       }
     }
