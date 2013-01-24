@@ -360,6 +360,7 @@ local function translate(...)
    end
    dst = dst or src.new()
    dst:resizeAs(src)
+   dst:zero()
    src.image.translate(src,dst,x,y)
    return dst
 end

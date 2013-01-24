@@ -420,10 +420,10 @@ static int image_(Main_translate)(lua_State *L)
   src= THTensor_(data)(Tsrc);
   dst= THTensor_(data)(Tdst);
 
-  dst_stride0 = 0;
+  dst_stride0 = 1;
   dst_stride1 = Tdst->stride[Tdst->nDimension-2];
   dst_stride2 = Tdst->stride[Tdst->nDimension-1];
-  dst_depth =  0;
+  dst_depth =  1;
   dst_height = Tdst->size[Tdst->nDimension-2];
   dst_width = Tdst->size[Tdst->nDimension-1];
   if(Tdst->nDimension == 3) {
@@ -431,10 +431,10 @@ static int image_(Main_translate)(lua_State *L)
     dst_depth = Tdst->size[0];
   }
 
-  src_stride0 = 0;
+  src_stride0 = 1;
   src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
   src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
-  src_depth =  0;
+  src_depth =  1;
   src_height = Tsrc->size[Tsrc->nDimension-2];
   src_width = Tsrc->size[Tsrc->nDimension-1];
   if(Tsrc->nDimension == 3) {
@@ -443,33 +443,20 @@ static int image_(Main_translate)(lua_State *L)
   }
 
   if( Tdst->nDimension==3 && ( src_depth!=dst_depth) )
-    luaL_error(L, "image.crop: src and dst depths do not match");
-
+    luaL_error(L, "image.translate: src and dst depths do not match");
+ 
   for(j = 0; j < src_height; j++) {
-
     for(i = 0; i < src_width; i++) {
-      float val = 0.0;
-
       long ii=i+shiftx;
       long jj=j+shifty;
 
-      if(ii<dst_width && jj<dst_height)
-        /* check it's within destination bounds, else crop */
-        {
-          if(Tsrc->nDimension==2)
-            {
-              val=src[i*src_stride2+j*src_stride1];
-              dst[ii*dst_stride2+jj*dst_stride1] = val;
-            }
-          else
-            {
-              for(k=0;k<src_depth;k++)
-                {
-                  val=src[i*src_stride2+j*src_stride1+k*src_stride0];
-                  dst[ii*dst_stride2+jj*dst_stride1+k*dst_stride0] = val;
-                }
-            }
+      // Check it's within destination bounds, else crop
+      if(ii<dst_width && jj<dst_height && ii>=0 && jj>=0) {
+        for(k=0;k<src_depth;k++) {
+          dst[ii*dst_stride2+jj*dst_stride1+k*dst_stride0] = src[i*src_stride2+j*src_stride1+k*src_stride0];
+          printf("val: %f\n", dst[ii*dst_stride2+jj*dst_stride1+k*dst_stride0]);
         }
+      }
     }
   }
   return 0;
