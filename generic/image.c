@@ -79,6 +79,7 @@ static void image_(Main_scale_rowcol)(THTensor *Tsrc,
     long si;
     float scale = (float)src_len / dst_len;
     float acc, n;
+
     for( di = 0; di < dst_len; di++ )
       {
         si1_f = (di + 1) * scale; si1_i = (long)si1_f; si1_f -= si1_i;
@@ -220,6 +221,7 @@ static int image_(Main_scaleSimple)(lua_State *L)
   scx=((float)src_width)/((float)dst_width);
   scy=((float)src_height)/((float)dst_height);
 
+#pragma omp parallel private(j)
   for(j = 0; j < dst_height; j++) {
     for(i = 0; i < dst_width; i++) {
       float val = 0.0;
