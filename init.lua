@@ -379,7 +379,7 @@ rawset(image, 'translate', translate)
 -- scale
 --
 local function scale(...)
-   local dst,src,width,height,mode
+   local dst,src,width,height,mode,size
    local args = {...}
    if select('#',...) == 4 then
       src = args[1]
@@ -388,17 +388,28 @@ local function scale(...)
       mode = args[4]
    elseif select('#',...) == 3 then
       if type(args[3]) == 'string' then
-         src = args[1]
-         dst = args[2]
-         mode = args[3]
+         if type(args[2]) == 'string' or type(args[2]) == 'number' then
+            src = args[1]
+            size = args[2]
+            mode = args[3]
+         else
+            dst = args[1]
+            src = args[2]
+            mode = args[3]
+         end
       else
          src = args[1]
          width = args[2]
          height = args[3]
       end
    elseif select('#',...) == 2 then
-      src = args[1]
-      dst = args[2]
+      if type(args[2]) == 'string' or type(args[2]) == 'number' then
+         src = args[1]
+         size = args[2]
+      else
+         dst = args[1]
+         src = args[2]
+      end
    else
       print(dok.usage('image.scale',
                        'rescale an image (geometry)', nil,
@@ -408,9 +419,40 @@ local function scale(...)
                        {type='string', help='mode: bilinear | simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='input image', req=true},
+                       {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or MAX', req=true},
+                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       '',
                        {type='torch.Tensor', help='destination image', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
                        {type='string', help='mode: bilinear | simple', default='bilinear'}))
       dok.error('incorrect arguments', 'image.scale')
+   end
+   if size then
+      local iwidth,iheight
+      if src:nDimension() == 3 then
+         iwidth,iheight = src:size(3),src:size(2)
+      else
+         iwidth,iheight = src:size(2),src:size(1)
+      end
+      local imax = math.max(iwidth,iheight)
+      local omax = tonumber(size)
+      if omax then
+         height = iheight / imax * omax
+         width = iwidth / imax * omax
+      else
+         width,height = size:gfind('(%d*)x(%d*)')()
+         if not width or not height then
+            local imin = math.min(iwidth,iheight)
+            local omin = size:gfind('%^(%d*)')()
+            if omin then
+               height = iheight / imin * omin
+               width = iwidth / imin * omin
+            end
+         end
+      end
+   end
+   if not dst and (not width or not height) then
+      dok.error('could not find valid dest size', 'image.scale')
    end
    if not dst then
       if src:nDimension() == 3 then
