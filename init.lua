@@ -1008,7 +1008,7 @@ end
 rawset(image, 'lena', lena)
 
 ----------------------------------------------------------------------
--- image.rgb2yuv(image)
+-- image.rgb2lab(image)
 -- converts a RGB image to YUV
 --
 function image.rgb2lab(...)   
@@ -1118,10 +1118,10 @@ function image.rgb2yuv(...)
    local outputV = output[3]
    
    -- convert
-   outputY:copy( inputRed*0.299 + inputGreen*0.587 + inputBlue*0.114 )
-   outputU:copy( inputRed*(-0.14713) + inputGreen*(-0.28886) + inputBlue*0.436 )
-   outputV:copy( inputRed*0.615 + inputGreen*(-0.51499) + inputBlue*(-0.10001) )
-   
+   outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
+   outputU:zero():add(-0.14713, inputRed):add(-0.28886, inputGreen):add(0.436, inputBlue)
+   outputV:zero():add(0.615, inputRed):add(-0.51499, inputGreen):add(-0.10001, inputBlue)
+
    -- return YUV image
    return output
 end
