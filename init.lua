@@ -1011,19 +1011,28 @@ rawset(image, 'lena', lena)
 -- image.rgb2yuv(image)
 -- converts a RGB image to YUV
 --
-function image.rgb2lab(input, ...)   
+function image.rgb2lab(...)   
    -- arg check
-   local arg = {...}
-   if not input then
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
       print(dok.usage('image.rgb2lab',
                       'transforms an image from RGB to Lab', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2lab')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
    
    -- output chanels
@@ -1074,19 +1083,28 @@ end
 -- image.rgb2yuv(image)
 -- converts a RGB image to YUV
 --
-function image.rgb2yuv(input, ...)   
+function image.rgb2yuv(...)   
    -- arg check
-   local arg = {...}
-   if not input then
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
       print(dok.usage('image.rgb2yuv',
                       'transforms an image from RGB to YUV', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2yuv')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
    
    -- input chanels
@@ -1101,12 +1119,8 @@ function image.rgb2yuv(input, ...)
    
    -- convert
    outputY:copy( inputRed*0.299 + inputGreen*0.587 + inputBlue*0.114 )
-   outputU:copy( inputRed*(-0.14713) 
-              + inputGreen*(-0.28886) 
-           + inputBlue*0.436 )
-   outputV:copy( inputRed*0.615 
-                 + inputGreen*(-0.51499) 
-              + inputBlue*(-0.10001) )
+   outputU:copy( inputRed*(-0.14713) + inputGreen*(-0.28886) + inputBlue*0.436 )
+   outputV:copy( inputRed*0.615 + inputGreen*(-0.51499) + inputBlue*(-0.10001) )
    
    -- return YUV image
    return output
@@ -1116,19 +1130,28 @@ end
 -- image.yuv2rgb(image)
 -- converts a YUV image to RGB
 --
-function image.yuv2rgb(input, ...)      
+function image.yuv2rgb(...)      
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.yuv2rgb',
                       'transforms an image from YUV to RGB', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.yuv2rgb')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
    
    -- input chanels
@@ -1154,19 +1177,28 @@ end
 -- image.rgb2y(image)
 -- converts a RGB image to Y (discards U/V)
 --
-function image.rgb2y(input, ...)
+function image.rgb2y(...)
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.rgb2y',
                       'transforms an image from RGB to Y', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2y')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resize(1, input:size(2), input:size(3))
    
    -- input chanels
@@ -1188,19 +1220,28 @@ end
 -- image.rgb2hsl(image)
 -- converts an RGB image to HSL
 --
-function image.rgb2hsl(input, ...)   
+function image.rgb2hsl(...)   
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.rgb2hsl',
                       'transforms an image from RGB to HSL', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2hsl')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
 
    -- compute
@@ -1214,19 +1255,28 @@ end
 -- image.hsl2rgb(image)
 -- converts an HSL image to RGB
 --
-function image.hsl2rgb(input, ...)
+function image.hsl2rgb(...)
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.hsl2rgb',
                       'transforms an image from HSL to RGB', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.hsl2rgb')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
 
    -- compute
@@ -1240,19 +1290,28 @@ end
 -- image.rgb2hsv(image)
 -- converts an RGB image to HSV
 --
-function image.rgb2hsv(input, ...)
+function image.rgb2hsv(...)
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.rgb2hsv',
                       'transforms an image from RGB to HSV', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2hsv')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
 
    -- compute
@@ -1266,19 +1325,28 @@ end
 -- image.hsv2rgb(image)
 -- converts an HSV image to RGB
 --
-function image.hsv2rgb(input, ...)
+function image.hsv2rgb(...)
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.hsv2rgb',
                       'transforms an image from HSV to RGB', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.hsv2rgb')
    end
 
    -- resize
-   local output = arg[1] or input.new()
+   output = output or input.new()
    output:resizeAs(input)
 
    -- compute
@@ -1292,19 +1360,28 @@ end
 -- image.rgb2nrgb(image)
 -- converts an RGB image to normalized-RGB
 --
-function image.rgb2nrgb(input, ...)
+function image.rgb2nrgb(...)
    -- arg check
-   local arg = {...}
-   if not input then
-      print(dok.usage('image.rgb2yuv',
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.rgb2nrgb',
                       'transforms an image from RGB to normalized RGB', nil,
                       {type='torch.Tensor', help='input image', req=true},
-                      {type='torch.Tensor', help='output image'}))
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
       dok.error('missing input', 'image.rgb2nrgb')
    end
 
-   -- resize tensors
-   local output = arg[1] or input.new()
+   -- resize
+   output = output or input.new()
    output:resizeAs(input)
    local sum = input.new()
    sum:resize(input:size(2), input:size(3))
