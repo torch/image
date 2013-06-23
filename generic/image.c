@@ -223,8 +223,8 @@ static int image_(Main_scaleSimple)(lua_State *L)
   for(j = 0; j < dst_height; j++) {
     for(i = 0; i < dst_width; i++) {
       float val = 0.0;
-      long ii=(long) (0.5+((float)i)*scx);
-      long jj=(long) (0.5+((float)j)*scy);
+      long ii=(long) (((float)i)*scx);
+      long jj=(long) (((float)j)*scy);
       if(ii>src_width-1) ii=src_width-1;
       if(jj>src_height-1) jj=src_height-1;
 
