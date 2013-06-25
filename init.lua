@@ -1549,7 +1549,7 @@ function image.gaussianpyramid(...)
       if scales[i] == 1 then
          dst[i][{}] = tmp
       else
-         image.scale(tmp, dst[i], 'simple')
+         image.scale(dst[i], tmp, 'simple')
       end
       tmp = image.convolve(dst[i], k, 'same')
    end
