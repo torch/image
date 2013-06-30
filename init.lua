@@ -67,9 +67,7 @@ local function loadPNG(filename, depth, tensortype)
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = a.new(a:size(2), a:size(3))
-         image.rgb2y(a:narrow(1,1,3),b)
-         a = b
+         a = image.rgb2y(a:narrow(1,1,3))[1]
       elseif a:size(1) == 2 then
          a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
@@ -120,9 +118,7 @@ local function loadJPG(filename, depth, tensortype)
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = a.new(a:size(2), a:size(3))
-         image.rgb2y(a:narrow(1,1,3),b)
-         a = b
+         a = image.rgb2y(a:narrow(1,1,3))[1]
       elseif a:size(1) == 2 then
          a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
@@ -171,9 +167,7 @@ local function loadPPM(filename, depth, tensortype)
       if a:nDimension() == 2 then
          -- all good
       elseif a:size(1) == 3 or a:size(1) == 4 then
-         local b = a.new(a:size(2), a:size(3))
-         image.rgb2y(a:narrow(1,1,3),b)
-         a = b
+         a = image.rgb2y(a:narrow(1,1,3))[1]
       elseif a:size(1) == 2 then
          a = a:narrow(1,1,1)
       elseif a:size(1) ~= 1 then
