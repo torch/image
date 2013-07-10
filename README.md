@@ -1,11 +1,15 @@
-DEPENDENCIES:
+## Dependencies:
 Torch7 (www.torch.ch)
 
-INSTALL:
+## Install:
+```
 $ torch-rocks install image
+```
 
-USE:
+## Use:
+```
 $ torch
 > require 'image'
 > l = image.lena()
 > image.display(l)
+```
