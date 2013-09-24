@@ -542,15 +542,27 @@ local function warp(...)
                        'warp an image, according to a flow field', nil,
                        {type='torch.Tensor', help='input image (KxHxW)', req=true},
                        {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
                        {type='string', help='offset mode (add (x,y) to flow field)', default=true},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
                        {type='torch.Tensor', help='input image (KxHxW)', req=true},
                        {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
                        {type='string', help='offset mode (add (x,y) to flow field)', default=true}))
       dok.error('incorrect arguments', 'image.warp')
+   end
+   -- This is a little messy, but convert mode string to an enum
+   if (mode == 'simple') then
+      mode = 0
+   elseif (mode == 'bilinear') then
+      mode = 1
+   elseif (mode == 'bicubic') then
+      mode = 2
+   elseif (mode == 'lanczos') then
+      mode = 3
+   else
+      dok.error('Incorrect arguments (mode is not lanczos | bicubic | bilinear | simple)!', 'image.warp')
    end
    local dim2 = false
    if src:nDimension() == 2 then
@@ -559,7 +571,8 @@ local function warp(...)
    end
    dst = dst or src.new()
    dst:resize(src:size(1), field:size(2), field:size(3))
-   src.image.warp(dst,src,field,((mode == 'bilinear') and true) or false, offset_mode)
+   
+   src.image.warp(dst,src,field,mode,offset_mode)
    if dim2 then
       dst = dst[1]
    end
