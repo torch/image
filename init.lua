@@ -1425,24 +1425,11 @@ function image.gaussian(...)
       {arg='mean_horz', type='number', help='horizontal mean', default=0.5},
       {arg='mean_vert', type='number', help='vertical mean', default=0.5}
    )
-   
-   -- local vars
-   local center_x = mean_horz * width + 0.5
-   local center_y = mean_vert * height + 0.5
 
    -- generate kernel
    local gauss = torch.Tensor(height, width)
-   for i=1,height do
-      for j=1,width do
-         gauss[i][j] = amplitude * math.exp(-(math.pow((j-center_x)
-                                                    /(sigma_horz*width),2)/2 
-                                           + math.pow((i-center_y)
-                                                   /(sigma_vert*height),2)/2))
-      end
-   end
-   if normalize then
-      gauss:div(gauss:sum())
-   end
+   gauss.image.gaussian(gauss, amplitude, normalize, sigma_horz, sigma_vert, mean_horz, mean_vert)
+   
    return gauss
 end
 
