@@ -905,6 +905,58 @@ int image_(Main_warp)(lua_State *L) {
   return 0;
 }
 
+int image_(Main_gaussian)(lua_State *L) {
+  THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
+  long width = dst->size[1];
+  long height = dst->size[0];
+  long *os = dst->stride;
+
+  real *dst_data = THTensor_(data)(dst);
+
+  real amplitude = (real)lua_tonumber(L, 2);
+  int normalize = (int)lua_toboolean(L, 3);
+  real sigma_u = (real)lua_tonumber(L, 4);
+  real sigma_v = (real)lua_tonumber(L, 5);
+  real mean_u = (real)lua_tonumber(L, 6) * (real)width + (real)0.5;
+  real mean_v = (real)lua_tonumber(L, 7) * (real)height + (real)0.5;
+
+  // Precalculate 1/(sigma*size) for speed (for some stupid reason the pragma
+  // omp declaration prevents gcc from optimizing the inside loop on my macine:
+  // verified by checking the assembly output)
+  real over_sigmau = (real)1.0 / (sigma_u * (real)width);
+  real over_sigmav = (real)1.0 / (sigma_v * (real)height);
+
+  long v, u;
+  real du, dv;
+#pragma omp parallel for private(v, u, du, dv)
+  for (v = 0; v < height; v++) {
+    for (u = 0; u < width; u++) {
+      du = ((real)u + 1 - mean_u) * over_sigmau;
+      dv = ((real)v + 1 - mean_v) * over_sigmav;
+      dst_data[ v*os[0] + u*os[1] ] = amplitude * 
+        exp(-((du*du*0.5) + (dv*dv*0.5)));
+    }
+  }
+
+  if (normalize) {
+    real sum = 0;
+    // We could parallelize this, but it's more trouble than it's worth
+    for(v = 0; v < height; v++) {
+      for(u = 0; u < width; u++) {
+        sum += dst_data[ v*os[0] + u*os[1] ];
+      }
+    }
+    real one_over_sum = 1.0 / sum;
+#pragma omp parallel for private(v, u)
+    for(v = 0; v < height; v++) {
+      for(u = 0; u < width; u++) {
+        dst_data[ v*os[0] + u*os[1] ] *= one_over_sum;
+      }
+    }
+  }
+  return 0;
+}
+
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
@@ -917,6 +969,7 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"rgb2hsl", image_(Main_rgb2hsl)},
   {"hsv2rgb", image_(Main_hsv2rgb)},
   {"hsl2rgb", image_(Main_hsl2rgb)},
+  {"gaussian", image_(Main_gaussian)},
   {NULL, NULL}
 };
 
