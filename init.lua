@@ -1410,7 +1410,7 @@ end
 function image.gaussian(...)
    -- process args
    local _, size, sigma, amplitude, normalize, 
-   width, height, sigma_horz, sigma_vert = dok.unpack(
+   width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
@@ -1421,32 +1421,21 @@ function image.gaussian(...)
       {arg='width', type='number', help='kernel width', defaulta='size'},
       {arg='height', type='number', help='kernel height', defaulta='size'},
       {arg='sigma_horz', type='number', help='horizontal sigma', defaulta='sigma'},
-      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'}
+      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'},
+      {arg='mean_horz', type='number', help='horizontal mean', default=0.5},
+      {arg='mean_vert', type='number', help='vertical mean', default=0.5}
    )
-   
-   -- local vars
-   local center_x = width/2 + 0.5
-   local center_y = height/2 + 0.5
-   
+
    -- generate kernel
    local gauss = torch.Tensor(height, width)
-   for i=1,height do
-      for j=1,width do
-         gauss[i][j] = amplitude * math.exp(-(math.pow((j-center_x)
-                                                    /(sigma_horz*width),2)/2 
-                                           + math.pow((i-center_y)
-                                                   /(sigma_vert*height),2)/2))
-      end
-   end
-   if normalize then
-      gauss:div(gauss:sum())
-   end
+   gauss.image.gaussian(gauss, amplitude, normalize, sigma_horz, sigma_vert, mean_horz, mean_vert)
+   
    return gauss
 end
 
 function image.gaussian1D(...)
    -- process args
-   local _, size, sigma, amplitude, normalize
+   local _, size, sigma, amplitude, normalize, mean
       = dok.unpack(
       {...},
       'image.gaussian1D',
@@ -1454,11 +1443,12 @@ function image.gaussian1D(...)
       {arg='size', type='number', help='size the kernel', default=3},
       {arg='sigma', type='number', help='Sigma', default=0.25},
       {arg='amplitude', type='number', help='Amplitute of the gaussian (max value)', default=1},
-      {arg='normalize', type='number', help='Normalize kernel (exc Amplitude)', default=false}
+      {arg='normalize', type='number', help='Normalize kernel (exc Amplitude)', default=false},
+      {arg='mean', type='number', help='Mean', default=0.5}
    )
 
    -- local vars
-   local center = size/2 + 0.5
+   local center = mean * size + 0.5
    
    -- generate kernel
    local gauss = torch.Tensor(size)
@@ -1478,7 +1468,7 @@ end
 function image.laplacian(...)
    -- process args
    local _, size, sigma, amplitude, normalize, 
-   width, height, sigma_horz, sigma_vert = dok.unpack(
+   width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
@@ -1489,12 +1479,14 @@ function image.laplacian(...)
       {arg='width', type='number', help='kernel width', defaulta='size'},
       {arg='height', type='number', help='kernel height', defaulta='size'},
       {arg='sigma_horz', type='number', help='horizontal sigma', defaulta='sigma'},
-      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'}
+      {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'},
+      {arg='mean_horz', type='number', help='horizontal mean', default=0.5},
+      {arg='mean_vert', type='number', help='vertical mean', default=0.5}
    )
 
    -- local vars
-   local center_x = width/2 + 0.5
-   local center_y = height/2 + 0.5
+   local center_x = mean_horz * width + 0.5
+   local center_y = mean_vert * height + 0.5
    
    -- generate kernel
    local logauss = torch.Tensor(height,width)
