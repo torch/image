@@ -39,26 +39,26 @@ flow:add(flow_scale)
 t0 = sys.clock()
 im_simple = image.warp(im, flow, 'simple', false)
 t1 = sys.clock()
-print("Time simple = " .. (t1 - t0))  -- Not a robust measure (should average)
-image.display{image = im_simple, zoom = 1, legend = 'simple'}
+print("Upscale Time simple = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_simple, zoom = 1, legend = 'upscale simple'}
 
 t0 = sys.clock()
 im_bilinear = image.warp(im, flow, 'bilinear', false)
 t1 = sys.clock()
-print("Time bilinear = " .. (t1 - t0))  -- Not a robust measure (should average)
-image.display{image = im_bilinear, zoom = 1, legend = 'bilinear'}
+print("Upscale Time bilinear = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_bilinear, zoom = 1, legend = 'upscale bilinear'}
 
 t0 = sys.clock()
 im_bicubic = image.warp(im, flow, 'bicubic', false)
 t1 = sys.clock()
-print("Time bicubic = " .. (t1 - t0))  -- Not a robust measure (should average)
-image.display{image = im_bicubic, zoom = 1, legend = 'bicubic'}
+print("Upscale Time bicubic = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_bicubic, zoom = 1, legend = 'upscale bicubic'}
 
 t0 = sys.clock()
 im_lanczos = image.warp(im, flow, 'lanczos', false)
 t1 = sys.clock()
-print("Time lanczos = " .. (t1 - t0))  -- Not a robust measure (should average)
-image.display{image = im_lanczos, zoom = 1, legend = 'lanczos'}
+print("Upscale Time lanczos = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_lanczos, zoom = 1, legend = 'upscale lanczos'}
 
 -- *********************************************
 -- NOW TRY A ROTATION AT THE STANDARD RESOLUTION
@@ -105,17 +105,29 @@ flow_rotr = torch.mm(rotmat, view)
 flow_rot = flow_rot - flow_rotr:reshape( 2, height, width )
 flow:add(flow_rot)
 
+t0 = sys.clock()
 im_simple = image.warp(im, flow, 'simple', false)
-image.display{image = im_simple, zoom = 4, legend = 'simple'}
+t1 = sys.clock()
+print("Rotation Time simple = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_simple, zoom = 4, legend = 'rotation simple'}
 
+t0 = sys.clock()
 im_bilinear = image.warp(im, flow, 'bilinear', false)
-image.display{image = im_bilinear, zoom = 4, legend = 'bilinear'}
+t1 = sys.clock()
+print("Rotation Time bilinear = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_bilinear, zoom = 4, legend = 'rotation bilinear'}
 
+t0 = sys.clock()
 im_bicubic = image.warp(im, flow, 'bicubic', false)
-image.display{image = im_bicubic, zoom = 4, legend = 'bicubic'}
+t1 = sys.clock()
+print("Rotation Time bicubic = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_bicubic, zoom = 4, legend = 'rotation bicubic'}
 
+t0 = sys.clock()
 im_lanczos = image.warp(im, flow, 'lanczos', false)
-image.display{image = im_lanczos, zoom = 4, legend = 'lanczos'}
+t1 = sys.clock()
+print("Rotation Time lanczos = " .. (t1 - t0))  -- Not a robust measure (should average)
+image.display{image = im_lanczos, zoom = 4, legend = 'rotation lanczos'}
 
 image.display{image = im, zoom = 4, legend = 'source image'}
 
