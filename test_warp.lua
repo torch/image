@@ -75,21 +75,6 @@ nchan = im:size()[1]  -- 3
 grid_y = torch.ger( torch.linspace(-1,1,height), torch.ones(width) )
 grid_x = torch.ger( torch.ones(height), torch.linspace(-1,1,width) )
 
-flow = torch.FloatTensor()
-flow:resize(2,height,width)
-flow:zero()
-
--- Apply uniform scale
-flow_scale = torch.FloatTensor()
-flow_scale:resize(2,height,width)
-flow_scale[1] = grid_y
-flow_scale[2] = grid_x
-flow_scale[1]:add(1):mul(0.5) -- 0 to 1
-flow_scale[2]:add(1):mul(0.5) -- 0 to 1
-flow_scale[1]:mul(height)
-flow_scale[2]:mul(width)
-flow:add(flow_scale)
-
 flow_rot = torch.FloatTensor()
 flow_rot:resize(2,height,width)
 flow_rot[1] = grid_y * ((height-1)/2) * -1
@@ -103,18 +88,17 @@ rot_angle = 360/7  -- a nice non-integer value
 rotmat = rmat(rot_angle)
 flow_rotr = torch.mm(rotmat, view)
 flow_rot = flow_rot - flow_rotr:reshape( 2, height, width )
-flow:add(flow_rot)
 
-im_simple = image.warp(im, flow, 'simple', false)
+im_simple = image.warp(im, flow_rot, 'simple', true)
 image.display{image = im_simple, zoom = 4, legend = 'simple'}
 
-im_bilinear = image.warp(im, flow, 'bilinear', false)
+im_bilinear = image.warp(im, flow_rot, 'bilinear', true)
 image.display{image = im_bilinear, zoom = 4, legend = 'bilinear'}
 
-im_bicubic = image.warp(im, flow, 'bicubic', false)
+im_bicubic = image.warp(im, flow_rot, 'bicubic', true)
 image.display{image = im_bicubic, zoom = 4, legend = 'bicubic'}
 
-im_lanczos = image.warp(im, flow, 'lanczos', false)
+im_lanczos = image.warp(im, flow_rot, 'lanczos', true)
 image.display{image = im_lanczos, zoom = 4, legend = 'lanczos'}
 
 image.display{image = im, zoom = 4, legend = 'source image'}
