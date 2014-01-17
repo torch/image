@@ -1631,8 +1631,8 @@ function image.lcn(im,ker)
    if im:dim() == 3 then
       im = im[1]
    end
-   mn = im:mean()
-   sd = im:std()
+   local mn = im:mean()
+   local sd = im:std()
    -- print(ker)
 
    -- 1. subtract the mean and divide by the standard deviation
