@@ -593,7 +593,7 @@ local function hflip(...)
       src = args[1]
    else
       print(dok.usage('image.hflip',
-                       'flips an image horizontally', nil,
+                       'flips an image horizontally (left/right)', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
@@ -626,7 +626,7 @@ local function vflip(...)
       src = args[1]
    else
       print(dok.usage('image.vflip',
-                       'flips an image horizontally', nil,
+                       'flips an image vertically (upside-down)', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
