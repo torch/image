@@ -1665,3 +1665,55 @@ function image.lcn(im,ker)
 
 end
 
+------------------------------------------------------------------------
+--- Morphological erosion
+function image.erode(im,kern,pad)
+   if not im then
+      print(dok.usage("image.erode",
+		            "Morphological erosion for odd dimension kernels",nil,
+			    {type="torch.Tensor",help="binary image of 0 and 1",req=true},
+			    {type="torch.Tensor",help="morphological kernel of 0 and 1; default is 3x3"},
+			    {type="number",help="value to assume outside boundary; default is 1"}))
+      dok.error("missing image","image.erode")
+   end
+   -- Default kernel is 3x3
+   local kern = kern or torch.ones(3,3):typeAs(im)
+   local pad = pad or 1
+   -- Padding the image
+   local hpad = kern:size(1)/2-0.5
+   local wpad = kern:size(2)/2-0.5
+   local padded = torch.zeros(im:size(1)+2*hpad,im:size(2)+2*wpad):fill(pad):typeAs(im)
+   padded[{{hpad+1,im:size(1)+hpad},{wpad+1,im:size(2)+wpad}}]:copy(im)
+   -- Do convolution
+   local n = kern:sum()
+   local conv = padded:conv2(kern)
+   -- Do erosion
+   return conv:eq(n):typeAs(im)
+end
+
+------------------------------------------------------------------------
+--- Morphological dilation
+function image.dilate(im,kern,pad)
+   if not im then
+      print(dok.usage("image.dilate",
+		            "Morphological dilation for odd dimension kernels",nil,
+			    {type="torch.Tensor",help="binary image of 0 and 1",req=true},
+			    {type="torch.Tensor",help="morphological kernel of 0 and 1; default is 3x3"},
+			    {type="number",help="value to assume outside boundary; default is 0"}))
+      dok.error("missing image","image.dilate")
+   end
+   -- Default kernel is 3x3
+   local kern = kern or torch.ones(3,3):typeAs(im)
+   kern = image.hflip(image.vflip(kern))
+   local pad = pad or 0
+   -- Padding the image
+   local hpad = kern:size(1)/2-0.5
+   local wpad = kern:size(2)/2-0.5
+   local padded = torch.zeros(im:size(1)+2*hpad,im:size(2)+2*wpad):fill(pad):typeAs(im)
+   padded[{{hpad+1,im:size(1)+hpad},{wpad+1,im:size(2)+wpad}}]:copy(im)
+   -- Do convolution
+   local conv = padded:conv2(kern)
+   -- Do erosion
+   return conv:gt(0):typeAs(im)
+end
+
