@@ -1717,3 +1717,4 @@ function image.dilate(im,kern,pad)
    return conv:gt(0):typeAs(im)
 end
 
+return image
