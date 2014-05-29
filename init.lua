@@ -54,7 +54,7 @@ end
 ----------------------------------------------------------------------
 -- save/load in multiple formats
 --
-local function loadPNG(filename, depth, tensortype)
+function image.loadPNG(filename, depth, tensortype)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
@@ -84,9 +84,8 @@ local function loadPNG(filename, depth, tensortype)
    end
    return a
 end
-rawset(image, 'loadPNG', loadPNG)
 
-local function savePNG(filename, tensor)
+function image.savePNG(filename, tensor)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
@@ -96,7 +95,6 @@ local function savePNG(filename, tensor)
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libpng.save(filename, a)
 end  
-rawset(image, 'savePNG', savePNG)
 
 function image.getPNGsize(filename)
    if not xlua.require 'libpng' then
@@ -105,7 +103,7 @@ function image.getPNGsize(filename)
    return torch.Tensor().libpng.size(filename)
 end
 
-local function loadJPG(filename, depth, tensortype)
+function image.loadJPG(filename, depth, tensortype)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.loadJPG')
    end
@@ -135,9 +133,8 @@ local function loadJPG(filename, depth, tensortype)
    end
    return a
 end
-rawset(image, 'loadJPG', loadJPG)
 
-local function saveJPG(filename, tensor)
+function image.saveJPG(filename, tensor)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
@@ -147,7 +144,6 @@ local function saveJPG(filename, tensor)
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libjpeg.save(filename, a)
 end
-rawset(image, 'saveJPG', saveJPG)
 
 function image.getJPGsize(filename)
    if not xlua.require 'libjpeg' then
@@ -156,7 +152,7 @@ function image.getJPGsize(filename)
    return torch.Tensor().libjpeg.size(filename)
 end
 
-local function loadPPM(filename, depth, tensortype)
+function image.loadPPM(filename, depth, tensortype)
    require 'libppm'
    local MAXVAL = 255
    local a = template(tensortype).libppm.load(filename)
@@ -184,9 +180,8 @@ local function loadPPM(filename, depth, tensortype)
    end
    return a
 end
-rawset(image, 'loadPPM', loadPPM)
 
-local function savePPM(filename, tensor)
+function image.savePPM(filename, tensor)
    require 'libppm'
    if tensor:nDimension() ~= 3 or tensor:size(1) ~= 3 then
       dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
@@ -197,9 +192,8 @@ local function savePPM(filename, tensor)
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
 end
-rawset(image, 'savePPM', savePPM)
 
-local function savePGM(filename, tensor)
+function image.savePGM(filename, tensor)
    require 'libppm'
    if tensor:nDimension() == 3 and tensor:size(1) ~= 1 then
       dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
@@ -210,7 +204,6 @@ local function savePGM(filename, tensor)
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libppm.save(filename, a)
 end
-rawset(image, 'savePGM', savePGM)
 
 local filetypes = {
    jpg = {loader = image.loadJPG, saver = image.saveJPG},
@@ -225,14 +218,13 @@ filetypes['jpeg'] = filetypes['jpg']
 filetypes['PNG']  = filetypes['png']
 filetypes['PPM']  = filetypes['ppm']
 filetypes['PGM']  = filetypes['pgm']
-rawset(image, 'supported_filetypes', filetypes)
+image.supported_filetypes = filetypes
 
-local function is_supported(suffix)
+function image.is_supported(suffix)
    return filetypes[suffix] ~= nil
 end
-rawset(image, 'is_supported', is_supported)
 
-local function load(filename, depth, tensortype)
+function image.load(filename, depth, tensortype)
    if not filename then
       print(dok.usage('image.load',
                        'loads an image into a torch.Tensor', nil,
@@ -251,9 +243,8 @@ local function load(filename, depth, tensortype)
 
    return tensor
 end
-rawset(image, 'load', load)
 
-local function save(filename, tensor)
+function image.save(filename, tensor)
    if not filename or not tensor then
       print(dok.usage('image.save',
                        'saves a torch.Tensor to a disk', nil,
@@ -268,12 +259,11 @@ local function save(filename, tensor)
       dok.error('unknown image type: ' .. ext, 'image.save')
    end
 end
-rawset(image, 'save', save)
 
 ----------------------------------------------------------------------
 -- crop
 --
-local function crop(...)
+function image.crop(...)
    local dst,src,startx,starty,endx,endy
    local args = {...}
    if select('#',...) == 6 then
@@ -331,12 +321,11 @@ local function crop(...)
    end
    return dst
 end
-rawset(image, 'crop', crop)
 
 ----------------------------------------------------------------------
 -- translate
 --
-local function translate(...)
+function image.translate(...)
    local dst,src,x,y
    local args = {...}
    if select('#',...) == 4 then
@@ -367,12 +356,11 @@ local function translate(...)
    src.image.translate(src,dst,x,y)
    return dst
 end
-rawset(image, 'translate', translate)
 
 ----------------------------------------------------------------------
 -- scale
 --
-local function scale(...)
+function image.scale(...)
    local dst,src,width,height,mode,size
    local args = {...}
    if select('#',...) == 4 then
@@ -465,12 +453,11 @@ local function scale(...)
    end
    return dst
 end
-rawset(image, 'scale', scale)
 
 ----------------------------------------------------------------------
 -- rotate
 --
-local function rotate(...)
+function image.rotate(...)
    local dst,src,theta
    local args = {...}
    if select('#',...) == 3 then
@@ -496,12 +483,11 @@ local function rotate(...)
    src.image.rotate(src,dst,theta)
    return dst  
 end
-rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
 -- warp
 --
-local function warp(...)
+function image.warp(...)
    local dst,src,field
    local mode = 'bilinear'
    local offset_mode = true
@@ -578,12 +564,11 @@ local function warp(...)
    end
    return dst
 end
-rawset(image, 'warp', warp)
 
 ----------------------------------------------------------------------
 -- hflip
 --
-local function hflip(...)
+function image.hflip(...)
    local dst,src
    local args = {...}
    if select('#',...) == 2 then
@@ -611,12 +596,11 @@ local function hflip(...)
    dst[{}] = image.warp(src,flow,'simple',false)
    return dst
 end
-rawset(image, 'hflip', hflip)
 
 ----------------------------------------------------------------------
 -- vflip
 --
-local function vflip(...)
+function image.vflip(...)
    local dst,src
    local args = {...}
    if select('#',...) == 2 then
@@ -644,7 +628,6 @@ local function vflip(...)
    dst[{}] = image.warp(src,flow,'simple',false)
    return dst
 end
-rawset(image, 'vflip', vflip)
 
 ----------------------------------------------------------------------
 -- convolve(dst,src,ker,type)
@@ -652,7 +635,7 @@ rawset(image, 'vflip', vflip)
 -- dst = convolve(src,ker,type)
 -- dst = convolve(src,ker)
 --
-local function convolve(...)
+function image.convolve(...)
    local dst,src,kernel,mode
    local args = {...}
    if select('#',...) == 4 then
@@ -711,12 +694,11 @@ local function convolve(...)
    end
    return dst
 end
-rawset(image, 'convolve', convolve) 
 
 ----------------------------------------------------------------------
 -- compresses an image between min and max
 --
-local function minmax(args)
+function image.minmax(args)
    local tensor = args.tensor
    local min = args.min
    local max = args.max 
@@ -768,9 +750,8 @@ local function minmax(args)
    -- and return
    return tensorOut
 end
-rawset(image, 'minmax', minmax) 
 
-local function toDisplayTensor(...)
+function image.toDisplayTensor(...)
    -- usage
    local _, input, padding, nrow, scaleeach, min, max, symm, saturate = dok.unpack(
       {...},
@@ -847,12 +828,11 @@ local function toDisplayTensor(...)
       xerror('input must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
    end
 end
-rawset(image,'toDisplayTensor',toDisplayTensor)
 
 ----------------------------------------------------------------------
 -- super generic display function
 --
-local function display(...)
+function image.display(...)
    -- usage
    local _, input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, offscreen, padding, symm, nrow, saturate = dok.unpack(
       {...},
@@ -953,12 +933,11 @@ local function display(...)
    -- return painter
    return w
 end
-rawset(image, 'display', display)
 
 ----------------------------------------------------------------------
 -- creates a window context for images
 --
-local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
+function image.window(hook_resize, hook_mousepress, hook_mousedoublepress)
    require 'qt'
    require 'qttorch'
    require 'qtwidget'
@@ -995,12 +974,11 @@ local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
               end)
    return win,painter
 end
-rawset(image, 'window', window)
 
 ----------------------------------------------------------------------
 -- lena is always useful
 --
-local function lena(full)
+function image.lena(full)
    local fname = 'lena'
    if full then fname = fname .. '_full' end
    if xlua.require 'libjpeg' then
@@ -1012,7 +990,6 @@ local function lena(full)
    end
    return lena
 end
-rawset(image, 'lena', lena)
 
 ----------------------------------------------------------------------
 -- image.rgb2lab(image)
