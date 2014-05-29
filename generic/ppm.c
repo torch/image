@@ -87,7 +87,8 @@ static int libppm_(Main_load)(lua_State *L)
        if (bpc == 1) {
           data[k*H*W+i] = (real)r[j++];
        } else if (bpc == 2) {
-          val = r[j++] | (r[j++] << 8);
+          val = r[j] | (r[j+1] << 8);
+          j += 2;
           data[k*H*W+i] = (real)val;
        }
     }
