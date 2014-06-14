@@ -1057,10 +1057,10 @@ function image.rgb2lab(...)
    -- Set a threshold
    local T = 0.008856;
 
-   local RGB = torch.Tensor():set(input):resize(3,input:size(2)*input:size(3))
+   local RGB = input:new():resize(3,input:size(2)*input:size(3))
 
    -- RGB to XYZ
-   local MAT = torch.Tensor({{0.412453, 0.357580, 0.180423},
+   local MAT = input.new({{0.412453, 0.357580, 0.180423},
               {0.212671, 0.715160, 0.072169},
               {0.019334, 0.119193, 0.950227}})
    local XYZ = MAT * RGB;
