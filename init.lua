@@ -691,7 +691,7 @@ local function convolve(...)
    end
    local md = (((mode == 'full') or (mode == 'same')) and 'F') or 'V'
    if kernel:nDimension() == 2 and src:nDimension() == 3 then
-      local k3d = torch.Tensor(src:size(1), kernel:size(1), kernel:size(2))
+      local k3d = src.new(src:size(1), kernel:size(1), kernel:size(2))
       for i = 1,src:size(1) do
          k3d[i]:copy(kernel)
       end
