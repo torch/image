@@ -28,7 +28,7 @@ else (PNG_FOUND)
 endif (PNG_FOUND)
 
 SET(src image.c)
-SET(luasrc init.lua lena.jpg lena.png win.ui)
+SET(luasrc init.lua fabio.jpg fabio.png lena.jpg lena.png win.ui)
 
 ADD_TORCH_PACKAGE(image "${src}" "${luasrc}" "Image Processing")
 TARGET_LINK_LIBRARIES(image luaT TH)
