@@ -1000,9 +1000,8 @@ rawset(image, 'window', window)
 ----------------------------------------------------------------------
 -- lena is always useful
 --
-local function lena(full)
+local function lena()
    local fname = 'lena'
-   if full then fname = fname .. '_full' end
    if xlua.require 'libjpeg' then
       lena = image.load(paths.concat(sys.fpath(), fname .. '.jpg'), 3)
    elseif xlua.require 'libpng' then
