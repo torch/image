@@ -1014,6 +1014,25 @@ local function lena(full)
 end
 rawset(image, 'lena', lena)
 
+
+----------------------------------------------------------------------
+-- fabio is a nice gender-balancing variation on lena
+-- See: http://www.claremontmckenna.edu/news/every-picture-tells-a-story/
+-- and first use in http://arxiv.org/abs/1202.6429
+-- along with original file on http://nuit-blanche.blogspot.co.uk/2012/03/let-there-be-only-one-fabio.html
+local function fabio()
+   local fname = 'fabio'
+   if xlua.require 'libjpeg' then
+      lena = image.load(paths.concat(sys.fpath(), fname .. '.jpg'), 1)
+   elseif xlua.require 'libpng' then
+      lena = image.load(paths.concat(sys.fpath(), fname .. '.png'), 1)
+   else
+      dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.fabio')
+   end
+   return lena
+end
+rawset(image, 'fabio', fabio)
+
 ----------------------------------------------------------------------
 -- image.rgb2lab(image)
 -- converts a RGB image to YUV
