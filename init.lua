@@ -600,15 +600,14 @@ local function hflip(...)
                        {type='torch.Tensor', help='input image', req=true}))
       dok.error('incorrect arguments', 'image.hflip')
    end
-   dst = dst or src.new():resizeAs(src)
-   dst:resizeAs(src)
+   dst = dst or src.new()
+   local original_size = src:size()
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
-   local flow = src.new(2,src:size(2),src:size(3))
-   flow[1] = torch.ger( torch.linspace(0,src:size(2)-1,src:size(2)), torch.ones(src:size(3)) )
-   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(-(src:size(3)-1),0,src:size(3))*-1 )
-   dst[{}] = image.warp(src,flow,'simple',false)
+   dst:resizeAs(src)
+   dst.image.hflip(dst, src)
+   dst:resize(original_size)
    return dst
 end
 rawset(image, 'hflip', hflip)
@@ -634,14 +633,13 @@ local function vflip(...)
       dok.error('incorrect arguments', 'image.vflip')
    end
    dst = dst or src.new()
-   dst:resizeAs(src)
+   local original_size = src:size()
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
-   local flow = src.new(2,src:size(2),src:size(3))
-   flow[1] = torch.ger( torch.linspace(-(src:size(2)-1),0,src:size(2))*-1, torch.ones(src:size(3)) )
-   flow[2] = torch.ger( torch.ones(src:size(2)), torch.linspace(0,src:size(3)-1,src:size(3)) )
-   dst[{}] = image.warp(src,flow,'simple',false)
+   dst:resizeAs(src)
+   dst.image.vflip(dst, src)
+   dst:resize(original_size)
    return dst
 end
 rawset(image, 'vflip', vflip)
