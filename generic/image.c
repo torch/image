@@ -678,6 +678,67 @@ int image_(Main_hsv2rgb)(lua_State *L) {
   return 0;
 }
 
+
+/* Vertically flip an image */
+int image_(Main_vflip)(lua_State *L) {
+  THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
+
+  int width = dst->size[2];
+  int height = dst->size[1];
+  int src_width = src->size[2];
+  int src_height = src->size[1];
+  int channels = dst->size[0];
+  long *is = src->stride;
+  long *os = dst->stride;
+
+  // get raw pointers
+  real *dst_data = THTensor_(data)(dst);
+  real *src_data = THTensor_(data)(src);
+
+  long k, x, y;
+  for(k=0; k<channels; k++) {
+      for (y=0; y<height; y++) {
+        for (x=0; x<width; x++) {
+            dst_data[ k*is[0] + (height-1-y)*is[1] + x*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
+        }
+      }
+  }
+
+  return 0;
+}
+
+
+/* Horizontally flip an image */
+int image_(Main_hflip)(lua_State *L) {
+  THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
+
+  int width = dst->size[2];
+  int height = dst->size[1];
+  int src_width = src->size[2];
+  int src_height = src->size[1];
+  int channels = dst->size[0];
+  long *is = src->stride;
+  long *os = dst->stride;
+
+  // get raw pointers
+  real *dst_data = THTensor_(data)(dst);
+  real *src_data = THTensor_(data)(src);
+
+  long k, x, y;
+  for(k=0; k<channels; k++) {
+      for (y=0; y<height; y++) {
+        for (x=0; x<width; x++) {
+            dst_data[ k*is[0] + y*is[1] + (width-x-1)*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
+        }
+      }
+  }
+
+  return 0;
+}
+
+
 /*
  * Warps an image, according to an (x,y) flow field. The flow
  * field is in the space of the destination image, each vector
@@ -970,6 +1031,8 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"hsv2rgb", image_(Main_hsv2rgb)},
   {"hsl2rgb", image_(Main_hsl2rgb)},
   {"gaussian", image_(Main_gaussian)},
+  {"vflip", image_(Main_vflip)},
+  {"hflip", image_(Main_hflip)},
   {NULL, NULL}
 };
 
