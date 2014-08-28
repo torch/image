@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------
 --
 -- Copyright (c) 2011 Ronan Collobert, Clement Farabet
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining
 -- a copy of this software and associated documentation files (the
 -- "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
 -- distribute, sublicense, and/or sell copies of the Software, and to
 -- permit persons to whom the Software is furnished to do so, subject to
 -- the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be
 -- included in all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 -- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 -- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -20,12 +20,12 @@
 -- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 -- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 -- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
--- 
+--
 ----------------------------------------------------------------------
 -- description:
 --     image - an image toolBox, for Torch
 --
--- history: 
+-- history:
 --     July  1, 2011, 7:42PM - import from Torch5 - Clement Farabet
 ----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ require 'libimage'
 
 ----------------------------------------------------------------------
 -- types lookups
--- 
+--
 local type2tensor = {
    float = torch.FloatTensor(),
    double = torch.DoubleTensor(),
@@ -95,7 +95,7 @@ local function savePNG(filename, tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libpng.save(filename, a)
-end  
+end
 rawset(image, 'savePNG', savePNG)
 
 function image.getPNGsize(filename)
@@ -269,6 +269,33 @@ local function save(filename, tensor)
    end
 end
 rawset(image, 'save', save)
+
+----------------------------------------------------------------------
+-- in-memory compression
+--
+local function compress(tensor)
+    if not xlua.require 'libcompress' then
+      dok.error('libcompress error','image.compress')
+    end
+
+    local compressed_data = libcompress.compress(tensor)
+    local original_size = tensor:size()
+    local function decompress()
+        return libcompress.decompress(compressed_data, original_size)
+    end
+    return compressed_data, decompress
+end
+rawset(image, 'compress', compress)
+
+local function decompress(packed_tensor, output_tensor_or_size)
+    if not xlua.require 'libcompress' then
+      dok.error('libcompress error','image.decompress')
+    end
+
+    local output_tensor = libcompress.decompress(packed_tensor, output_tensor_or_size)
+    return output_tensor
+end
+rawset(image, 'decompress', decompress)
 
 ----------------------------------------------------------------------
 -- crop
