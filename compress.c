@@ -16,7 +16,7 @@ struct mem_buffer
     size_t read_write_index, size;
 };
 
-void png_read_data(png_structp png_ptr, png_bytep data, png_size_t length)
+static void libcompress_read_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
     struct mem_buffer* p = (struct mem_buffer*)png_get_io_ptr(png_ptr);
     if(p->read_write_index + length > p->size)
@@ -25,7 +25,7 @@ void png_read_data(png_structp png_ptr, png_bytep data, png_size_t length)
     p->read_write_index = p->read_write_index + length;
 }
 
-void png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
+static void libcompress_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
     struct mem_buffer* p=(struct mem_buffer*)png_get_io_ptr(png_ptr);
     size_t total_length = p->read_write_index + length;
@@ -51,7 +51,7 @@ void png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
 
 /* The libpng specification specifies that if providing your own write_fn,
 you need to provide a flush fn too, but this never gets called.*/
-void png_flush(png_structp png_ptr) { }
+static void libcompress_flush(png_structp png_ptr) { }
 
 /* Useful for when we have some kind of error. */
 static void tidyup_write(png_structpp structpp, png_infopp infopp, png_bytep* row_pointers, THByteTensor* tensor)
@@ -116,7 +116,7 @@ static THByteStorage* libcompress_pack_png_string(THByteTensor* image_tensor)
       THError("libcompress.compress: couldn't create png_info_struct");
     }
 
-    png_set_write_fn(write_ptr, &compressed_image, png_write_data, png_flush);
+    png_set_write_fn(write_ptr, &compressed_image, libcompress_write_data, libcompress_flush);
 
     /* TODO: Experiment with non-default libpng options */
     png_set_IHDR(write_ptr, write_info_ptr, width, height, 8, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
@@ -155,7 +155,7 @@ static THByteTensor* libcompress_unpack_png_string(THByteStorage* packed_data, T
         THError("libcompress.decompress: libpng error.");
     }
 
-    png_set_read_fn(png_ptr, &compressed_image, png_read_data);
+    png_set_read_fn(png_ptr, &compressed_image, libcompress_read_data);
 
     /* Read all the png header info up to the image data. */
     png_read_info(png_ptr, info_ptr);
