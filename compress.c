@@ -210,8 +210,8 @@ static int libcompress_Main_pack(lua_State *L) {
 static int libcompress_Main_unpack(lua_State *L) {
     THByteStorage* packed_data = luaT_checkudata(L, 1, "torch.ByteStorage");
     THByteTensor* image_tensor = luaT_toudata(L, 2, "torch.ByteTensor");
-    THByteTensor* result_tensor;
-    THLongStorage* tensor_dimensions;
+    THByteTensor* result_tensor = NULL;
+    THLongStorage* tensor_dimensions = NULL;
 
     if(image_tensor == NULL) {
         if((tensor_dimensions = luaT_toudata(L, 2, "torch.LongStorage"))) {
