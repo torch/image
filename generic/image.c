@@ -750,6 +750,7 @@ int image_(Main_warp)(lua_State *L) {
   THTensor *flowfield = luaT_checkudata(L, 3, torch_Tensor);
   int mode = lua_tointeger(L, 4);
   int offset_mode = lua_toboolean(L, 5);
+  int clamp_mode = lua_tointeger(L, 6);
 
   // dims
   int width = dst->size[2];
@@ -777,188 +778,201 @@ int image_(Main_warp)(lua_State *L) {
       float ix = offset_mode*x + flow_x;
 
       // borders
-      ix = MAX(ix,0); ix = MIN(ix,src_width-1);
-      iy = MAX(iy,0); iy = MIN(iy,src_height-1);
+      int off_image = 0;
+      if (iy < 0 || iy > src_height - 1 || 
+          ix < 0 || ix > src_width - 1) {
+        off_image = 1;
+      }
 
-      // bilinear?
-      switch (mode) {
-      case 1:  // Bilinear interpolation
-        {
-          // 4 nearest neighbors:
-          long ix_nw = floor(ix);
-          long iy_nw = floor(iy);
-          long ix_ne = ix_nw + 1;
-          long iy_ne = iy_nw;
-          long ix_sw = ix_nw;
-          long iy_sw = iy_nw + 1;
-          long ix_se = ix_nw + 1;
-          long iy_se = iy_nw + 1;
-
-          // get surfaces to each neighbor:
-          real nw = ((real)(ix_se-ix))*(iy_se-iy);
-          real ne = ((real)(ix-ix_sw))*(iy_sw-iy);
-          real sw = ((real)(ix_ne-ix))*(iy-iy_ne);
-          real se = ((real)(ix-ix_nw))*(iy-iy_nw);
-
-          // weighted sum of neighbors:
-          for (k=0; k<channels; k++) {
-            dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 
-                src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
-              + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,src_width-1)*is[2] ] * ne
-              + src_data[ k*is[0] + MIN(iy_sw,src_height-1)*is[1] +              ix_sw*is[2] ] * sw
-              + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se;
-          }
+      if (off_image == 1 && clamp_mode == 1) {
+        // We're off the image and we're clamping the input image to 0
+        for (k=0; k<channels; k++) {
+          dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 0;
         }
-	break;
-      case 0:  // Simple (i.e., nearest neighbor)
-        {
-          // 1 nearest neighbor:
-          long ix_n = floor(ix+0.5);
-          long iy_n = floor(iy+0.5);
+      } else {
+        ix = MAX(ix,0); ix = MIN(ix,src_width-1);
+        iy = MAX(iy,0); iy = MIN(iy,src_height-1);
+        
+        // bilinear?
+        switch (mode) {
+        case 1:  // Bilinear interpolation
+          {
+            // 4 nearest neighbors:
+            long ix_nw = floor(ix);
+            long iy_nw = floor(iy);
+            long ix_ne = ix_nw + 1;
+            long iy_ne = iy_nw;
+            long ix_sw = ix_nw;
+            long iy_sw = iy_nw + 1;
+            long ix_se = ix_nw + 1;
+            long iy_se = iy_nw + 1;
 
-          // weighted sum of neighbors:
-          for (k=0; k<channels; k++) {
-            dst_data[ k*os[0] + y*os[1] + x*os[2] ] = src_data[ k*is[0] + iy_n*is[1] + ix_n*is[2] ];
+            // get surfaces to each neighbor:
+            real nw = ((real)(ix_se-ix))*(iy_se-iy);
+            real ne = ((real)(ix-ix_sw))*(iy_sw-iy);
+            real sw = ((real)(ix_ne-ix))*(iy-iy_ne);
+            real se = ((real)(ix-ix_nw))*(iy-iy_nw);
+
+            // weighted sum of neighbors:
+            for (k=0; k<channels; k++) {
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 
+                  src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
+                + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,src_width-1)*is[2] ] * ne
+                + src_data[ k*is[0] + MIN(iy_sw,src_height-1)*is[1] +              ix_sw*is[2] ] * sw
+                + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se;
+            }
           }
-        }
-        break;
-      case 2:  // Bicubic
-        {
-	  // Calculate fractional and integer components
-          long x_pix = floor(ix);
-          long y_pix = floor(iy);
-          real dx = ix - (real)x_pix;
-          real dy = iy - (real)y_pix;
-         
-          real C[4];
-          for (k=0; k<channels; k++) {
-            // Sweep by rows through the samples (to calculate final cubic coefs)
-            for (jj = 0; jj <= 3; jj++) {
-              v = y_pix - 1 + jj;
-              // We need to clamp all uv values to image border: hopefully 
-              // branch prediction and compiler reordering takes care of all
-              // the conditionals (since the branch probabilities are heavily 
-              // skewed).  Alternatively an inline "getPixelSafe" function would
-              // would be clearer here, but cannot be done with lua?
-              v = MAX(MIN((long)(src_height-1), v), 0);
-              long ofst = k * is[0] + v * is[1];  
-              u = x_pix;
-              u = MAX(MIN((long)(src_width-1), u), 0);
-              real a0 = src_data[ofst + u * is[2]];
-              u = x_pix - 1;
-              u = MAX(MIN((long)(src_width-1), u), 0);
-              real d0 = src_data[ofst + u * is[2]] - a0;
-              u = x_pix + 1;
-              u = MAX(MIN((long)(src_width-1), u), 0);
-              real d2 = src_data[ofst + u * is[2]] - a0;
-              u = x_pix + 2;
-              u = MAX(MIN((long)(src_width-1), u), 0); 
-              real d3 = src_data[ofst + u * is[2]] - a0;
+	      break;
+        case 0:  // Simple (i.e., nearest neighbor)
+          {
+            // 1 nearest neighbor:
+            long ix_n = floor(ix+0.5);
+            long iy_n = floor(iy+0.5);
 
-              // Note: there are mostly static casts, optimizer will take care of
-              // of it for us (prevents compiler warnings in new gcc)
-              real a1 =  -(real)1/(real)3*d0 + d2 -(real)1/(real)6*d3;
+            // weighted sum of neighbors:
+            for (k=0; k<channels; k++) {
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = src_data[ k*is[0] + iy_n*is[1] + ix_n*is[2] ];
+            }
+          }
+          break;
+        case 2:  // Bicubic
+          {
+	        // Calculate fractional and integer components
+            long x_pix = floor(ix);
+            long y_pix = floor(iy);
+            real dx = ix - (real)x_pix;
+            real dy = iy - (real)y_pix;
+           
+            real C[4];
+            for (k=0; k<channels; k++) {
+              // Sweep by rows through the samples (to calculate final cubic coefs)
+              for (jj = 0; jj <= 3; jj++) {
+                v = y_pix - 1 + jj;
+                // We need to clamp all uv values to image border: hopefully 
+                // branch prediction and compiler reordering takes care of all
+                // the conditionals (since the branch probabilities are heavily 
+                // skewed).  Alternatively an inline "getPixelSafe" function would
+                // would be clearer here, but cannot be done with lua?
+                v = MAX(MIN((long)(src_height-1), v), 0);
+                long ofst = k * is[0] + v * is[1];  
+                u = x_pix;
+                u = MAX(MIN((long)(src_width-1), u), 0);
+                real a0 = src_data[ofst + u * is[2]];
+                u = x_pix - 1;
+                u = MAX(MIN((long)(src_width-1), u), 0);
+                real d0 = src_data[ofst + u * is[2]] - a0;
+                u = x_pix + 1;
+                u = MAX(MIN((long)(src_width-1), u), 0);
+                real d2 = src_data[ofst + u * is[2]] - a0;
+                u = x_pix + 2;
+                u = MAX(MIN((long)(src_width-1), u), 0); 
+                real d3 = src_data[ofst + u * is[2]] - a0;
+
+                // Note: there are mostly static casts, optimizer will take care of
+                // of it for us (prevents compiler warnings in new gcc)
+                real a1 =  -(real)1/(real)3*d0 + d2 -(real)1/(real)6*d3;
+                real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
+                real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 + 
+                  (real)1/(real)6*d3;
+                C[jj] = a0 + dx * (a1 + dx * (a2 + a3 * dx));
+              }
+ 
+              real d0 = C[0]-C[1];
+              real d2 = C[2]-C[1];
+              real d3 = C[3]-C[1];
+              real a0 = C[1];
+              real a1 = -(real)1/(real)3*d0 + d2 - (real)1/(real)6*d3;
               real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
               real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 + 
                 (real)1/(real)6*d3;
-              C[jj] = a0 + dx * (a1 + dx * (a2 + a3 * dx));
-            }
- 
-            real d0 = C[0]-C[1];
-            real d2 = C[2]-C[1];
-            real d3 = C[3]-C[1];
-            real a0 = C[1];
-            real a1 = -(real)1/(real)3*d0 + d2 - (real)1/(real)6*d3;
-            real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
-            real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 + 
-              (real)1/(real)6*d3;
-            real Cc = a0 + dy * (a1 + dy * (a2 + a3 * dy));
+              real Cc = a0 + dy * (a1 + dy * (a2 + a3 * dy));
 
-            // I assume that since the image is stored as reals we don't have 
-            // to worry about clamping to min and max int (to prevent over or
-            // underflow)
-            dst_data[ k*os[0] + y*os[1] + x*os[2] ] = Cc;
-	  }  
-        }
-        break;
-      case 3:  // Lanczos
-	{
-          // Note: Lanczos can be made fast if the resampling period is 
-          // constant... and therefore the Lu, Lv can be cached and reused.
-          // However, unfortunately warp makes no assumptions about resampling 
-          // and so we need to perform the O(k^2) convolution on each pixel AND
-          // we have to re-calculate the kernel for every pixel.
-          // See wikipedia for more info.
-          // It is however an extremely good approximation to to full sinc
-          // interpolation (IIR) filter.
-          // Another note is that the version here has been optimized using
-          // pretty aggressive code flow and explicit inlining.  It might not
-          // be very readable (contact me, Jonathan Tompson, if it is not)
-
-          // Calculate fractional and integer components
-          long x_pix = floor(ix);
-          long y_pix = floor(iy);
-
-          // Precalculate the L(x) function evaluations in the u and v direction
-          const long rad = 3;  // This is a tunable parameter: 2 to 3 is OK
-          float Lu[2 * rad];  // L(x) for u direction
-          float Lv[2 * rad];  // L(x) for v direction
-          for (u=x_pix-rad+1, i=0; u<=x_pix+rad; u++, i++) {
-            float du = ix - (float)u;  // Lanczos kernel x value
-            du = du < 0 ? -du : du;  // prefer not to used std absf
-            if (du < 0.000001f) {  // TODO: Is there a real eps standard?
-              Lu[i] = 1;
-            } else if (du > (float)rad) {
-              Lu[i] = 0;
-            } else {
-              Lu[i] = ((float)rad * sin((float)M_PI * du) *       
-                sin((float)M_PI * du / (float)rad)) / 
-                ((float)(M_PI * M_PI) * du * du);
-            }
+              // I assume that since the image is stored as reals we don't have 
+              // to worry about clamping to min and max int (to prevent over or
+              // underflow)
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = Cc;
+	        }  
           }
-          for (v=y_pix-rad+1, i=0; v<=y_pix+rad; v++, i++) {
-            float dv = iy - (float)v;  // Lanczos kernel x value
-            dv = dv < 0 ? -dv : dv;  // prefer not to used std absf
-            if (dv < 0.000001f) {  // TODO: Is there a real eps standard?
-              Lv[i] = 1;
-            } else if (dv > (float)rad) {
-              Lv[i] = 0;
-            } else {
-              Lv[i] = ((float)rad * sin((float)M_PI * dv) *
-                sin((float)M_PI * dv / (float)rad)) /
-                ((float)(M_PI * M_PI) * dv * dv);
-            }
-          }          
-          float sum_weights = 0;
-          for (u=0; u<2*rad; u++) {
-            for (v=0; v<2*rad; v++) {
-              sum_weights += (Lu[u] * Lv[v]); 
-            }
-          }
+          break;
+        case 3:  // Lanczos
+	      {
+            // Note: Lanczos can be made fast if the resampling period is 
+            // constant... and therefore the Lu, Lv can be cached and reused.
+            // However, unfortunately warp makes no assumptions about resampling 
+            // and so we need to perform the O(k^2) convolution on each pixel AND
+            // we have to re-calculate the kernel for every pixel.
+            // See wikipedia for more info.
+            // It is however an extremely good approximation to to full sinc
+            // interpolation (IIR) filter.
+            // Another note is that the version here has been optimized using
+            // pretty aggressive code flow and explicit inlining.  It might not
+            // be very readable (contact me, Jonathan Tompson, if it is not)
 
-          for (k=0; k<channels; k++) {
-            real result = 0;
+            // Calculate fractional and integer components
+            long x_pix = floor(ix);
+            long y_pix = floor(iy);
+
+            // Precalculate the L(x) function evaluations in the u and v direction
+            const long rad = 3;  // This is a tunable parameter: 2 to 3 is OK
+            float Lu[2 * rad];  // L(x) for u direction
+            float Lv[2 * rad];  // L(x) for v direction
             for (u=x_pix-rad+1, i=0; u<=x_pix+rad; u++, i++) {
-              long curu = MAX(MIN((long)(src_width-1), u), 0);
-              for (v=y_pix-rad+1, j=0; v<=y_pix+rad; v++, j++) {
-                long curv = MAX(MIN((long)(src_height-1), v), 0);
-                real Suv = src_data[k * is[0] + curv * is[1] + curu * is[2]];
-                
-                real weight = (real)(Lu[i] * Lv[j]);
-                result += (Suv * weight);
+              float du = ix - (float)u;  // Lanczos kernel x value
+              du = du < 0 ? -du : du;  // prefer not to used std absf
+              if (du < 0.000001f) {  // TODO: Is there a real eps standard?
+                Lu[i] = 1;
+              } else if (du > (float)rad) {
+                Lu[i] = 0;
+              } else {
+                Lu[i] = ((float)rad * sin((float)M_PI * du) *       
+                  sin((float)M_PI * du / (float)rad)) / 
+                  ((float)(M_PI * M_PI) * du * du);
               }
             }
-            // Normalize by the sum of the weights
-            result = result / (float)sum_weights;
-            
-            // Again,  I assume that since the image is stored as reals we 
-            // don't have to worry about clamping to min and max int (to 
-            // prevent over or underflow)
-            dst_data[ k*os[0] + y*os[1] + x*os[2] ] = result;
+            for (v=y_pix-rad+1, i=0; v<=y_pix+rad; v++, i++) {
+              float dv = iy - (float)v;  // Lanczos kernel x value
+              dv = dv < 0 ? -dv : dv;  // prefer not to used std absf
+              if (dv < 0.000001f) {  // TODO: Is there a real eps standard?
+                Lv[i] = 1;
+              } else if (dv > (float)rad) {
+                Lv[i] = 0;
+              } else {
+                Lv[i] = ((float)rad * sin((float)M_PI * dv) *
+                  sin((float)M_PI * dv / (float)rad)) /
+                  ((float)(M_PI * M_PI) * dv * dv);
+              }
+            }          
+            float sum_weights = 0;
+            for (u=0; u<2*rad; u++) {
+              for (v=0; v<2*rad; v++) {
+                sum_weights += (Lu[u] * Lv[v]); 
+              }
+            }
+
+            for (k=0; k<channels; k++) {
+              real result = 0;
+              for (u=x_pix-rad+1, i=0; u<=x_pix+rad; u++, i++) {
+                long curu = MAX(MIN((long)(src_width-1), u), 0);
+                for (v=y_pix-rad+1, j=0; v<=y_pix+rad; v++, j++) {
+                  long curv = MAX(MIN((long)(src_height-1), v), 0);
+                  real Suv = src_data[k * is[0] + curv * is[1] + curu * is[2]];
+                  
+                  real weight = (real)(Lu[i] * Lv[j]);
+                  result += (Suv * weight);
+                }
+              }
+              // Normalize by the sum of the weights
+              result = result / (float)sum_weights;
+              
+              // Again,  I assume that since the image is stored as reals we 
+              // don't have to worry about clamping to min and max int (to 
+              // prevent over or underflow)
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = result;
+            }
           }
-        }
-        break;
-      }
+          break;
+        }  // end switch (mode)
+      }  // end else
     }
   }
 
