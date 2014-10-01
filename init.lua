@@ -505,51 +505,48 @@ local function warp(...)
    local dst,src,field
    local mode = 'bilinear'
    local offset_mode = true
+   local clamp_mode = 'clamp'
    local args = {...}
-   if select('#',...) == 5 then
-      dst = args[1]
-      src = args[2]
-      field = args[3]
-      mode = args[4]
-      offset_mode = args[5]
-   elseif select('#',...) == 4 then
+   local nargs = select('#',...)
+   local bad_args = false
+   if nargs == 2 then
+      src = args[1]
+      field = args[2]
+   elseif nargs >= 3 then
       if type(args[3]) == 'string' then
-    src = args[1]
-    field = args[2]
-         mode = args[3]
-    offset_mode = args[4]
-      else
-    dst = args[1]
-    src = args[2]
-    field = args[3]
-    mode = args[4]
-      end
-   elseif select('#',...) == 3 then
-      if type(args[3]) == 'string' then
+         -- No destination tensor
          src = args[1]
          field = args[2]
          mode = args[3]
+         if nargs >= 4 then offset_mode = args[4] end
+         if nargs >= 5 then clamp_mode = args[5] end
+         if nargs >= 6 then bad_args = true end
       else
+         -- With Destination tensor
          dst = args[1]
          src = args[2]
          field = args[3]
+         if nargs >= 4 then mode = args[4] end
+         if nargs >= 5 then offset_mode = args[5] end
+         if nargs >= 6 then clamp_mode = args[6] end
+         if nargs >= 7 then bad_args = true end
       end
-   elseif select('#',...) == 2 then
-      src = args[1]
-      field = args[2]
-   else
+   end
+   if bad_args then
       print(dok.usage('image.warp',
-                       'warp an image, according to a flow field', nil,
-                       {type='torch.Tensor', help='input image (KxHxW)', req=true},
-                       {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
-                       {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
-                       {type='string', help='offset mode (add (x,y) to flow field)', default=true},
-                       '',
-                       {type='torch.Tensor', help='destination', req=true},
-                       {type='torch.Tensor', help='input image (KxHxW)', req=true},
-                       {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
-                       {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
-                       {type='string', help='offset mode (add (x,y) to flow field)', default=true}))
+         'warp an image, according to a flow field', nil,
+         {type='torch.Tensor', help='input image (KxHxW)', req=true},
+         {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
+         {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
+         {type='string', help='offset mode (add (x,y) to flow field)', default=true},
+         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'},
+         '',
+         {type='torch.Tensor', help='destination', req=true},
+         {type='torch.Tensor', help='input image (KxHxW)', req=true},
+         {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
+         {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
+         {type='string', help='offset mode (add (x,y) to flow field)', default=true},
+         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'}))
       dok.error('incorrect arguments', 'image.warp')
    end
    -- This is a little messy, but convert mode string to an enum
@@ -564,6 +561,14 @@ local function warp(...)
    else
       dok.error('Incorrect arguments (mode is not lanczos | bicubic | bilinear | simple)!', 'image.warp')
    end
+   if (clamp_mode == 'clamp') then
+      clamp_mode = 0
+   elseif (clamp_mode == 'pad') then
+      clamp_mode = 1
+   else
+      dok.error('Incorrect arguments (clamp_mode is not clamp | pad)!', 'image.warp')
+   end
+   
    local dim2 = false
    if src:nDimension() == 2 then
       dim2 = true
@@ -571,8 +576,8 @@ local function warp(...)
    end
    dst = dst or src.new()
    dst:resize(src:size(1), field:size(2), field:size(3))
-   
-   src.image.warp(dst,src,field,mode,offset_mode)
+
+   src.image.warp(dst, src, field, mode, offset_mode, clamp_mode)
    if dim2 then
       dst = dst[1]
    end
