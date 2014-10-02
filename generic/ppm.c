@@ -10,8 +10,6 @@ static int libppm_(Main_load)(lua_State *L)
     printf ( "Failed to open file '%s'!\n", filename );
   }
 
-  // parse header
-  char hdr[256]={};
   long W,H,C;
   char p,n;
   int D, bps, bpc;
@@ -41,9 +39,6 @@ static int libppm_(Main_load)(lua_State *L)
   bpc = bps / 8;
 
   //printf("Loading PPM\nMAGIC: %c%c\nWidth: %ld, Height: %ld\nChannels: %d, Bits-per-pixel: %d\n", p, n, W, H, D, bps);
-
-  // Skip to end of header (newline)
-  fgets(hdr, 256, fp);
 
   // load data
   unsigned char *r = NULL;
