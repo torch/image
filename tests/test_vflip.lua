@@ -19,6 +19,14 @@ function all_tests.test_transformation_largeByteImage(flip)
     tester:assertTensorEq(f_real:byte():double(), f_byte:double(), 1e-16, flip .. ':  result for double and byte images do not match')
 end
 
+function all_tests.test_inplace(flip)
+    local im = image.lena()
+    local not_inplace = image.hflip(im)
+    local in_place = im:clone()
+    image[flip](in_place, in_place)
+    tester:assertTensorEq(in_place, not_inplace, 1e-16, flip .. ': result in-place does not match result not in-place')
+end
+
 
 -- Apply all tests to both vflip and hflip
 for _, flip in pairs{'vflip', 'hflip'} do
