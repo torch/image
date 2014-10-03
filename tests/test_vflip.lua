@@ -22,7 +22,7 @@ end
 
 function all_tests.test_inplace(flip)
     local im = image.lena()
-    local not_inplace = image.hflip(im)
+    local not_inplace = image[flip](im)
     local in_place = im:clone()
     image[flip](in_place, in_place)
     tester:assertTensorEq(in_place, not_inplace, 1e-16, flip .. ': result in-place does not match result not in-place')
