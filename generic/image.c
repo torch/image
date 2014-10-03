@@ -697,11 +697,31 @@ int image_(Main_vflip)(lua_State *L) {
   real *src_data = THTensor_(data)(src);
 
   long k, x, y;
-  for(k=0; k<channels; k++) {
-      for (y=0; y<height; y++) {
-        for (x=0; x<width; x++) {
-            dst_data[ k*is[0] + (height-1-y)*is[1] + x*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
-        }
+  if (dst_data != src_data) {
+      /* not in-place. 
+       * this branch could be removed by first duplicating the src into dst then doing inplace */
+      for(k=0; k<channels; k++) {
+          for (y=0; y<height; y++) {
+            for (x=0; x<width; x++) {
+                dst_data[ k*is[0] + (height-1-y)*is[1] + x*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
+            }
+          }
+      }
+  } else {
+      printf("in place\n");
+      /* in-place  */
+      real swap, * src_px,  * dst_px;
+      long half_height = height >> 1;
+      for(k=0; k<channels; k++) {
+          for (y=0; y < half_height; y++) {
+            for (x=0; x<width; x++) {
+                src_px = src_data + k*is[0] + y*is[1] + x*is[2];
+                dst_px =  dst_data + k*is[0] + (height-1-y)*is[1] + x*is[2]; 
+                swap = *dst_px;
+                *dst_px = *src_px;
+                *src_px = swap; 
+            }
+          }
       }
   }
 

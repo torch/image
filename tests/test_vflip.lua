@@ -7,6 +7,7 @@ local tester = totem.Tester()
 
 -- List of all possible tests
 local all_tests = {}
+
 function all_tests.test_transformation_largeByteImage(flip)
     local x_real = image.fabio():double():mul(255)
     local x_byte = x_real:clone():byte()
@@ -34,6 +35,43 @@ for _, flip in pairs{'vflip', 'hflip'} do
         myTests[name .. '_' .. flip] = function() return test(flip) end
     end
 end
+
+function myTests.test_vflip_simple()
+    local im_even = torch.Tensor{{1,2}, {3, 4}}
+    local expected_even = torch.Tensor{{3, 4}, {1, 2}}
+    local x_even = image.vflip(im_even)
+    tester:assertTensorEq(expected_even, x_even, 1e-16, 'vflip: fails on even size')
+    -- test inplace
+    image.vflip(im_even, im_even)
+    tester:assertTensorEq(expected_even, im_even, 1e-16, 'vflip: fails on even size in place')
+
+    local im_odd = torch.Tensor{{1,2}, {3, 4}, {5, 6}}
+    local expected_odd = torch.Tensor{{5,6}, {3, 4}, {1, 2}}
+    local x_odd = image.vflip(im_odd)
+    tester:assertTensorEq(expected_odd, x_odd, 1e-16, 'vflip: fails on odd size')
+    -- test inplace
+    image.vflip(im_odd, im_odd)
+    tester:assertTensorEq(expected_odd, im_odd, 1e-16, 'vflip: fails on odd size in place')
+end
+
+function myTests.test_hflip_simple()
+    local im_even = torch.Tensor{{1, 2}, {3, 4}}
+    local expected_even = torch.Tensor{{2, 1}, {4, 3}}
+    local x_even = image.hflip(im_even)
+    tester:assertTensorEq(expected_even, x_even, 1e-16, 'hflip: fails on even size')
+    -- test inplace
+    image.hflip(im_even, im_even)
+    tester:assertTensorEq(expected_even, im_even, 1e-16, 'hflip: fails on even size in place')
+
+    local im_odd = torch.Tensor{{1,2, 3}, {4, 5, 6}}
+    local expected_odd = torch.Tensor{{3, 2, 1}, {6, 5, 4}}
+    local x_odd = image.hflip(im_odd)
+    tester:assertTensorEq(expected_odd, x_odd, 1e-16, 'hflip: fails on odd size')
+    -- test inplace
+    image.hflip(im_odd, im_odd)
+    tester:assertTensorEq(expected_odd, im_odd, 1e-16, 'hflip: fails on odd size in place')
+end
+
 
 tester:add(myTests)
 return tester:run(myTests)
