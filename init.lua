@@ -690,7 +690,7 @@ local function convolve(...)
       dok.error('incorrect arguments', 'image.convolve')
    end
    if mode and mode ~= 'valid' and mode ~= 'full' and mode ~= 'same' then
-      dok.error('mode has to be one of: full | valid', 'image.convolve')
+      dok.error('mode has to be one of: full | valid | same', 'image.convolve')
    end
    local md = (((mode == 'full') or (mode == 'same')) and 'F') or 'V'
    if kernel:nDimension() == 2 and src:nDimension() == 3 then
