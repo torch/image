@@ -105,37 +105,65 @@ function image.getPNGsize(filename)
    return torch.Tensor().libpng.size(filename)
 end
 
+local function processJPG(img, depth, tensortype)
+   local MAXVAL = 255
+   if tensortype ~= 'byte' then
+      img:mul(1/MAXVAL)
+   end
+   if depth and depth == 1 then
+      if img:nDimension() == 2 then
+         -- all good
+      elseif img:size(1) == 3 or img:size(1) == 4 then
+         img = image.rgb2y(img:narrow(1,1,3))[1]
+      elseif img:size(1) == 2 then
+         img = img:narrow(1,1,1)
+      elseif img:size(1) ~= 1 then
+         dok.error('image loaded has wrong #channels','processJPG')
+      end
+   elseif depth and depth == 3 then
+      if img:size(1) == 3 then
+         -- all good
+      elseif img:size(1) == 4 then
+         img = img:narrow(1,1,3)
+      else
+         dok.error('image loaded has wrong #channels','processJPG')
+      end
+   end
+   return img
+end
+
 local function loadJPG(filename, depth, tensortype)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.loadJPG')
    end
-   local MAXVAL = 255
-   local a = template(tensortype).libjpeg.load(filename)
-   if tensortype ~= 'byte' then
-      a:mul(1/MAXVAL)
+   local load_from_file = 1
+   local a = template(tensortype).libjpeg.load(load_from_file, filename)
+   if a == nil then
+      return nil
+   else
+      return processJPG(a, depth, tensortype)
    end
-   if depth and depth == 1 then
-      if a:nDimension() == 2 then
-         -- all good
-      elseif a:size(1) == 3 or a:size(1) == 4 then
-         a = image.rgb2y(a:narrow(1,1,3))[1]
-      elseif a:size(1) == 2 then
-         a = a:narrow(1,1,1)
-      elseif a:size(1) ~= 1 then
-         dok.error('image loaded has wrong #channels','image.loadJPG')
-      end
-   elseif depth and depth == 3 then
-      if a:size(1) == 3 then
-         -- all good
-      elseif a:size(1) == 4 then
-         a = a:narrow(1,1,3)
-      else
-         dok.error('image loaded has wrong #channels','image.loadJPG')
-      end
-   end
-   return a
 end
 rawset(image, 'loadJPG', loadJPG)
+
+local function decompressJPG(tensor, depth, tensortype)
+   if not xlua.require 'libjpeg' then
+      dok.error('libjpeg package not found, please install libjpeg',
+        'image.decompressJPG')
+   end
+   if torch.typename(tensor) ~= 'torch.ByteTensor' then
+      dok.error('Input tensor (with compressed jpeg) must be a byte tensor',
+        'image.decompressJPG')
+   end   
+   local load_from_file = 0
+   local a = template(tensortype).libjpeg.load(load_from_file, tensor)
+   if a == nil then
+      return nil
+   else
+      return processJPG(a, depth, tensortype)
+   end
+end
+rawset(image, 'decompressJPG', decompressJPG)
 
 local function saveJPG(filename, tensor)
    if not xlua.require 'libjpeg' then

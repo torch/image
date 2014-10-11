@@ -185,24 +185,35 @@ static int libjpeg_(Main_load)(lua_State *L)
    */
   struct my_error_mgr jerr;
   /* More stuff */
-  FILE * infile;		/* source file */
+  FILE * infile;		    /* source file (if loading from file) */
+  unsigned char * inmem;    /* source memory (if loading from memory) */
+  unsigned long inmem_size; /* source memory size (bytes) */
   JSAMPARRAY buffer;		/* Output row buffer */
   /* int row_stride;		/1* physical row width in output buffer *1/ */
   int i, k;
 
-  const char *filename = luaL_checkstring(L, 1);
-
   THTensor *tensor = NULL;
+  const int load_from_file = luaL_checkint(L, 1);
+  
+  if (load_from_file == 1) {
+    const char *filename = luaL_checkstring(L, 2);
+    
+    /* In this example we want to open the input file before doing anything else,
+     * so that the setjmp() error recovery below can assume the file is open.
+     * VERY IMPORTANT: use "b" option to fopen() if you are on a machine that
+     * requires it in order to read binary files.
+     */
 
-  /* In this example we want to open the input file before doing anything else,
-   * so that the setjmp() error recovery below can assume the file is open.
-   * VERY IMPORTANT: use "b" option to fopen() if you are on a machine that
-   * requires it in order to read binary files.
-   */
-
-  if ((infile = fopen(filename, "rb")) == NULL)
-  {
-    luaL_error(L, "cannot open file <%s> for reading", filename);
+    if ((infile = fopen(filename, "rb")) == NULL)
+    {
+      luaL_error(L, "cannot open file <%s> for reading", filename);
+    }
+  } else {
+    /* We're loading from a ByteTensor */
+    THByteTensor *src = luaT_checkudata(L, 2, "torch.ByteTensor");
+    inmem = THByteTensor_data(src);
+    inmem_size = src->size[0];
+    infile = NULL;
   }
   
   /* Step 1: allocate and initialize JPEG decompression object */
@@ -216,15 +227,20 @@ static int libjpeg_(Main_load)(lua_State *L)
      * We need to clean up the JPEG object, close the input file, and return.
      */
     jpeg_destroy_decompress(&cinfo);
-    fclose(infile);
+    if (infile) {
+      fclose(infile);
+    }
     return 0;
   }
   /* Now we can initialize the JPEG decompression object. */
   jpeg_create_decompress(&cinfo);
 
   /* Step 2: specify data source (eg, a file) */
-
-  jpeg_stdio_src(&cinfo, infile);
+  if (load_from_file == 1) {
+    jpeg_stdio_src(&cinfo, infile);
+  } else {
+    jpeg_mem_src(&cinfo, inmem, inmem_size);
+  }
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -299,7 +315,9 @@ static int libjpeg_(Main_load)(lua_State *L)
    * so as to simplify the setjmp error logic above.  (Actually, I don't
    * think that jpeg_destroy can do an error exit, but why assume anything...)
    */
-  fclose(infile);
+  if (infile) {
+    fclose(infile);
+  }
 
   /* At this point you may want to check to see whether any corrupt-data
    * warnings occurred (test whether jerr.pub.num_warnings is nonzero).
