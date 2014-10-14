@@ -4,6 +4,9 @@ Unless speficied otherwise, this package deals with images of size
  * [Saving and loading](#image.saveload) images as JPEG, PNG, PPM and PGM;
  * [Simple transformations](#image.simpletrans) like translation, scaling and rotation;
  * [Parameterized transformations](#image.paramtrans) like convolutions and warping;
+ * [Graphical user interfaces](#image.grapicalinter) like display and window;
+ * [Color Space Conversions](#image.colorspace) from and to RGB, YUV, Lab, and HSL;
+ * [Constant Tensors](#image.constanttensor) like Lenna, Fabio and Gaussian and Laplacian kernels;
 
 <a name="image.saveload"/>
 ## Saving and Loading ##
@@ -73,6 +76,7 @@ store the output image. Otherwise, returns a new `res` Tensor.
 Flips image `src` vertically (upsize<->down). If `dst` is provided, it is used to
 store the output image. Otherwise, returns a new `res` Tensor.
 
+<a name="image.minmax"/>
 ### [res] image.minmax{tensor, [min, max, ...]} ###
 Compresses image `tensor` between `min` and `max`. 
 When omitted, `min` and `max` are infered from 
@@ -83,13 +87,26 @@ tensor:add(-min):div(max-min)
 ```
 Other optional arguments (`...`) include `symm`, `inplace`, `saturate`, and `tensorOut`.
 When `symm=true` and `min` and `max` are both omitted, 
-`max = min*2` in the above equation. The default is `false`.
+`max = min*2` in the above equation. This results in a symmetric dynamic 
+range that is particularly useful for drawing filters. The default is `false`.
 When `inplace=true`, the result of the compression is stored in `tensor`. 
 The default is `false`.
 When `saturate=true`, the result of the compression is passed through
 [image.saturate](#image.saturate)
 When provided, Tensor `tensorOut` is used to store results. 
 Note that arguments should be provided as key-value pairs (in a table).
+
+### [res] image.gaussianpyramid([dst,] src, scales) ###
+Constructs a [Gaussian pyramid](https://en.wikipedia.org/wiki/Gaussian_pyramid)
+of scales `scales` from a 2D or 3D `src` image or size 
+`[nChannel x] width x height`. Each Tensor at index `i` 
+in the returned list of Tensors has size  `[nChannel x] width*scales[i] x height*scales[i]`.
+
+If list `dst` is provided, with or without Tensors, it is used to store the output images. 
+Otherwise, returns a new `res` list of Tensors.
+
+Internally, this function makes use of functions [image.gaussian](#image.gaussian),
+[image.scale](#image.scale) and [image.convolve](#image.convolve).
 
 <a name="image.paramtrans"/>
 ## Parameterized transformations ##
@@ -104,7 +121,8 @@ take on values [lanczos](https://en.wikipedia.org/wiki/Lanczos_resampling),
 or *simple*. When `offset` is true (the default), `(x,y)` is added to the flow field.
 The `clamp` variable specifies how to handle the interpolation of samples off the input image.
 Permitted values are strings *clamp* (the default) or *pad*. 
-If `dst` is specified it is used to store the result of the warp.
+If `dst` is specified, it is used to store the result of the warp.
+Otherwise, returns a new `res` Tensor.
 
 ### [res] image.convolve([dst,] src, kernel, [mode]) ###
 Convolves Tensor `kernel` over image `src`. Valid string values for argument 
@@ -117,7 +135,202 @@ Note that this function internally uses
 If `dst` is provided, it is used to store the output image. 
 Otherwise, returns a new `res` Tensor.
 
+<a name="image.toDisplayTensor"/>
+### [res] image.toDisplayTensor(input, padding, nrow, scaleeach, min, max, symmetric, saturate) ###
+Returns a single `res` Tensor that contains a grid of all in the images in `input`.
+The latter can either be a table of image Tensors of size `height x width` (greyscale) or 
+`nChannel x height x width` (color), 
+or a single Tensor of size `batchSize x nChannel x height x width` or `nChannel x height x width` 
+where `nChannel=[3,1]`, `batchSize x height x width` or `height x width`.
 
+Unless `input` is a table and `scaleeach=false` (the default), all detected images 
+are compressed with successive calls to [image.minmax](#image.minmax):
+```lua
+image.minmax{tensor=input[i], min=min, max=max, symm=symmetric, saturate=saturate}
+```
+`padding` specifies the number of padding pixels between images. The default is 0.
+`nrow` specifies the number of images per row. The default is 6.
+
+Note that arguments can also be specified as key-value arguments (in a table).
+
+### [res] image.lcn(src, [kernel]) ###
+Local contrast normalization (LCN) on a given `src` image using kernel `kernel`.
+If `kernel` is not given, then a default `9x9` Gaussian is used 
+(see [image.gaussian](#image.gaussian)).
+
+To prevent border effects, the image is first global contrast normalized
+(GCN) by substracting the global mean and dividing by the global 
+standard deviation.
+
+```lua
+res = (src - lm(src)) / sqrt( lm(src) - lm(src*src) )
+```
+
+### [res] image.erode(src, [kernel, pad]) ###
+Performs a [morphological erosion](https://en.wikipedia.org/wiki/Erosion_(morphology)) 
+on binary (zeros and ones) image `src` using odd 
+dimensioned morphological binary kernel `kernel`. 
+The default is a kernel consisting of ones of size `3x3`. Number 
+`pad` is the value to assume outside the image boundary when performing 
+the convolution. The default is 1.
+
+### [res] image.dilate(src, [kernel, pad]) ###
+Performs a [morphological dilation](https://en.wikipedia.org/wiki/Dilation_(morphology)) 
+on binary (zeros and ones) image `src` using odd 
+dimensioned morphological binary kernel `kernel`. 
+The default is a kernel consisting of ones of size `3x3`. Number 
+`pad` is the value to assume outside the image boundary when performing 
+the convolution. The default is 0.
+
+<a name="image.grapicalinter"/>
+## Graphical User Interfaces ##
+The following functions require package [qtlua](https://github.com/torch/qtlua).
+
+### [res] image.display(input, zoom, min, max, legend, w, ox, oy, scaleeach, gui, offscreen, padding, symm, nrow) ###
+Displays `input` image(s) with optional saturation and zooming. 
+The `input`, which is either a Tensor of size `HxW`, `KxHxW` or `Kx3xHxW`, or list,
+is first prepared for display by passing it through [image.toDisplayTensor](#image.toDisplayTensor):
+```lua
+input = image.toDisplayTensor{
+   input=input, padding=padding, nrow=nrow, saturate=saturate, 
+   scaleeach=scaleeach, min=min, max=max, symmetric=symm
+}
+```
+The resulting `input` will be displayed using [qtlua](https://github.com/torch/qtlua).
+The displayed image will be zoomed by a factor of `zoom`. The default is 1.
+If `gui=true` (the default), the graphical user inteface (GUI) 
+is an interactive window that provides the user with the ability to zoom in or out. 
+This can be turned off for a faster display.
+
+
+### [window, painter] image.window(resize, mousepress, mousedoublepress) ###
+Creates a window context for images.
+
+<a name="image.colorspace"/>
+## Color Space Conversions ##
+
+### [res] image.rgb2lab([dst,] src) ###
+Converts a `src` RGB image to [Lab](https://en.wikipedia.org/wiki/Lab_color_space). 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.rgb2yuv([dst,] src) ###
+Converts a RGB image to YUV. If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.yuv2rgb([dst,] src) ###
+Converts a YUV image to RGB. If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.rgb2y([dst,] src) ###
+Converts a RGB image to Y (discard U and V). 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.rgb2hsl([dst,] src) ###
+Converts a RGB image to [HSL](https://en.wikipedia.org/wiki/HSL_and_HSV). 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.hsl2rgb([dst,] src) ###
+Converts a HSL image to RGB. 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.rgb2hsv([dst,] src) ###
+Converts a RGB image to [HSV](https://en.wikipedia.org/wiki/HSL_and_HSV). 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.hsv2rgb([dst,] src) ###
+Converts a HSV image to RGB. 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
+### [res] image.rgb2nrgb([dst,] src) ###
+Converts an RGB image to normalized-RGB. 
+
+
+## Constant Tensors ##
+The following functions construct Tensor constants like Gaussian or 
+Laplacian kernels, or images like Lenna and Fabio.
+
+### [res] image.lena() ###
+Returns the classic `Lenna.jpg` image as a `3 x 512 x 512` Tensor.
+
+### [res] image.fabio() ###
+Returns the `fabio.jpg` image as a `257 x 271` Tensor.
+
+### [res] image.gaussian([size, sigma, amplitude, normalize, [...]]) ###
+Returns a 2D [Gaussian](https://en.wikipedia.org/wiki/Gaussian_function) 
+kernel of size `height x width`. When used as a Gaussian smoothing operator in a 2D 
+convolution, this kernel is used to `blur' images and remove detail and noise 
+(ref.: [Gaussian Smoothing](http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm)).
+Optional arguments `[...]` expand to 
+`width`, `height`, `sigma_horz`, `sigma_vert`, `mean_horz`, `mean_vert`.
+
+The default value of `height` and `width` is `size`, where the latter 
+has a default value of 3. The amplitude of the Gaussian (its maximum value) 
+is `amplitude`. The default is 1. 
+When `normalize=true`, the kernel is normalized to have a sum of 1.
+This overrides the `amplitude` argument. The default is `false`.
+The default value of the horizontal and vertical standard deviation 
+`sigma_horz` and `sigma_vert` of the Gaussian kernel is `sigma`, where 
+the latter has a default value of 0.25. The default values for the 
+corresponding means `mean_horz` and `mean_vert` are 0.5. Both the 
+standard deviations and means are relative to kernels of unit width and height
+where the top-left corner is the origin. In other works, a mean of 0.5 is 
+the center of the kernel size, while a standard deviation of 0.25 is a quarter
+of it.
+
+Note that arguments can also be specified as key-value arguments (in a table).
+
+### [res] image.gaussian1D([size, sigma, amplitude, normalize, mean]) ###
+Returns a 1D Gaussian kernel of size `size`, mean `mean` and standard 
+deviation `sigma`. 
+Respectively, these arguments have default values of 3, 0.25 and 0.5. 
+The amplitude of the Gaussian (its maximum value) 
+is `amplitude`. The default is 1. 
+When `normalize=true`, the kernel is normalized to have a sum of 1.
+This overrides the `amplitude` argument. The default is `false`. Both the 
+standard deviation and mean are relative to a kernel of unit size. 
+In other works, a mean of 0.5 is the center of the kernel size, 
+while a standard deviation of 0.25 is a quarter of it.
+
+Note that arguments can also be specified as key-value arguments (in a table).
+
+### [res] image.laplacian([size, sigma, amplitude, normalize, [...]]) ###
+Returns a 2D [Laplacian](https://en.wikipedia.org/wiki/Blob_detection#The_Laplacian_of_Gaussian) 
+kernel of size `height x width`. 
+When used in a 2D convolution, the Laplacian of an image highlights 
+regions of rapid intensity change and is therefore often used for edge detection 
+(ref.: [Laplacian/Laplacian of Gaussian](http://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm)).
+Optional arguments `[...]` expand to 
+`width`, `height`, `sigma_horz`, `sigma_vert`, `mean_horz`, `mean_vert`.
+
+The default value of `height` and `width` is `size`, where the latter 
+has a default value of 3. The amplitude of the Laplacian (its maximum value) 
+is `amplitude`. The default is 1. 
+When `normalize=true`, the kernel is normalized to have a sum of 1.
+This overrides the `amplitude` argument. The default is `false`.
+The default value of the horizontal and vertical standard deviation 
+`sigma_horz` and `sigma_vert` of the Laplacian kernel is `sigma`, where 
+the latter has a default value of 0.25. The default values for the 
+corresponding means `mean_horz` and `mean_vert` are 0.5. Both the 
+standard deviations and means are relative to kernels of unit width and height
+where the top-left corner is the origin. In other works, a mean of 0.5 is 
+the center of the kernel size, while a standard deviation of 0.25 is a quarter
+of it.
+
+### [res] image.colormap(nColor) ###
+Creates an optimally-spaced RGB color mapping of `nColor` colors. 
+Note that the mapping is obtained by generating the colors around 
+the HSV wheel, varying the Hue component.
+The returned `res` Tensor has size `nColor x 3`. 
+
+### [res] image.jetColormap(nColor) ###
+Creates a jet (blue to red) RGB color mapping of `nColor` colors.
+The returned `res` Tensor has size `nColor x 3`. 
 
 ## Dependencies:
 Torch7 (www.torch.ch)
