@@ -718,7 +718,7 @@ local function convolve(...)
       dok.error('incorrect arguments', 'image.convolve')
    end
    if mode and mode ~= 'valid' and mode ~= 'full' and mode ~= 'same' then
-      dok.error('mode has to be one of: full | valid | same', 'image.convolve')
+      dok.error('mode has to be one of: full | valid', 'image.convolve')
    end
    local md = (((mode == 'full') or (mode == 'same')) and 'F') or 'V'
    if kernel:nDimension() == 2 and src:nDimension() == 3 then
@@ -916,9 +916,11 @@ local function display(...)
 
    input = image.toDisplayTensor{input=input, padding=padding, nrow=nrow, saturate=saturate,
                                  scaleeach=scaleeach, min=min, max=max, symmetric=symm}
-
+   -- if image is a table, then we treat if as a list of images
    -- if 2 dims or 3 dims and 1/3 channels, then we treat it as a single image
    if input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
+      -- Rescale range
+      local mminput = input--image.minmax{tensor=input, min=min, max=max, symm=symm}
       -- Compute width
       local d = input:nDimension()
       local x = input:size(d)*zoom
@@ -930,10 +932,10 @@ local function display(...)
          local closure = w
          local hook_resize, hook_mouse
          if closure and closure.window and closure.image then
-            closure.image = input
+            closure.image = mminput
             closure.refresh(x,y)
          else
-            closure = {image=input}
+            closure = {image=mminput}
             hook_resize = function(wi,he)
                              local qtimg = qt.QImage.fromTensor(closure.image)
                              closure.painter:image(0,0,wi,he,qtimg)
@@ -966,13 +968,13 @@ local function display(...)
          if w.isclosure then
             -- window was created with gui, just update closure
             local closure = w
-            closure.image = input
+            closure.image = mminput
             local size = closure.window.size:totable()
             closure.window.windowTitle = legend
             closure.refresh(size.width, size.height)
          else
             -- if no gui, create plain window, and blit
-            local qtimg = qt.QImage.fromTensor(input)
+            local qtimg = qt.QImage.fromTensor(mminput)
             w:image(ox,oy,x,y,qtimg)
          end
       end
@@ -1517,11 +1519,11 @@ function image.laplacian(...)
    local _, size, sigma, amplitude, normalize, 
    width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
       {...},
-      'image.laplacian',
-      'returns a 2D Laplacian kernel',
+      'image.gaussian',
+      'returns a 2D gaussian kernel',
       {arg='size', type='number', help='kernel size (size x size)', default=3},
       {arg='sigma', type='number', help='sigma (horizontal and vertical)', default=0.1},
-      {arg='amplitude', type='number', help='amplitute of the Laplacian (max value)', default=1},
+      {arg='amplitude', type='number', help='amplitute of the gaussian (max value)', default=1},
       {arg='normalize', type='number', help='normalize kernel (exc Amplitude)', default=false},
       {arg='width', type='number', help='kernel width', defaulta='size'},
       {arg='height', type='number', help='kernel height', defaulta='size'},
@@ -1603,7 +1605,7 @@ function image.gaussianpyramid(...)
 end
 
 ----------------------------------------------------------------------
---- Creates an optimally-spaced RGB color mapping
+--- Creates a random color mapping
 --
 function image.colormap(nbColor)
    -- note: the best way of obtaining optimally-spaced
@@ -1648,12 +1650,12 @@ function image.colormap(nbColor)
 end
 
 ----------------------------------------------------------------------
---- Creates a jet color mapping - Inspired by http://www.metastine.com/?p=7
+--- Creates a jet colour mapping - Inspired by http://www.metastine.com/?p=7
 --
-function image.jetColormap(nbColor)
-   local map = torch.Tensor(nbColor,3)
-   for i = 1,nbColor do
-      local fourValue = 4 * i / nbColor
+function image.jetColormap(nbColour)
+   local map = torch.Tensor(nbColour,3)
+   for i = 1,nbColour do
+      local fourValue = 4 * i / nbColour
       map[i][1] = math.max(math.min(fourValue - 1.5, -fourValue + 4.5, 1),0)
       map[i][2] = math.max(math.min(fourValue -  .5, -fourValue + 3.5, 1),0)
       map[i][3] = math.max(math.min(fourValue +  .5, -fourValue + 2.5, 1),0)
@@ -1666,8 +1668,8 @@ end
 ------------------------------------------------------------------------
 --- Local contrast normalization of an image
 --
--- local contrast normalization on a given image tensor using kernel ker.
--- If kernel is not given, then a default 9x9 gaussian will be used
+-- do local contrast normalization on a given image tensor using kernel ker.
+-- of kernel is not given, then a default 9x9 gaussian will be used
 function image.lcn(im,ker)
 
    ker = ker or image.gaussian({size=9,sigma=1.591/9,normalize=true})
