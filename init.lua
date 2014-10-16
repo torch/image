@@ -817,19 +817,21 @@ local function toDisplayTensor(...)
       {arg='saturate', type='boolean', help='saturate (useful when min/max are lower than actual min/max', default=true}
    )
 
-   local packed = torch.Tensor()
+   local packed
    if type(input) == 'table' then
       -- pack images in single tensor
       local ndims = input[1]:dim()
       local channels = ((ndims == 2) and 1) or input[1]:size(1)
       local height = input[1]:size(ndims-1)
       local width = input[1]:size(ndims)
-      packed:resize(#input,channels,height,width)
+      packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
          packed[i]:copy(input[i])
       end
+   elseif scaleeach then
+      packed = torch.Tensor(input:size()):copy(input)
    else
-      packed:resize(input:size()):copy(input)
+      packed = input
    end
    
    -- scale each
