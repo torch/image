@@ -212,7 +212,7 @@ The latter can either be a table of image Tensors of size `height x width` (grey
 or a single Tensor of size `batchSize x nChannel x height x width` or `nChannel x height x width` 
 where `nChannel=[3,1]`, `batchSize x height x width` or `height x width`.
 
-Unless `input` is a table and `scaleeach=false` (the default), all detected images 
+When `scaleeach=false` (the default), all detected images 
 are compressed with successive calls to [image.minmax](#image.minmax):
 ```lua
 image.minmax{tensor=input[i], min=min, max=max, symm=symmetric, saturate=saturate}
