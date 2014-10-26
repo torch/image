@@ -817,66 +817,79 @@ local function toDisplayTensor(...)
       {arg='saturate', type='boolean', help='saturate (useful when min/max are lower than actual min/max', default=true}
    )
 
+   local packed
    if type(input) == 'table' then
       -- pack images in single tensor
       local ndims = input[1]:dim()
       local channels = ((ndims == 2) and 1) or input[1]:size(1)
       local height = input[1]:size(ndims-1)
       local width = input[1]:size(ndims)
-      local packed = torch.Tensor(#input,channels,height,width)
+      packed = torch.Tensor(#input,channels,height,width)
       for i,img in ipairs(input) do
-         if scaleeach then
-       packed[i] = image.minmax{tensor=input[i], min=min, max=max, symm=symm, saturate=saturate}
-         else
-            packed[i]:copy(input[i])
-         end
+         packed[i]:copy(input[i])
       end
-      return toDisplayTensor{input=packed,padding=padding,nrow=nrow,min=min,max=max,symmetric=symm,saturate=saturate}
-   end
-
-   if input:nDimension() == 4 and (input:size(2) == 3 or input:size(2) == 1) then
-      -- arbitrary number of color images: lay them out on a grid
-      local nmaps = input:size(1)
-      local xmaps = math.min(nrow, nmaps)
-      local ymaps = math.ceil(nmaps / xmaps)
-      local height = input:size(3)+padding
-      local width = input:size(4)+padding
-      local grid = torch.Tensor(input:size(2), height*ymaps, width*xmaps):fill(input:max())
-      local k = 1
-      for y = 1,ymaps do
-         for x = 1,xmaps do
-            if k > nmaps then break end
-            grid:narrow(2,(y-1)*height+1+padding/2,height-padding):narrow(3,(x-1)*width+1+padding/2,width-padding):copy(input[k])
-            k = k + 1
-         end
-      end
-      local mminput = image.minmax{tensor=grid, min=min, max=max, symm=symm, saturate=saturate}
-      return mminput
-   elseif input:nDimension() == 2  or (input:nDimension() == 3 and (input:size(1) == 1 or input:size(1) == 3)) then
-      -- Rescale range
-      local mminput = image.minmax{tensor=input, min=min, max=max, symm=symm, saturate=saturate}
-      return mminput
-   elseif input:nDimension() == 3 then
-      -- arbitrary number of channels: lay them out on a grid
-      local nmaps = input:size(1)
-      local xmaps = math.min(nrow, nmaps)
-      local ymaps = math.ceil(nmaps / xmaps)
-      local height = input:size(2)+padding
-      local width = input:size(3)+padding
-      local grid = torch.Tensor(height*ymaps, width*xmaps):fill(input:max())
-      local k = 1
-      for y = 1,ymaps do
-         for x = 1,xmaps do
-            if k > nmaps then break end
-            grid:narrow(1,(y-1)*height+1+padding/2,height-padding):narrow(2,(x-1)*width+1+padding/2,width-padding):copy(input[k])
-            k = k + 1
-         end
-      end
-      local mminput = image.minmax{tensor=grid, min=min, max=max, symm=symm, saturate=saturate}
-      return mminput
+   elseif scaleeach then
+      packed = torch.Tensor(input:size()):copy(input)
    else
-      xerror('input must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
+      packed = input
    end
+   
+   -- scale each
+   if scaleeach and (
+         (packed:dim() == 4 and (packed:size(2) == 3 or packed:size(2) == 1))
+         or
+         (packed:dim() == 3 and (packed:size(1) ~= 1 and packed:size(1) ~= 3))
+         ) then
+      for i=1,packed:size(1) do
+         image.minmax{tensor=packed[i], inplace=true, min=min, max=max, symm=symm, saturate=saturate}
+      end
+   end
+   
+   local grid = torch.Tensor()
+   if packed:dim() == 4 and (packed:size(2) == 3 or packed:size(2) == 1) then
+      -- arbitrary number of color images: lay them out on a grid
+      local nmaps = packed:size(1)
+      local xmaps = math.min(nrow, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = packed:size(3)+padding
+      local width = packed:size(4)+padding
+      grid:resize(packed:size(2), height*ymaps, width*xmaps):fill(packed:max())
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            grid:narrow(2,(y-1)*height+1+padding/2,height-padding):narrow(3,(x-1)*width+1+padding/2,width-padding):copy(packed[k])
+            k = k + 1
+         end
+      end
+   elseif packed:dim() == 2  or (packed:dim() == 3 and (packed:size(1) == 1 or packed:size(1) == 3)) then
+      -- Rescale range
+      image.minmax{tensor=packed, inplace=true, min=min, max=max, symm=symm, saturate=saturate}
+      return packed
+   elseif packed:dim() == 3 then
+      -- arbitrary number of channels: lay them out on a grid
+      local nmaps = packed:size(1)
+      local xmaps = math.min(nrow, nmaps)
+      local ymaps = math.ceil(nmaps / xmaps)
+      local height = packed:size(2)+padding
+      local width = packed:size(3)+padding
+      grid:resize(height*ymaps, width*xmaps):fill(packed:max())
+      local k = 1
+      for y = 1,ymaps do
+         for x = 1,xmaps do
+            if k > nmaps then break end
+            grid:narrow(1,(y-1)*height+1+padding/2,height-padding):narrow(2,(x-1)*width+1+padding/2,width-padding):copy(packed[k])
+            k = k + 1
+         end
+      end
+   else
+      xerror('packed must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
+   end
+   
+   if not scaleeach then
+      image.minmax{tensor=grid, inplace=true, min=min, max=max, symm=symm, saturate=saturate}
+   end
+   return grid
 end
 rawset(image,'toDisplayTensor',toDisplayTensor)
 
