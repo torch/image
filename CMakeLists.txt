@@ -32,3 +32,4 @@ SET(luasrc init.lua fabio.jpg fabio.png lena.jpg lena.png win.ui)
 
 ADD_TORCH_PACKAGE(image "${src}" "${luasrc}" "Image Processing")
 TARGET_LINK_LIBRARIES(image luaT TH)
+INSTALL(FILES "README.md" DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/image")
