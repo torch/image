@@ -499,12 +499,23 @@ rawset(image, 'scale', scale)
 -- rotate
 --
 local function rotate(...)
-   local dst,src,theta
+   local dst,src,theta, mode
    local args = {...}
-   if select('#',...) == 3 then
+   if select('#',...) == 4 then
       dst = args[1]
       src = args[2]
       theta = args[3]
+      mode = args[4]
+   elseif select('#',...) == 3 then
+      if type(args[2]) == 'number' then
+	 src = args[1]
+	 theta = args[2]
+	 mode = args[3]
+      else
+	 dst = args[1]
+	 src = args[2]
+	 theta = args[3]
+      end
    elseif select('#',...) == 2 then
       src = args[1]
       theta = args[2]
@@ -513,15 +524,24 @@ local function rotate(...)
                        'rotate an image by theta radians', nil,
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='rotation angle (in radians)', req=true},
+		       {type='string', help='mode: simple | bilinear', default='simple'},
                        '',
                        {type='torch.Tensor', help='destination', req=true},
                        {type='torch.Tensor', help='input image', req=true},
-                       {type='number', help='rotation angle (in radians)', req=true}))
+                       {type='number', help='rotation angle (in radians)', req=true},
+		       {type='string', help='mode: simple | bilinear', default='simple'}))
       dok.error('incorrect arguments', 'image.rotate')
    end
    dst = dst or src.new()
    dst:resizeAs(src)
-   src.image.rotate(src,dst,theta)
+   mode = mode or 'simple'
+   if mode == 'simple' then
+      src.image.rotate(src,dst,theta)
+   elseif mode == 'bilinear' then
+      src.image.rotateBilinear(src,dst,theta)
+   else
+      dok.error('mode must be one of: simple | bilinear', 'image.rotate')
+   end
    return dst  
 end
 rawset(image, 'rotate', rotate)

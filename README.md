@@ -77,9 +77,11 @@ Rescale the height and width of image `src` to fit the dimensions of
 Tensor `dst`. 
 
 <a name="image.rotate"/>
-### [res] image.rotate([dst,], src, theta) ###
+### [res] image.rotate([dst,], src, theta, [mode]) ###
 Rotates image `src` by `theta` radians. 
 If `dst` is specified it is used to store the results of the rotation.
+Variable `mode` specifies type of interpolation to be used. Valid values include 
+*simple*(the default) or *bilinear* interpolation.
 
 <a name="image.hflip"/>
 ### [res] image.hflip([dst,] src) ###
