@@ -800,7 +800,7 @@ int image_(Main_vflip)(lua_State *L) {
       for(k=0; k<channels; k++) {
           for (y=0; y<height; y++) {
             for (x=0; x<width; x++) {
-                dst_data[ k*is[0] + (height-1-y)*is[1] + x*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
+                dst_data[ k*os[0] + (height-1-y)*os[1] + x*os[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
             }
           }
       }
@@ -849,7 +849,7 @@ int image_(Main_hflip)(lua_State *L) {
       for(k=0; k<channels; k++) {
           for (y=0; y<height; y++) {
               for (x=0; x<width; x++) {
-                  dst_data[ k*is[0] + y*is[1] + (width-x-1)*is[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
+                  dst_data[ k*os[0] + y*os[1] + (width-x-1)*os[2] ] = src_data[ k*is[0] + y*is[1] + x*is[2] ];
               }
           }
       }
