@@ -1647,15 +1647,15 @@ function image.colormap(nbColor)
    local satf = 0
    for i = 1,nbColor do
       -- HSL
-      local hue = math.mod(huef,360)
-      local sat = math.mod(satf,0.7) + 0.3
+      local hue = math.fmod(huef,360)
+      local sat = math.fmod(satf,0.7) + 0.3
       local light = 0.5
       huef = huef + 39
       satf = satf + 1/9
       -- HSL -> RGB
       local c = (1 - math.abs(2*light-1))*sat
       local huep = hue/60
-      local x = c*(1-math.abs(math.mod(huep,2)-1))
+      local x = c*(1-math.abs(math.fmod(huep,2)-1))
       local redp
       local greenp
       local bluep
