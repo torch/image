@@ -848,10 +848,8 @@ local function toDisplayTensor(...)
       for i,img in ipairs(input) do
          packed[i]:copy(input[i])
       end
-   elseif scaleeach then
-      packed = torch.Tensor(input:size()):copy(input)
    else
-      packed = input
+      packed = torch.Tensor(input:size()):copy(input)
    end
    
    -- scale each
