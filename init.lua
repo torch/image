@@ -244,7 +244,8 @@ local filetypes = {
    jpg = {loader = image.loadJPG, saver = image.saveJPG},
    png = {loader = image.loadPNG, saver = image.savePNG},
    ppm = {loader = image.loadPPM, saver = image.savePPM},
-   pgm = {loader = image.loadPGM, saver = image.savePGM}
+   -- yes, loadPPM not loadPGM
+   pgm = {loader = image.loadPPM, saver = image.savePGM}
 }
 
 filetypes['JPG']  = filetypes['jpg']
