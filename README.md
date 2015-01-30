@@ -307,6 +307,18 @@ image. Otherwise, returns a new `res` Tensor.
 ### [res] image.rgb2nrgb([dst,] src) ###
 Converts an RGB image to normalized-RGB. 
 
+<a name="image.y2jet"/>
+### [res] image.y2jet([dst,] src) ###
+Converts a L-levels (1 to L) greyscale image into a L-levels jet heat-map.
+If `dst` is provided, it is used to store the output image. Otherwise, returns a new `res` Tensor.
+
+This is particulary helpful for understanding the magnitude of the values of a matrix, or easily spot peaks in scalar field (like probability densities over a 2D area).
+For example, you can run it as
+
+```lua
+image.display{image=image.y2jet(torch.linspace(1,10,10)), zoom=50}
+```
+
 <a name="image.tensorconst"/>
 ## Tensor Constructors ##
 The following functions construct Tensors like Gaussian or 
