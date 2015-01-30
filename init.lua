@@ -1484,6 +1484,45 @@ function image.rgb2nrgb(...)
 end
 
 ----------------------------------------------------------------------
+-- image.y2yet(image)
+-- Converts a L-levels (1-L) greyscale image into a jet heat-map
+--
+function image.y2jet(...)
+
+   -- arg check
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      error('Invalid input for image.y2jet()')
+   end
+
+   -- just use double
+   if torch.type(input) ~= 'torch.DoubleTensor' then input = input:double() end
+
+   -- accept 3D grayscale
+   if input:dim() == 3 and input:size(1) == 1 then
+      input = torch.Tensor(input):resize(input:size(2), input:size(3))
+   end
+
+   -- accept 1D greyscale
+   if input:dim() == 1  then
+      input = torch.Tensor(input):resize(1, input:size(1))
+   end
+
+   local output = output or torch.Tensor():typeAs(input)
+   local L = input:max()
+
+   input.image.colorize(output, input-1, image.jetColormap(L))
+
+   return output
+end
+
+----------------------------------------------------------------------
 --- Returns a gaussian kernel.
 --
 function image.gaussian(...)

@@ -15,6 +15,11 @@
 #define M_PI    3.14159265358979323846
 #endif
 
+#ifdef rand0to1
+#undef rand0to1
+#endif
+#define rand0to1() ((float)rand()/(float)RAND_MAX)
+
 static void image_(Main_op_validate)( lua_State *L,  THTensor *Tsrc, THTensor *Tdst){
 
   long src_depth = 1;
@@ -1167,6 +1172,52 @@ int image_(Main_gaussian)(lua_State *L) {
   return 0;
 }
 
+/*
+ * Borrowed from github.com/clementfarabet/lua---imgraph
+ * with Clément's permission for implementing y2jet()
+ */
+int image_(Main_colorize)(lua_State *L) {
+  // get args
+  THTensor *output = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *input = (THTensor *)luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *colormap = (THTensor *)luaT_checkudata(L, 3, torch_Tensor);
+
+  // dims
+  long height = input->size[0];
+  long width = input->size[1];
+
+  // generate color map if not given
+  if (THTensor_(nElement)(colormap) == 0) {
+    THTensor_(resize2d)(colormap, width*height, 3);
+    THTensor_(fill)(colormap, -1);
+  }
+
+  // colormap channels
+  int channels = colormap->size[1];
+
+  // generate output
+  THTensor_(resize3d)(output, channels, height, width);
+  int x,y,k;
+  for (y = 0; y < height; y++) {
+    for (x = 0; x < width; x++) {
+      int id = THTensor_(get2d)(input, y, x);
+      real check = THTensor_(get2d)(colormap, id, 0);
+      if (check == -1) {
+        for (k = 0; k < channels; k++) {
+          THTensor_(set2d)(colormap, id, k, rand0to1());
+        }
+      }
+      for (k = 0; k < channels; k++) {
+        real color = THTensor_(get2d)(colormap, id, k);
+        THTensor_(set3d)(output, k, y, x, color);
+      }
+    }
+  }
+
+  // return nothing
+  return 0;
+}
+
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
@@ -1183,6 +1234,7 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"gaussian", image_(Main_gaussian)},
   {"vflip", image_(Main_vflip)},
   {"hflip", image_(Main_hflip)},
+  {"colorize", image_(Main_colorize)},
   {NULL, NULL}
 };
 
