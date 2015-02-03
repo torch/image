@@ -225,7 +225,7 @@ static int image_(Main_scaleSimple)(lua_State *L)
   scx=((float)src_width)/((float)dst_width);
   scy=((float)src_height)/((float)dst_height);
 
-#pragma omp parallel for private(j)
+#pragma omp parallel for private(j, i, k)
   for(j = 0; j < dst_height; j++) {
     for(i = 0; i < dst_width; i++) {
       float val = 0.0;
