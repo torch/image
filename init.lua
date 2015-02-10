@@ -548,6 +548,54 @@ end
 rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
+-- polar
+--
+local function polar(...)
+   local dst,src,mode
+   local args = {...}
+   if select('#',...) == 3 then
+      dst  = args[1]
+      src  = args[2]
+      mode = args[3]
+   elseif select('#',...) == 2 then
+      if type(args[2]) == 'string' then
+        src = args[1]
+        mode = args[2]
+      else
+        dst  = args[1]
+        src  = args[2]
+      end
+   elseif select('#',...) == 1 then
+     src = args[1]
+   else
+      print(dok.usage('image.polar',
+                       'convert an image to polar coordinates', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='mode: simple | bilinear', default='simple'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='mode: simple | bilinear', default='simple'}))
+      dok.error('incorrect arguments', 'image.polar')
+   end
+   mode = mode or 'simple'
+   if dst == nil then
+      local maxDist = math.floor(math.max(src:size(2), src:size(3)))
+      dst = src.new()
+      dst:resize(src:size(1), maxDist, maxDist)
+   end
+   if mode == 'simple' then
+      src.image.polar(src,dst)
+   elseif mode == 'bilinear' then
+      src.image.polarBilinear(src,dst)
+   else
+      dok.error('mode must be one of: simple | bilinear', 'image.polar')
+   end  
+   return dst  
+end
+rawset(image, 'polar', polar)
+
+----------------------------------------------------------------------
 -- warp
 --
 local function warp(...)

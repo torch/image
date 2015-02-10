@@ -83,6 +83,11 @@ If `dst` is specified it is used to store the results of the rotation.
 Variable `mode` specifies type of interpolation to be used. Valid values include 
 *simple*(the default) or *bilinear* interpolation.
 
+<a name="image.polar"/>
+### [res] image.polar([dst,], src, [mode]) ###
+Converts image `src` to polar coordinates. In the polar image, angular information is in the vertical direction and radius information in the horizontal direction.
+If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `mode` specifies type of interpolation to be used. Valid values include *simple*(the default) or *bilinear* interpolation.
+
 <a name="image.hflip"/>
 ### [res] image.hflip([dst,] src) ###
 Flips image `src` horizontally (left<->right). If `dst` is provided, it is used to
