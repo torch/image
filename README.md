@@ -81,12 +81,12 @@ Tensor `dst`.
 Rotates image `src` by `theta` radians. 
 If `dst` is specified it is used to store the results of the rotation.
 Variable `mode` specifies type of interpolation to be used. Valid values include 
-*simple*(the default) or *bilinear* interpolation.
+*simple* (the default) or *bilinear* interpolation.
 
 <a name="image.polar"/>
-### [res] image.polar([dst,], src, [mode]) ###
+### [res] image.polar([dst,], src, [interpolation], [mode]) ###
 Converts image `src` to polar coordinates. In the polar image, angular information is in the vertical direction and radius information in the horizontal direction.
-If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `mode` specifies type of interpolation to be used. Valid values include *simple*(the default) or *bilinear* interpolation.
+If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `interpolation` specifies type of interpolation to be used. Valid values include *simple* (the default) or *bilinear* interpolation. Variable `mode` determines whether the *full* image is converted to the polar space (implying empty regions in the polar image), or whether only the *valid* central part of the polar transform is returned (the default). 
 
 <a name="image.hflip"/>
 ### [res] image.hflip([dst,] src) ###

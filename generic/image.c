@@ -439,11 +439,12 @@ static int image_(Main_polar)(lua_State *L)
 {
     THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
     THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
+    float doFull = luaL_checknumber(L, 3);
     real *src, *dst;
     long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
     long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
     long i, j, k;
-    float id, jd, a, r, m;
+    float id, jd, a, r, m, midY, midX;
     long ii,jj;
     
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
@@ -481,20 +482,26 @@ static int image_(Main_polar)(lua_State *L)
         luaL_error(L, "image.polar: src and dst depths do not match"); }
             
     // compute maximum distance
-    if(src_width < src_height) { m = (float) src_width  / 2.0; }
-    else {                       m = (float) src_height / 2.0; }
+    midY = (float) src_height / 2.0;
+    midX = (float) src_width  / 2.0;
+    if(doFull == 1) {
+      m = sqrt((float) src_width * (float) src_width + (float) src_height * (float) src_height) / 2.0;
+    }
+    else {
+      m = (src_width < src_height) ? midX : midY;
+    }
     
     // loop to fill polar image
-    for(j = 0; j < dst_height; j++) {                       // orientation loop
+    for(j = 0; j < dst_height; j++) {               // orientation loop
         jd = (float) j;
-        a = (2 * M_PI * jd) / (float) dst_height;           // current angle
-        for(i = 0; i < dst_width; i++) {                    // radius loop
+        a = (2 * M_PI * jd) / (float) dst_height;   // current angle
+        for(i = 0; i < dst_width; i++) {            // radius loop
             float val = -1;
             id = (float) i;
-            r = (m * id) / (float) dst_width;               // current distance
+            r = (m * id) / (float) dst_width;       // current distance
             
-            jj =  r * cos(a) + m;                           // y-location in source image
-            ii = -r * sin(a) + m;                           // x-location in source image
+            jj = (long) floor( r * cos(a) + midY);  // y-location in source image
+            ii = (long) floor(-r * sin(a) + midX);  // x-location in source image
             
             if(ii>src_width-1) val=0;
             if(jj>src_height-1) val=0;
@@ -525,11 +532,12 @@ static int image_(Main_polarBilinear)(lua_State *L)
 {
     THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
     THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
+    float doFull = luaL_checknumber(L, 3);
     real *src, *dst;
     long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
     long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
     long i, j, k;
-    float id, jd, a, r, m;
+    float id, jd, a, r, m, midY, midX;
     long ii_0, ii_1, jj_0, jj_1;
     
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
@@ -567,21 +575,27 @@ static int image_(Main_polarBilinear)(lua_State *L)
         luaL_error(L, "image.polar: src and dst depths do not match"); }
     
     // compute maximum distance
-    if(src_width < src_height) { m = floor((float) src_width  / 2.0); }
-    else {                       m = floor((float) src_height / 2.0); }
+    midY = (float) src_height / 2.0;
+    midX = (float) src_width  / 2.0;
+    if(doFull == 1) {
+      m = sqrt((float) src_width * (float) src_width + (float) src_height * (float) src_height) / 2.0;
+    }
+    else {
+      m = (src_width < src_height) ? midX : midY;
+    }
     
     // loop to fill polar image
-    for(j = 0; j < dst_height; j++) {                       // orientation loop
+    for(j = 0; j < dst_height; j++) {                 // orientation loop
         jd = (float) j;
-        a = (2 * M_PI * jd) / (float) dst_height;           // current angle
-        for(i = 0; i < dst_width; i++) {                    // radius loop
+        a = (2 * M_PI * jd) / (float) dst_height;     // current angle
+        for(i = 0; i < dst_width; i++) {              // radius loop
             float val = -1;
             real ri, rj, wi, wj;
             id = (float) i;
-            r = (m * id) / (float) dst_width;               // current distance
+            r = (m * id) / (float) dst_width;         // current distance
             
-            rj =  r * cos(a) + m;                           // y-location in source image
-            ri = -r * sin(a) + m;                           // x-location in source image
+            rj =  r * cos(a) + midY;                  // y-location in source image
+            ri = -r * sin(a) + midX;                  // x-location in source image
             
             ii_0=(long)floor(ri);
             ii_1=ii_0 + 1;
