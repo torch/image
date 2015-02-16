@@ -993,7 +993,7 @@ static int image_(Main_translate)(lua_State *L)
 
   if( Tdst->nDimension==3 && ( src_depth!=dst_depth) )
     luaL_error(L, "image.translate: src and dst depths do not match");
- 
+
   for(j = 0; j < src_height; j++) {
     for(i = 0; i < src_width; i++) {
       long ii=i+shiftx;
@@ -1054,7 +1054,7 @@ int image_(Main_rgb2hsl)(lua_State *L) {
         if (mx == r) {
           h = (g - b) / d + (g < b ? 6 : 0);
         } else if (mx == g) {
-          h = (b - r) / d + 2; 
+          h = (b - r) / d + 2;
         } else {
           h = (r - g) / d + 4;
         }
@@ -1074,14 +1074,14 @@ int image_(Main_rgb2hsl)(lua_State *L) {
 static inline real image_(hue2rgb)(real p, real q, real t) {
   if (t < 0.) t += 1;
   if (t > 1.) t -= 1;
-  if (t < 1./6) 
+  if (t < 1./6)
     return p + (q - p) * 6. * t;
-  else if (t < 1./2) 
+  else if (t < 1./2)
     return q;
-  else if (t < 2./3) 
+  else if (t < 2./3)
     return p + (q - p) * (2./3 - t) * 6.;
   else
-    return p;                                       
+    return p;
 }
 
 /*
@@ -1161,7 +1161,7 @@ int image_(Main_rgb2hsv)(lua_State *L) {
         if (mx == r) {
           h = (g - b) / d + (g < b ? 6 : 0);
         } else if (mx == g) {
-          h = (b - r) / d + 2; 
+          h = (b - r) / d + 2;
         } else {
           h = (r - g) / d + 4;
         }
@@ -1221,6 +1221,112 @@ int image_(Main_hsv2rgb)(lua_State *L) {
   return 0;
 }
 
+/*
+ * Converts an sRGB color value to LAB.
+ * Based on http://www.brucelindbloom.com/index.html?Equations.html.
+ * Assumes r, g, and b are contained in the set [0, 1].
+ * LAB output is NOT restricted to [0, 1]!
+ */
+int image_(Main_rgb2lab)(lua_State *L) {
+  THTensor *rgb = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *lab = luaT_checkudata(L, 2, torch_Tensor);
+
+  // CIE Standard
+  double epsilon = 216.0/24389.0;
+  double k = 24389.0/27.0;
+  // D65 white point
+  double xn = 0.950456;
+  double zn = 1.088754;
+
+  int y,x;
+  real r,g,b,l,a,_b;
+  for (y=0; y<rgb->size[1]; y++) {
+    for (x=0; x<rgb->size[2]; x++) {
+      // get RGB
+      r = gamma_expand_sRGB(THTensor_(get3d)(rgb, 0, y, x));
+      g = gamma_expand_sRGB(THTensor_(get3d)(rgb, 1, y, x));
+      b = gamma_expand_sRGB(THTensor_(get3d)(rgb, 2, y, x));
+
+      // sRGB to XYZ
+      double X = 0.412453 * r + 0.357580 * g + 0.180423 * b;
+      double Y = 0.212671 * r + 0.715160 * g + 0.072169 * b;
+      double Z = 0.019334 * r + 0.119193 * g + 0.950227 * b;
+
+      // normalize for D65 white point
+      X /= xn;
+      Z /= zn;
+
+      // XYZ normalized to CIE Lab
+      double fx = X > epsilon ? pow(X, 1/3.0) : (k * X + 16)/116;
+      double fy = Y > epsilon ? pow(Y, 1/3.0) : (k * Y + 16)/116;
+      double fz = Z > epsilon ? pow(Z, 1/3.0) : (k * Z + 16)/116;
+      l = 116 * fy - 16;
+      a = 500 * (fx - fy);
+      _b = 200 * (fy - fz);
+
+      // set lab
+      THTensor_(set3d)(lab, 0, y, x, l);
+      THTensor_(set3d)(lab, 1, y, x, a);
+      THTensor_(set3d)(lab, 2, y, x, _b);
+    }
+  }
+  return 0;
+}
+
+/*
+ * Converts an LAB color value to sRGB.
+ * Based on http://www.brucelindbloom.com/index.html?Equations.html.
+ * returns r, g, and b in the set [0, 1].
+ */
+int image_(Main_lab2rgb)(lua_State *L) {
+  THTensor *lab = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *rgb = luaT_checkudata(L, 2, torch_Tensor);
+
+  int y,x;
+  real r,g,b,l,a,_b;
+
+  // CIE Standard
+  double epsilon = 216.0/24389.0;
+  double k = 24389.0/27.0;
+  // D65 white point
+  double xn = 0.950456;
+  double zn = 1.088754;
+
+  for (y=0; y<lab->size[1]; y++) {
+    for (x=0; x<lab->size[2]; x++) {
+      // get lab
+      l = THTensor_(get3d)(lab, 0, y, x);
+      a = THTensor_(get3d)(lab, 1, y, x);
+      _b = THTensor_(get3d)(lab, 2, y, x);
+
+      // LAB to XYZ
+      double fy = (l + 16) / 116;
+      double fz = fy - _b / 200;
+      double fx = (a / 500) + fy;
+      double X = pow(fx, 3);
+      if (X <= epsilon)
+        X = (116 * fx - 16) / k;
+      double Y = l > (k * epsilon) ? pow((l + 16) / 116, 3) : l/k;
+      double Z = pow(fz, 3);
+      if (Z <= epsilon)
+        Z = (116 * fz - 16) / k;
+
+      X *= xn;
+      Z *= zn;
+
+      // XYZ to sRGB
+      r =  3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z;
+      g = -0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z;
+      b =  0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
+
+      // set rgb
+      THTensor_(set3d)(rgb, 0, y, x, gamma_compress_sRGB(r));
+      THTensor_(set3d)(rgb, 1, y, x, gamma_compress_sRGB(g));
+      THTensor_(set3d)(rgb, 2, y, x, gamma_compress_sRGB(b));
+    }
+  }
+  return 0;
+}
 
 /* Vertically flip an image */
 int image_(Main_vflip)(lua_State *L) {
@@ -1360,7 +1466,7 @@ int image_(Main_warp)(lua_State *L) {
 
       // borders
       int off_image = 0;
-      if (iy < 0 || iy > src_height - 1 || 
+      if (iy < 0 || iy > src_height - 1 ||
           ix < 0 || ix > src_width - 1) {
         off_image = 1;
       }
@@ -1373,7 +1479,7 @@ int image_(Main_warp)(lua_State *L) {
       } else {
         ix = MAX(ix,0); ix = MIN(ix,src_width-1);
         iy = MAX(iy,0); iy = MIN(iy,src_height-1);
-        
+
         // bilinear?
         switch (mode) {
         case 1:  // Bilinear interpolation
@@ -1396,7 +1502,7 @@ int image_(Main_warp)(lua_State *L) {
 
             // weighted sum of neighbors:
             for (k=0; k<channels; k++) {
-              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] =
                   src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
                 + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,src_width-1)*is[2] ] * ne
                 + src_data[ k*is[0] + MIN(iy_sw,src_height-1)*is[1] +              ix_sw*is[2] ] * sw
@@ -1423,19 +1529,19 @@ int image_(Main_warp)(lua_State *L) {
             long y_pix = floor(iy);
             real dx = ix - (real)x_pix;
             real dy = iy - (real)y_pix;
-           
+
             real C[4];
             for (k=0; k<channels; k++) {
               // Sweep by rows through the samples (to calculate final cubic coefs)
               for (jj = 0; jj <= 3; jj++) {
                 v = y_pix - 1 + jj;
-                // We need to clamp all uv values to image border: hopefully 
+                // We need to clamp all uv values to image border: hopefully
                 // branch prediction and compiler reordering takes care of all
-                // the conditionals (since the branch probabilities are heavily 
+                // the conditionals (since the branch probabilities are heavily
                 // skewed).  Alternatively an inline "getPixelSafe" function would
                 // would be clearer here, but cannot be done with lua?
                 v = MAX(MIN((long)(src_height-1), v), 0);
-                long ofst = k * is[0] + v * is[1];  
+                long ofst = k * is[0] + v * is[1];
                 u = x_pix;
                 u = MAX(MIN((long)(src_width-1), u), 0);
                 real a0 = src_data[ofst + u * is[2]];
@@ -1446,40 +1552,40 @@ int image_(Main_warp)(lua_State *L) {
                 u = MAX(MIN((long)(src_width-1), u), 0);
                 real d2 = src_data[ofst + u * is[2]] - a0;
                 u = x_pix + 2;
-                u = MAX(MIN((long)(src_width-1), u), 0); 
+                u = MAX(MIN((long)(src_width-1), u), 0);
                 real d3 = src_data[ofst + u * is[2]] - a0;
 
                 // Note: there are mostly static casts, optimizer will take care of
                 // of it for us (prevents compiler warnings in new gcc)
                 real a1 =  -(real)1/(real)3*d0 + d2 -(real)1/(real)6*d3;
                 real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
-                real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 + 
+                real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 +
                   (real)1/(real)6*d3;
                 C[jj] = a0 + dx * (a1 + dx * (a2 + a3 * dx));
               }
- 
+
               real d0 = C[0]-C[1];
               real d2 = C[2]-C[1];
               real d3 = C[3]-C[1];
               real a0 = C[1];
               real a1 = -(real)1/(real)3*d0 + d2 - (real)1/(real)6*d3;
               real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
-              real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 + 
+              real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 +
                 (real)1/(real)6*d3;
               real Cc = a0 + dy * (a1 + dy * (a2 + a3 * dy));
 
-              // I assume that since the image is stored as reals we don't have 
+              // I assume that since the image is stored as reals we don't have
               // to worry about clamping to min and max int (to prevent over or
               // underflow)
               dst_data[ k*os[0] + y*os[1] + x*os[2] ] = Cc;
-	        }  
+	        }
           }
           break;
         case 3:  // Lanczos
 	      {
-            // Note: Lanczos can be made fast if the resampling period is 
+            // Note: Lanczos can be made fast if the resampling period is
             // constant... and therefore the Lu, Lv can be cached and reused.
-            // However, unfortunately warp makes no assumptions about resampling 
+            // However, unfortunately warp makes no assumptions about resampling
             // and so we need to perform the O(k^2) convolution on each pixel AND
             // we have to re-calculate the kernel for every pixel.
             // See wikipedia for more info.
@@ -1505,8 +1611,8 @@ int image_(Main_warp)(lua_State *L) {
               } else if (du > (float)rad) {
                 Lu[i] = 0;
               } else {
-                Lu[i] = ((float)rad * sin((float)M_PI * du) *       
-                  sin((float)M_PI * du / (float)rad)) / 
+                Lu[i] = ((float)rad * sin((float)M_PI * du) *
+                  sin((float)M_PI * du / (float)rad)) /
                   ((float)(M_PI * M_PI) * du * du);
               }
             }
@@ -1522,11 +1628,11 @@ int image_(Main_warp)(lua_State *L) {
                   sin((float)M_PI * dv / (float)rad)) /
                   ((float)(M_PI * M_PI) * dv * dv);
               }
-            }          
+            }
             float sum_weights = 0;
             for (u=0; u<2*rad; u++) {
               for (v=0; v<2*rad; v++) {
-                sum_weights += (Lu[u] * Lv[v]); 
+                sum_weights += (Lu[u] * Lv[v]);
               }
             }
 
@@ -1537,16 +1643,16 @@ int image_(Main_warp)(lua_State *L) {
                 for (v=y_pix-rad+1, j=0; v<=y_pix+rad; v++, j++) {
                   long curv = MAX(MIN((long)(src_height-1), v), 0);
                   real Suv = src_data[k * is[0] + curv * is[1] + curu * is[2]];
-                  
+
                   real weight = (real)(Lu[i] * Lv[j]);
                   result += (Suv * weight);
                 }
               }
               // Normalize by the sum of the weights
               result = result / (float)sum_weights;
-              
-              // Again,  I assume that since the image is stored as reals we 
-              // don't have to worry about clamping to min and max int (to 
+
+              // Again,  I assume that since the image is stored as reals we
+              // don't have to worry about clamping to min and max int (to
               // prevent over or underflow)
               dst_data[ k*os[0] + y*os[1] + x*os[2] ] = result;
             }
@@ -1589,7 +1695,7 @@ int image_(Main_gaussian)(lua_State *L) {
     for (u = 0; u < width; u++) {
       du = ((real)u + 1 - mean_u) * over_sigmau;
       dv = ((real)v + 1 - mean_v) * over_sigmav;
-      dst_data[ v*os[0] + u*os[1] ] = amplitude * 
+      dst_data[ v*os[0] + u*os[1] ] = amplitude *
         exp(-((du*du*0.5) + (dv*dv*0.5)));
     }
   }
@@ -1676,6 +1782,8 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"rgb2hsl", image_(Main_rgb2hsl)},
   {"hsv2rgb", image_(Main_hsv2rgb)},
   {"hsl2rgb", image_(Main_hsl2rgb)},
+  {"rgb2lab", image_(Main_rgb2lab)},
+  {"lab2rgb", image_(Main_lab2rgb)},
   {"gaussian", image_(Main_gaussian)},
   {"vflip", image_(Main_vflip)},
   {"hflip", image_(Main_hflip)},
