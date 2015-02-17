@@ -674,9 +674,9 @@ local function logpolar(...)
    end
    if interp == 'simple' then
       if mode == 'full' then
-        src.image.logpolar(src,dst,1)
+        src.image.logPolar(src,dst,1)
       elseif mode == 'valid' then
-        src.image.logpolar(src,dst,0)
+        src.image.logPolar(src,dst,0)
       else
         dok.error('mode must be one of: valid | full', 'image.logpolar')
       end
