@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------
 --
 -- Copyright (c) 2011 Ronan Collobert, Clement Farabet
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining
 -- a copy of this software and associated documentation files (the
 -- "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
 -- distribute, sublicense, and/or sell copies of the Software, and to
 -- permit persons to whom the Software is furnished to do so, subject to
 -- the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be
 -- included in all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 -- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 -- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -20,12 +20,12 @@
 -- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 -- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 -- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
--- 
+--
 ----------------------------------------------------------------------
 -- description:
 --     image - an image toolBox, for Torch
 --
--- history: 
+-- history:
 --     July  1, 2011, 7:42PM - import from Torch5 - Clement Farabet
 ----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ require 'libimage'
 
 ----------------------------------------------------------------------
 -- types lookups
--- 
+--
 local type2tensor = {
    float = torch.FloatTensor(),
    double = torch.DoubleTensor(),
@@ -95,7 +95,7 @@ local function savePNG(filename, tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
    a.libpng.save(filename, a)
-end  
+end
 rawset(image, 'savePNG', savePNG)
 
 function image.getPNGsize(filename)
@@ -154,7 +154,7 @@ local function decompressJPG(tensor, depth, tensortype)
    if torch.typename(tensor) ~= 'torch.ByteTensor' then
       dok.error('Input tensor (with compressed jpeg) must be a byte tensor',
         'image.decompressJPG')
-   end   
+   end
    local load_from_file = 0
    local a = template(tensortype).libjpeg.load(load_from_file, tensor)
    if a == nil then
@@ -543,7 +543,7 @@ local function rotate(...)
    else
       dok.error('mode must be one of: simple | bilinear', 'image.rotate')
    end
-   return dst  
+   return dst
 end
 rawset(image, 'rotate', rotate)
 
@@ -765,7 +765,7 @@ local function warp(...)
    else
       dok.error('Incorrect arguments (clamp_mode is not clamp | pad)!', 'image.warp')
    end
-   
+
    local dim2 = false
    if src:nDimension() == 2 then
       dim2 = true
@@ -870,7 +870,7 @@ local function convolve(...)
          src = args[2]
          kernel = args[3]
       end
-   elseif select('#',...) == 2 then      
+   elseif select('#',...) == 2 then
       src = args[1]
       kernel = args[2]
    else
@@ -911,7 +911,7 @@ local function convolve(...)
    end
    return dst
 end
-rawset(image, 'convolve', convolve) 
+rawset(image, 'convolve', convolve)
 
 ----------------------------------------------------------------------
 -- compresses an image between min and max
@@ -919,11 +919,11 @@ rawset(image, 'convolve', convolve)
 local function minmax(args)
    local tensor = args.tensor
    local min = args.min
-   local max = args.max 
+   local max = args.max
    local symm = args.symm or false
    local inplace = args.inplace or false
    local saturate = args.saturate or false
-   local tensorOut = args.tensorOut or (inplace and tensor) 
+   local tensorOut = args.tensorOut or (inplace and tensor)
       or torch.Tensor(tensor:size()):copy(tensor)
 
    -- resize
@@ -959,7 +959,7 @@ local function minmax(args)
       max = max - min
    end
    if (max ~= 0) then tensorOut:div(max) end
-      
+
    -- saturate
    if saturate then
       tensorOut.image.saturate(tensorOut)
@@ -968,7 +968,7 @@ local function minmax(args)
    -- and return
    return tensorOut
 end
-rawset(image, 'minmax', minmax) 
+rawset(image, 'minmax', minmax)
 
 local function toDisplayTensor(...)
    -- usage
@@ -1000,7 +1000,7 @@ local function toDisplayTensor(...)
    else
       packed = torch.Tensor(input:size()):copy(input)
    end
-   
+
    -- scale each
    if scaleeach and (
          (packed:dim() == 4 and (packed:size(2) == 3 or packed:size(2) == 1))
@@ -1011,7 +1011,7 @@ local function toDisplayTensor(...)
          image.minmax{tensor=packed[i], inplace=true, min=min, max=max, symm=symm, saturate=saturate}
       end
    end
-   
+
    local grid = torch.Tensor()
    if packed:dim() == 4 and (packed:size(2) == 3 or packed:size(2) == 1) then
       -- arbitrary number of color images: lay them out on a grid
@@ -1052,7 +1052,7 @@ local function toDisplayTensor(...)
    else
       xerror('packed must be a HxW or KxHxW or Kx3xHxW tensor, or a list of tensors', 'image.toDisplayTensor')
    end
-   
+
    if not scaleeach then
       image.minmax{tensor=grid, inplace=true, min=min, max=max, symm=symm, saturate=saturate}
    end
@@ -1087,7 +1087,7 @@ local function display(...)
       {arg='nrow',type='number',help='number of images per row', default=6},
       {arg='saturate', type='boolean', help='saturate (useful when min/max are lower than actual min/max', default=true}
    )
-   
+
    -- dependencies
    require 'qt'
    require 'qttorch'
@@ -1121,8 +1121,8 @@ local function display(...)
                           end
             hook_mouse = function(x,y,button)
                             --local size = closure.window.frame.size:totable()
-                            --size.width = 
-                            --size.height = 
+                            --size.width =
+                            --size.height =
                             if button == 'LeftButton' then
                             elseif button == 'RightButton' then
                             end
@@ -1176,13 +1176,13 @@ local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
    local win = qtuiloader.load(pathui)
    local painter = qt.QtLuaPainter(win.frame)
    if hook_resize then
-      qt.connect(qt.QtLuaListener(win.frame), 
-                 'sigResize(int,int)', 
+      qt.connect(qt.QtLuaListener(win.frame),
+                 'sigResize(int,int)',
                  hook_resize)
    end
    if hook_mousepress then
       qt.connect(qt.QtLuaListener(win.frame),
-                 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)', 
+                 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)',
                  hook_mousepress)
    end
    if hook_mousedoublepress then
@@ -1241,83 +1241,12 @@ local function fabio()
 end
 rawset(image, 'fabio', fabio)
 
-----------------------------------------------------------------------
--- image.rgb2lab(image)
--- converts a RGB image to YUV
---
-function image.rgb2lab(...)   
-   -- arg check
-   local output,input
-   local args = {...}
-   if select('#',...) == 2 then
-      output = args[1]
-      input = args[2]
-   elseif select('#',...) == 1 then
-      input = args[1]
-   else
-      print(dok.usage('image.rgb2lab',
-                      'transforms an image from RGB to Lab', nil,
-                      {type='torch.Tensor', help='input image', req=true},
-                      '',
-                      {type='torch.Tensor', help='output image', req=true},
-                      {type='torch.Tensor', help='input image', req=true}
-                      ))
-      dok.error('missing input', 'image.rgb2lab')
-   end
 
-   -- resize
-   output = output or input.new()
-   output:resizeAs(input)
-   
-   -- output chanels
-   local xyz = output:clone()
-   local outputX = xyz[1]
-   local outputY = xyz[2]
-   local outputZ = xyz[3]
-
-   -- output chanels
-   local outputL = output[1]
-   local outputA = output[2]
-   local outputB = output[3]
-
-
-   -- Set a threshold
-   local T = 0.008856;
-
-   local RGB = input:new():resize(3,input:size(2)*input:size(3))
-
-   -- RGB to XYZ
-   local MAT = input.new({{0.412453, 0.357580, 0.180423},
-              {0.212671, 0.715160, 0.072169},
-              {0.019334, 0.119193, 0.950227}})
-   local XYZ = MAT * RGB;
-
-   -- Normalize for D65 white point
-   XYZ[1]:div(0.950456);
-   XYZ[3]:div(1.088754);
-   local Y3 = torch.pow(XYZ[2],1/3)
-
-   local thres = function(x) 
-      if x > T then 
-    return x^(1/3) 
-      else 
-    return 1/3*(29/6)^2 * x + 16/116 
-      end 
-   end
-   XYZ:apply(thres)
-   
-   outputL:mul(XYZ[2],116):add(-16):div(100)
-   outputA:copy(XYZ[1]):add(-1,XYZ[2]):mul(500):add(110):div(220)
-   outputB:copy(XYZ[2]):add(-1,XYZ[3]):mul(200):add(110):div(220)
-    
-   -- return LAB image
-   return output
-end
 ----------------------------------------------------------------------
 -- image.rgb2yuv(image)
 -- converts a RGB image to YUV
 --
-function image.rgb2yuv(...)   
+function image.rgb2yuv(...)
    -- arg check
    local output,input
    local args = {...}
@@ -1340,17 +1269,17 @@ function image.rgb2yuv(...)
    -- resize
    output = output or input.new()
    output:resizeAs(input)
-   
+
    -- input chanels
    local inputRed = input[1]
    local inputGreen = input[2]
    local inputBlue = input[3]
-   
+
    -- output chanels
    local outputY = output[1]
    local outputU = output[2]
    local outputV = output[3]
-   
+
    -- convert
    outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
    outputU:zero():add(-0.14713, inputRed):add(-0.28886, inputGreen):add(0.436, inputBlue)
@@ -1364,7 +1293,7 @@ end
 -- image.yuv2rgb(image)
 -- converts a YUV image to RGB
 --
-function image.yuv2rgb(...)      
+function image.yuv2rgb(...)
    -- arg check
    local output,input
    local args = {...}
@@ -1387,22 +1316,22 @@ function image.yuv2rgb(...)
    -- resize
    output = output or input.new()
    output:resizeAs(input)
-   
+
    -- input chanels
    local inputY = input[1]
    local inputU = input[2]
    local inputV = input[3]
-   
+
    -- output chanels
    local outputRed = output[1]
    local outputGreen = output[2]
    local outputBlue = output[3]
-   
+
    -- convert
    outputRed:copy(inputY):add(1.13983, inputV)
-   outputGreen:copy(inputY):add(-0.39465, inputU):add(-0.58060, inputV)      
+   outputGreen:copy(inputY):add(-0.39465, inputU):add(-0.58060, inputV)
    outputBlue:copy(inputY):add(2.03211, inputU)
-   
+
    -- return RGB image
    return output
 end
@@ -1434,18 +1363,18 @@ function image.rgb2y(...)
    -- resize
    output = output or input.new()
    output:resize(1, input:size(2), input:size(3))
-   
+
    -- input chanels
    local inputRed = input[1]
    local inputGreen = input[2]
    local inputBlue = input[3]
-   
+
    -- output chanels
    local outputY = output[1]
-   
+
    -- convert
    outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
-   
+
    -- return YUV image
    return output
 end
@@ -1454,7 +1383,7 @@ end
 -- image.rgb2hsl(image)
 -- converts an RGB image to HSL
 --
-function image.rgb2hsl(...)   
+function image.rgb2hsl(...)
    -- arg check
    local output,input
    local args = {...}
@@ -1480,7 +1409,7 @@ function image.rgb2hsl(...)
 
    -- compute
    input.image.rgb2hsl(input,output)
-   
+
    -- return HSL image
    return output
 end
@@ -1515,7 +1444,7 @@ function image.hsl2rgb(...)
 
    -- compute
    input.image.hsl2rgb(input,output)
-   
+
    -- return HSL image
    return output
 end
@@ -1550,7 +1479,7 @@ function image.rgb2hsv(...)
 
    -- compute
    input.image.rgb2hsv(input,output)
-   
+
    -- return HSV image
    return output
 end
@@ -1585,10 +1514,82 @@ function image.hsv2rgb(...)
 
    -- compute
    input.image.hsv2rgb(input,output)
-   
+
    -- return HSV image
    return output
 end
+
+----------------------------------------------------------------------
+-- image.rgb2lab(image)
+-- converts an RGB image to LAB
+-- assumes sRGB input in the range [0, 1]
+--
+function image.rgb2lab(...)
+   -- arg check
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.rgb2lab',
+                      'transforms an image from sRGB to LAB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
+      dok.error('missing input', 'image.rgb2lab')
+   end
+
+   -- resize
+   output = output or input.new()
+   output:resizeAs(input)
+
+   -- compute
+   input.image.rgb2lab(input,output)
+
+   -- return LAB image
+   return output
+end
+
+----------------------------------------------------------------------
+-- image.lab2rgb(image)
+-- converts an LAB image to RGB (assumes sRGB)
+--
+function image.lab2rgb(...)
+   -- arg check
+   local output,input
+   local args = {...}
+   if select('#',...) == 2 then
+      output = args[1]
+      input = args[2]
+   elseif select('#',...) == 1 then
+      input = args[1]
+   else
+      print(dok.usage('image.lab2rgb',
+                      'transforms an image from LAB to RGB', nil,
+                      {type='torch.Tensor', help='input image', req=true},
+                      '',
+                      {type='torch.Tensor', help='output image', req=true},
+                      {type='torch.Tensor', help='input image', req=true}
+                      ))
+      dok.error('missing input', 'image.lab2rgb')
+   end
+
+   -- resize
+   output = output or input.new()
+   output:resizeAs(input)
+
+   -- compute
+   input.image.lab2rgb(input,output)
+
+   -- return sRGB image
+   return output
+end
+
 
 ----------------------------------------------------------------------
 -- image.rgb2nrgb(image)
@@ -1619,14 +1620,14 @@ function image.rgb2nrgb(...)
    output:resizeAs(input)
    local sum = input.new()
    sum:resize(input:size(2), input:size(3))
-   
+
    -- compute sum and normalize
    sum:copy(input[1]):add(input[2]):add(input[3]):add(1e-6)
    output:copy(input)
    output[1]:cdiv(sum)
    output[2]:cdiv(sum)
    output[3]:cdiv(sum)
-   
+
    -- return HSV image
    return output
 end
@@ -1675,7 +1676,7 @@ end
 --
 function image.gaussian(...)
    -- process args
-   local _, size, sigma, amplitude, normalize, 
+   local _, size, sigma, amplitude, normalize,
    width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
       {...},
       'image.gaussian',
@@ -1695,7 +1696,7 @@ function image.gaussian(...)
    -- generate kernel
    local gauss = torch.Tensor(height, width)
    gauss.image.gaussian(gauss, amplitude, normalize, sigma_horz, sigma_vert, mean_horz, mean_vert)
-   
+
    return gauss
 end
 
@@ -1715,7 +1716,7 @@ function image.gaussian1D(...)
 
    -- local vars
    local center = mean * size + 0.5
-   
+
    -- generate kernel
    local gauss = torch.Tensor(size)
    for i=1,size do
@@ -1733,7 +1734,7 @@ end
 --
 function image.laplacian(...)
    -- process args
-   local _, size, sigma, amplitude, normalize, 
+   local _, size, sigma, amplitude, normalize,
    width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
       {...},
       'image.laplacian',
@@ -1753,7 +1754,7 @@ function image.laplacian(...)
    -- local vars
    local center_x = mean_horz * width + 0.5
    local center_y = mean_vert * height + 0.5
-   
+
    -- generate kernel
    local logauss = torch.Tensor(height,width)
    for i=1,height do
