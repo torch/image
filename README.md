@@ -86,7 +86,12 @@ Variable `mode` specifies type of interpolation to be used. Valid values include
 <a name="image.polar"/>
 ### [res] image.polar([dst,], src, [interpolation], [mode]) ###
 Converts image `src` to polar coordinates. In the polar image, angular information is in the vertical direction and radius information in the horizontal direction.
-If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `interpolation` specifies type of interpolation to be used. Valid values include *simple* (the default) or *bilinear* interpolation. Variable `mode` determines whether the *full* image is converted to the polar space (implying empty regions in the polar image), or whether only the *valid* central part of the polar transform is returned (the default). 
+If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `interpolation` specifies type of interpolation to be used. Valid values include *simple* (the default) or *bilinear* interpolation. Variable `mode` determines whether the *full* image is converted to the polar space (implying empty regions in the polar image), or whether only the *valid* central part of the polar transform is returned (the default).
+
+<a name="image.logpolar"/>
+### [res] image.logpolar([dst,], src, [interpolation], [mode]) ###
+Converts image `src` to log-polar coordinates. In the log-polar image, angular information is in the vertical direction and log-radius information in the horizontal direction.
+If `dst` is specified it is used to store the polar image. If `dst` is not specified, its size is automatically determined. Variable `interpolation` specifies type of interpolation to be used. Valid values include *simple* (the default) or *bilinear* interpolation. Variable `mode` determines whether the *full* image is converted to the log-polar space (implying empty regions in the log-polar image), or whether only the *valid* central part of the log-polar transform is returned (the default). 
 
 <a name="image.hflip"/>
 ### [res] image.hflip([dst,] src) ###

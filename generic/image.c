@@ -713,7 +713,7 @@ static int image_(Main_logPolar)(lua_State *L)
     }
     
     // loop to fill polar image
-    fw = (float) dst_width;
+    fw = log(m) / (float) dst_width;
     for(j = 0; j < dst_height; j++) {               // orientation loop
         jd = (float) j;
         a = (2 * M_PI * jd) / (float) dst_height;   // current angle
@@ -721,7 +721,7 @@ static int image_(Main_logPolar)(lua_State *L)
             float val = -1;
             id = (float) i;
             
-            r = m - m * (log(fw - id + 1.0) / log(fw));
+            r = exp(id * fw);
             
             jj = (long) floor( r * cos(a) + midY);  // y-location in source image
             ii = (long) floor(-r * sin(a) + midX);  // x-location in source image
@@ -808,7 +808,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
     }
     
     // loop to fill polar image
-    fw = (float) dst_width;
+    fw = log(m) / (float) dst_width;
     for(j = 0; j < dst_height; j++) {                 // orientation loop
         jd = (float) j;
         a = (2 * M_PI * jd) / (float) dst_height;     // current angle
@@ -817,7 +817,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
             real ri, rj, wi, wj;
             id = (float) i;
             
-            r = m - m * (log(fw - id + 1.0) / log(fw));
+            r = exp(id * fw);
             
             rj =  r * cos(a) + midY;                  // y-location in source image
             ri = -r * sin(a) + midX;                  // x-location in source image
