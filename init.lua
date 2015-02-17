@@ -548,6 +548,154 @@ end
 rawset(image, 'rotate', rotate)
 
 ----------------------------------------------------------------------
+-- polar
+--
+local function polar(...)
+   local dst,src,interp,mode
+   local args = {...}
+   if select('#',...) == 4 then
+      dst    = args[1]
+      src    = args[2]
+      interp = args[3]
+      mode   = args[4]
+    elseif select('#',...) == 3 then
+      if type(args[2]) == 'string' then
+        src    = args[1]
+        interp = args[2]
+        mode   = args[3]
+      else        
+        dst    = args[1]
+        src    = args[2]
+        interp = args[3]
+      end
+   elseif select('#',...) == 2 then
+      if type(args[2]) == 'string' then
+        src    = args[1]
+        interp = args[2]
+      else
+        dst  = args[1]
+        src  = args[2]
+      end
+   elseif select('#',...) == 1 then
+     src = args[1]
+   else
+      print(dok.usage('image.polar',
+                       'convert an image to polar coordinates', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='interpolation: simple | bilinear', default='simple'},
+                       {type='string', help='mode: valid | full', default='valid'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='interpolation: simple | bilinear', default='simple'},
+                       {type='string', help='mode: valid | full', default='valid'}))
+      dok.error('incorrect arguments', 'image.polar')
+   end
+   interp = interp or 'valid'
+   mode = mode or 'simple'
+   if dst == nil then
+      local maxDist = math.floor(math.max(src:size(2), src:size(3)))
+      dst = src.new()
+      dst:resize(src:size(1), maxDist, maxDist)
+   end
+   if interp == 'simple' then
+      if mode == 'full' then
+        src.image.polar(src,dst,1)
+      elseif mode == 'valid' then
+        src.image.polar(src,dst,0)
+      else
+        dok.error('mode must be one of: valid | full', 'image.polar')
+      end
+   elseif interp == 'bilinear' then
+      if mode == 'full' then
+        src.image.polarBilinear(src,dst,1)
+      elseif mode == 'valid' then
+        src.image.polarBilinear(src,dst,0)
+      else
+        dok.error('mode must be one of: valid | full', 'image.polar')
+      end
+   else
+      dok.error('interpolation must be one of: simple | bilinear', 'image.polar')
+   end  
+   return dst  
+end
+rawset(image, 'polar', polar)
+
+----------------------------------------------------------------------
+-- logpolar
+--
+local function logpolar(...)
+   local dst,src,interp,mode
+   local args = {...}
+   if select('#',...) == 4 then
+      dst    = args[1]
+      src    = args[2]
+      interp = args[3]
+      mode   = args[4]
+    elseif select('#',...) == 3 then
+      if type(args[2]) == 'string' then
+        src    = args[1]
+        interp = args[2]
+        mode   = args[3]
+      else        
+        dst    = args[1]
+        src    = args[2]
+        interp = args[3]
+      end
+   elseif select('#',...) == 2 then
+      if type(args[2]) == 'string' then
+        src    = args[1]
+        interp = args[2]
+      else
+        dst  = args[1]
+        src  = args[2]
+      end
+   elseif select('#',...) == 1 then
+     src = args[1]
+   else
+      print(dok.usage('image.logpolar',
+                       'convert an image to log-polar coordinates', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='interpolation: simple | bilinear', default='simple'},
+                       {type='string', help='mode: valid | full', default='valid'},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='interpolation: simple | bilinear', default='simple'},
+                       {type='string', help='mode: valid | full', default='valid'}))
+      dok.error('incorrect arguments', 'image.polar')
+   end
+   interp = interp or 'valid'
+   mode = mode or 'simple'
+   if dst == nil then
+      local maxDist = math.floor(math.max(src:size(2), src:size(3)))
+      dst = src.new()
+      dst:resize(src:size(1), maxDist, maxDist)
+   end
+   if interp == 'simple' then
+      if mode == 'full' then
+        src.image.logPolar(src,dst,1)
+      elseif mode == 'valid' then
+        src.image.logPolar(src,dst,0)
+      else
+        dok.error('mode must be one of: valid | full', 'image.logpolar')
+      end
+   elseif interp == 'bilinear' then
+      if mode == 'full' then
+        src.image.logPolarBilinear(src,dst,1)
+      elseif mode == 'valid' then
+        src.image.logPolarBilinear(src,dst,0)
+      else
+        dok.error('mode must be one of: valid | full', 'image.logpolar')
+      end
+   else
+      dok.error('interpolation must be one of: simple | bilinear', 'image.logpolar')
+   end  
+   return dst  
+end
+rawset(image, 'logpolar', logpolar)
+
+----------------------------------------------------------------------
 -- warp
 --
 local function warp(...)
