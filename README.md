@@ -39,6 +39,31 @@ Saves Tensor `tensor` to disk at path `filename`. The format to which
 the image is saved is extrapolated from the `filename`'s extension suffix.
 The `tensor` should be of size `nChannel x height x width`.
 
+<a name="image.decompressJPG"/>
+### [res] image.decompressJPG(tensor, [depth, tensortype]) ###
+Decompresses an image from a ByteTensor in memory having `depth` channels (1 or 3)
+into a [Tensor](https://github.com/torch/torch7/blob/master/doc/tensor.md#tensor)
+of type `tensortype` (*float*, *double* or *byte*). The last two arguments
+are optional.
+
+Usage:
+```lua
+local fin = torch.DiskFile(imfile, 'r')
+fin:binary()
+fin:seekEnd()
+local file_size_bytes = fin:position() - 1
+fin:seek(1)
+local img_binary = torch.ByteTensor(file_size_bytes)
+fin:readByte(img_binary:storage())
+fin:close()
+-- Then when you're ready to decompress the ByteTensor:
+im = image.decompressJPG(img_binary)
+```
+
+<a name="image.compressJPG"/>
+### [res] image.compressJPG(tensor, [quality]) ###
+Compresses an image to a ByteTensor in memory.  Optional quality is between 1 and 100 and adjusts compression quality.
+
 <a name="image.simpletrans"/>
 ## Simple Transformations ##
 This section includes simple but very common image transformations 

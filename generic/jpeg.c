@@ -333,11 +333,26 @@ static int libjpeg_(Main_load)(lua_State *L)
  *
  */
 int libjpeg_(Main_save)(lua_State *L) {
+  unsigned char *inmem = NULL;  /* destination memory (if saving to memory) */
+  unsigned long inmem_size = 0;  /* destination memory size (bytes) */
+
   /* get args */
   const char *filename = luaL_checkstring(L, 1);
   THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);  
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *tensor_data = THTensor_(data)(tensorc);
+
+  const int save_to_file = luaL_checkint(L, 3);
+
+  THByteTensor* tensor_dest = NULL;
+  if (save_to_file == 0) {
+    tensor_dest = luaT_checkudata(L, 5, "torch.ByteTensor");
+  }
+
+  int quality = luaL_checkint(L, 4);
+  if (quality < 0 || quality > 100) {
+    luaL_error(L, "quality should be between 0 and 100");
+  }
 
   /* jpeg struct */
   struct jpeg_compress_struct cinfo;
@@ -384,15 +399,24 @@ int libjpeg_(Main_save)(lua_State *L) {
 
   /* this is a pointer to one row of image data */
   JSAMPROW row_pointer[1];
-  FILE *outfile = fopen( filename, "wb" );
-
-  if ( !outfile ) {
-    printf("Error opening output jpeg file %s\n!", filename );
-    return -1;
+  FILE *outfile = NULL;
+  if (save_to_file == 1) {
+    outfile = fopen( filename, "wb" );
+    if ( !outfile ) {
+      printf("Error opening output jpeg file %s\n!", filename );
+      return -1;
+    }
   }
+
   cinfo.err = jpeg_std_error( &jerr );
   jpeg_create_compress(&cinfo);
-  jpeg_stdio_dest(&cinfo, outfile);
+
+  /* specify data source (eg, a file) */
+  if (save_to_file == 1) {
+    jpeg_stdio_dest(&cinfo, outfile);
+  } else {
+    jpeg_mem_dest(&cinfo, &inmem, &inmem_size);
+  }
 
   /* Setting the parameters of the output file here */
   cinfo.image_width = width;	
@@ -402,6 +426,7 @@ int libjpeg_(Main_save)(lua_State *L) {
 
   /* default compression parameters, we shouldn't be worried about these */
   jpeg_set_defaults( &cinfo );
+  jpeg_set_quality(&cinfo, quality, (boolean)0);
 
   /* Now do the compression .. */
   jpeg_start_compress( &cinfo, TRUE );
@@ -415,7 +440,18 @@ int libjpeg_(Main_save)(lua_State *L) {
   /* similar to read file, clean up after we're done compressing */
   jpeg_finish_compress( &cinfo );
   jpeg_destroy_compress( &cinfo );
-  fclose( outfile );
+  
+  if (outfile != NULL) {
+    fclose( outfile );
+  }
+
+  if (save_to_file == 0) {
+    
+    THByteTensor_resize1d(tensor_dest, inmem_size);  /* will fail if it's not a Byte Tensor */ 
+    unsigned char* tensor_dest_data = THByteTensor_data(tensor_dest); 
+    memcpy(tensor_dest_data, inmem, inmem_size);
+    free(inmem);
+  }
 
   /* some cleanup */
   free(raw_image);
