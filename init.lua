@@ -54,6 +54,43 @@ end
 ----------------------------------------------------------------------
 -- save/load in multiple formats
 --
+
+-- depth convertion helper
+local function todepth(img, depth)
+   if depth and depth == 1 then
+      if img:nDimension() == 2 then
+         -- all good
+      elseif img:size(1) == 3 or img:size(1) == 4 then
+         img = image.rgb2y(img:narrow(1,1,3))[1]
+      elseif img:size(1) == 2 then
+         img = img:narrow(1,1,1)
+      elseif img:size(1) ~= 1 then
+         dok.error('image loaded has wrong #channels', 'image.todepth')
+      end
+   elseif depth and depth == 3 then
+      if img:nDimension() == 2 then
+         local imgrgb = img.new(3, img:size(1), img:size(2))
+         imgrgb:select(1, 1):copy(img)
+         imgrgb:select(1, 2):copy(img)
+         imgrgb:select(1, 3):copy(img)
+         img = imgrgb
+      elseif img:size(1) == 3 then
+         -- all good
+      elseif img:size(1) == 4 then
+         img = img:narrow(1,1,3)
+      elseif img:size(1) == 1 then
+         local imgrgb = img.new(3, img:size(2), img:size(3))
+         imgrgb:select(1, 1):copy(img)
+         imgrgb:select(1, 2):copy(img)
+         imgrgb:select(1, 3):copy(img)
+         img = imgrgb
+      else
+         dok.error('image loaded has wrong #channels', 'image.todepth')
+      end
+   end
+   return img
+end
+
 local function loadPNG(filename, depth, tensortype)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
@@ -63,25 +100,7 @@ local function loadPNG(filename, depth, tensortype)
    if tensortype ~= 'byte' then
       a:mul(1/MAXVAL)
    end
-   if depth and depth == 1 then
-      if a:nDimension() == 2 then
-         -- all good
-      elseif a:size(1) == 3 or a:size(1) == 4 then
-         a = image.rgb2y(a:narrow(1,1,3))[1]
-      elseif a:size(1) == 2 then
-         a = a:narrow(1,1,1)
-      elseif a:size(1) ~= 1 then
-         dok.error('image loaded has wrong #channels','image.loadPNG')
-      end
-   elseif depth and depth == 3 then
-      if a:size(1) == 3 then
-         -- all good
-      elseif a:size(1) == 4 then
-         a = a:narrow(1,1,3)
-      else
-         dok.error('image loaded has wrong #channels','image.loadPNG')
-      end
-   end
+   a = todepth(a, depth)
    return a
 end
 rawset(image, 'loadPNG', loadPNG)
@@ -110,25 +129,7 @@ local function processJPG(img, depth, tensortype)
    if tensortype ~= 'byte' then
       img:mul(1/MAXVAL)
    end
-   if depth and depth == 1 then
-      if img:nDimension() == 2 then
-         -- all good
-      elseif img:size(1) == 3 or img:size(1) == 4 then
-         img = image.rgb2y(img:narrow(1,1,3))[1]
-      elseif img:size(1) == 2 then
-         img = img:narrow(1,1,1)
-      elseif img:size(1) ~= 1 then
-         dok.error('image loaded has wrong #channels','processJPG')
-      end
-   elseif depth and depth == 3 then
-      if img:size(1) == 3 then
-         -- all good
-      elseif img:size(1) == 4 then
-         img = img:narrow(1,1,3)
-      else
-         dok.error('image loaded has wrong #channels','processJPG')
-      end
-   end
+   img = todepth(img, depth)
    return img
 end
 
@@ -191,25 +192,7 @@ local function loadPPM(filename, depth, tensortype)
    if tensortype ~= 'byte' then
       a:mul(1/MAXVAL)
    end
-   if depth and depth == 1 then
-      if a:nDimension() == 2 then
-         -- all good
-      elseif a:size(1) == 3 or a:size(1) == 4 then
-         a = image.rgb2y(a:narrow(1,1,3))[1]
-      elseif a:size(1) == 2 then
-         a = a:narrow(1,1,1)
-      elseif a:size(1) ~= 1 then
-         dok.error('image loaded has wrong #channels','image.loadPPM')
-      end
-   elseif depth and depth == 3 then
-      if a:size(1) == 3 then
-         -- all good
-      elseif a:size(1) == 4 then
-         a = a:narrow(1,1,3)
-      else
-         dok.error('image loaded has wrong #channels','image.loadPPM')
-      end
-   end
+   a = todepth(a, depth)
    return a
 end
 rawset(image, 'loadPPM', loadPPM)
