@@ -174,9 +174,35 @@ local function saveJPG(filename, tensor)
    local a = torch.Tensor():resize(tensor:size()):copy(tensor)
    a.image.saturate(a) -- bound btwn 0 and 1
    a:mul(MAXVAL)       -- remap to [0..255]
-   a.libjpeg.save(filename, a)
+   local save_to_file = 1
+   local quality = 75
+   a.libjpeg.save(filename, a, save_to_file, quality)
 end
 rawset(image, 'saveJPG', saveJPG)
+
+function image.getJPGsize(filename)
+   if not xlua.require 'libjpeg' then
+      dok.error('libjpeg package not found, please install libjpeg','image.getJPGsize')
+   end
+   return torch.Tensor().libjpeg.size(filename)
+end
+
+local function compressJPG(tensor, quality)
+   if not xlua.require 'libjpeg' then
+      dok.error('libjpeg package not found, please install libjpeg',
+         'image.compressJPG')
+   end
+   local MAXVAL = 255
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(MAXVAL)       -- remap to [0..255]
+   local b = torch.ByteTensor()
+   local save_to_file = 0
+   quality = quality or 75
+   a.libjpeg.save("", a, save_to_file, quality, b)
+   return b
+end
+rawset(image, 'compressJPG', compressJPG)
 
 function image.getJPGsize(filename)
    if not xlua.require 'libjpeg' then
