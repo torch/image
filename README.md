@@ -371,7 +371,7 @@ Returns the `fabio.jpg` image as a `257 x 271` Tensor.
 ### [res] image.gaussian([size, sigma, amplitude, normalize, [...]]) ###
 Returns a 2D [Gaussian](https://en.wikipedia.org/wiki/Gaussian_function) 
 kernel of size `height x width`. When used as a Gaussian smoothing operator in a 2D 
-convolution, this kernel is used to `blur' images and remove detail and noise 
+convolution, this kernel is used to `blur` images and remove detail and noise 
 (ref.: [Gaussian Smoothing](http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm)).
 Optional arguments `[...]` expand to 
 `width`, `height`, `sigma_horz`, `sigma_vert`, `mean_horz`, `mean_vert`.
