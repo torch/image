@@ -374,7 +374,7 @@ kernel of size `height x width`. When used as a Gaussian smoothing operator in a
 convolution, this kernel is used to `blur` images and remove detail and noise 
 (ref.: [Gaussian Smoothing](http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm)).
 Optional arguments `[...]` expand to 
-`width`, `height`, `sigma_horz`, `sigma_vert`, `mean_horz`, `mean_vert`.
+`width`, `height`, `sigma_horz`, `sigma_vert`, `mean_horz`, `mean_vert` and `tensor`.
 
 The default value of `height` and `width` is `size`, where the latter 
 has a default value of 3. The amplitude of the Gaussian (its maximum value) 
@@ -388,12 +388,13 @@ corresponding means `mean_horz` and `mean_vert` are 0.5. Both the
 standard deviations and means are relative to kernels of unit width and height
 where the top-left corner is the origin. In other works, a mean of 0.5 is 
 the center of the kernel size, while a standard deviation of 0.25 is a quarter
-of it.
+of it. When `tensor` is provided (a 2D Tensor), the `height`, `width` and `size` are ignored.
+It is used to store the returned gaussian kernel.
 
 Note that arguments can also be specified as key-value arguments (in a table).
 
 <a name="image.gaussian1D"/>
-### [res] image.gaussian1D([size, sigma, amplitude, normalize, mean]) ###
+### [res] image.gaussian1D([size, sigma, amplitude, normalize, mean, tensor]) ###
 Returns a 1D Gaussian kernel of size `size`, mean `mean` and standard 
 deviation `sigma`. 
 Respectively, these arguments have default values of 3, 0.25 and 0.5. 
@@ -403,7 +404,9 @@ When `normalize=true`, the kernel is normalized to have a sum of 1.
 This overrides the `amplitude` argument. The default is `false`. Both the 
 standard deviation and mean are relative to a kernel of unit size. 
 In other works, a mean of 0.5 is the center of the kernel size, 
-while a standard deviation of 0.25 is a quarter of it.
+while a standard deviation of 0.25 is a quarter of it. 
+When `tensor` is provided (a 1D Tensor), the `size` is ignored.
+It is used to store the returned gaussian kernel.
 
 Note that arguments can also be specified as key-value arguments (in a table).
 
