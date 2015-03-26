@@ -1685,8 +1685,8 @@ end
 --
 function image.gaussian(...)
    -- process args
-   local _, size, sigma, amplitude, normalize,
-   width, height, sigma_horz, sigma_vert, mean_horz, mean_vert = dok.unpack(
+   local _, size, sigma, amplitude, normalize, width, height, 
+      sigma_horz, sigma_vert, mean_horz, mean_vert, tensor = dok.unpack(
       {...},
       'image.gaussian',
       'returns a 2D gaussian kernel',
@@ -1699,11 +1699,15 @@ function image.gaussian(...)
       {arg='sigma_horz', type='number', help='horizontal sigma', defaulta='sigma'},
       {arg='sigma_vert', type='number', help='vertical sigma', defaulta='sigma'},
       {arg='mean_horz', type='number', help='horizontal mean', default=0.5},
-      {arg='mean_vert', type='number', help='vertical mean', default=0.5}
+      {arg='mean_vert', type='number', help='vertical mean', default=0.5},
+      {arg='tensor', type='torch.Tensor', help='result tensor (height/width are ignored)'}
    )
-
+   if tensor then 
+      assert(tensor:dim() == 2, "expecting 2D tensor")
+      assert(tensor:nElement() > 0, "expecting non-empty tensor")
+   end
    -- generate kernel
-   local gauss = torch.Tensor(height, width)
+   local gauss = tensor or torch.Tensor(height, width)
    gauss.image.gaussian(gauss, amplitude, normalize, sigma_horz, sigma_vert, mean_horz, mean_vert)
 
    return gauss
@@ -1711,7 +1715,7 @@ end
 
 function image.gaussian1D(...)
    -- process args
-   local _, size, sigma, amplitude, normalize, mean
+   local _, size, sigma, amplitude, normalize, mean, tensor
       = dok.unpack(
       {...},
       'image.gaussian1D',
@@ -1720,14 +1724,20 @@ function image.gaussian1D(...)
       {arg='sigma', type='number', help='Sigma', default=0.25},
       {arg='amplitude', type='number', help='Amplitute of the gaussian (max value)', default=1},
       {arg='normalize', type='number', help='Normalize kernel (exc Amplitude)', default=false},
-      {arg='mean', type='number', help='Mean', default=0.5}
+      {arg='mean', type='number', help='Mean', default=0.5},
+      {arg='tensor', type='torch.Tensor', help='result tensor (size is ignored)'}
    )
 
    -- local vars
+   if tensor then
+      assert(tensor:dim() == 1, "expecting 1D tensor")
+      assert(tensor:nElement() > 0, "expecting non-empty tensor")
+      size = tensor:size(1)
+   end
    local center = mean * size + 0.5
 
    -- generate kernel
-   local gauss = torch.Tensor(size)
+   local gauss = tensor or torch.Tensor(size)
    for i=1,size do
       gauss[i] = amplitude * math.exp(-(math.pow((i-center)
                                               /(sigma*size),2)/2))
