@@ -11,9 +11,10 @@
  * Clement: modified for Torch7.
  */
 
-
-static THTensor * libpng_(read_png_file)(const char *file_name)
+static int libpng_(Main_load)(lua_State *L) 
 {
+  const char *file_name = luaL_checkstring(L, 1);
+
   png_byte header[8];    // 8 is the maximum size that can be checked
 
   int width, height;
@@ -27,25 +28,25 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
    /* open file and test for it being a png */
   FILE *fp = fopen(file_name, "rb");
   if (!fp)
-    abort_("[read_png_file] File %s could not be opened for reading", file_name);
+    luaL_error(L, "[read_png_file] File %s could not be opened for reading", file_name);
   fread_ret = fread(header, 1, 8, fp);
   if (fread_ret != 8)
-    abort_("[read_png_file] File %s error reading header", file_name);
+    luaL_error(L, "[read_png_file] File %s error reading header", file_name);
   if (png_sig_cmp(header, 0, 8))
-    abort_("[read_png_file] File %s is not recognized as a PNG file", file_name);
+    luaL_error(L, "[read_png_file] File %s is not recognized as a PNG file", file_name);
 
   /* initialize stuff */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (!png_ptr)
-    abort_("[read_png_file] png_create_read_struct failed");
+    luaL_error(L, "[read_png_file] png_create_read_struct failed");
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
-    abort_("[read_png_file] png_create_info_struct failed");
+    luaL_error(L, "[read_png_file] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[read_png_file] Error during init_io");
+    luaL_error(L, "[read_png_file] Error during init_io");
 
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
@@ -81,7 +82,7 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
       png_read_update_info(png_ptr, info_ptr);
     }
   else
-    abort_("[read_png_file] Unknown color space");
+    luaL_error(L, "[read_png_file] Unknown color space");
 
   if(png_get_bit_depth(png_ptr, info_ptr) < 8)
   {
@@ -91,7 +92,7 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
-     abort_("[read_png_file] Error during read_image");
+     luaL_error(L, "[read_png_file] Error during read_image");
 
   /* alloc tensor */
   THTensor *tensor = THTensor_(newWithSize3d)(depth, height, width);
@@ -133,11 +134,15 @@ static THTensor * libpng_(read_png_file)(const char *file_name)
   fclose(fp);
 
   /* return tensor */
-  return tensor;
+  luaT_pushudata(L, tensor, torch_Tensor);
+  return 1;
 }
 
-static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
+static int libpng_(Main_save)(lua_State *L)
 {
+  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
+  const char *file_name = luaL_checkstring(L, 1);
+
   int width=0, height=0;
   png_byte color_type = 0;
   png_byte bit_depth = 8;
@@ -162,7 +167,7 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
 
   /* depth check */
   if ((depth != 1) && (depth != 3) && (depth != 4)) {
-    abort_("[write_png_file] Depth must be 1, 3 or 4");
+    luaL_error(L, "[write_png_file] Depth must be 1, 3 or 4");
   }
   if (depth == 4) color_type = PNG_COLOR_TYPE_RGBA;
   else if (depth == 3) color_type = PNG_COLOR_TYPE_RGB;
@@ -171,26 +176,26 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   /* create file */
   FILE *fp = fopen(file_name, "wb");
   if (!fp)
-    abort_("[write_png_file] File %s could not be opened for writing", file_name);
+    luaL_error(L, "[write_png_file] File %s could not be opened for writing", file_name);
 
   /* initialize stuff */
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (!png_ptr)
-    abort_("[write_png_file] png_create_write_struct failed");
+    luaL_error(L, "[write_png_file] png_create_write_struct failed");
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
-    abort_("[write_png_file] png_create_info_struct failed");
+    luaL_error(L, "[write_png_file] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[write_png_file] Error during init_io");
+    luaL_error(L, "[write_png_file] Error during init_io");
 
   png_init_io(png_ptr, fp);
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[write_png_file] Error during writing header");
+    luaL_error(L, "[write_png_file] Error during writing header");
 
   png_set_IHDR(png_ptr, info_ptr, width, height,
          bit_depth, color_type, PNG_INTERLACE_NONE,
@@ -218,13 +223,13 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
 
   /* write bytes */
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[write_png_file] Error during writing bytes");
+    luaL_error(L, "[write_png_file] Error during writing bytes");
 
   png_write_image(png_ptr, row_pointers);
 
   /* end write */
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[write_png_file] Error during end of write");
+    luaL_error(L, "[write_png_file] Error during end of write");
 
   /* cleanup png structs */
   png_write_end(png_ptr, NULL);
@@ -238,9 +243,11 @@ static void libpng_(write_png_file)(const char *file_name, THTensor *tensor)
   /* cleanup */
   fclose(fp);
   THTensor_(free)(tensorc);
+  return 0;
 }
 
-static int libpng_(Main_size)(lua_State *L) {
+static int libpng_(Main_size)(lua_State *L) 
+{
   const char *filename = luaL_checkstring(L, 1);
   png_byte header[8];    // 8 is the maximum size that can be checked
 
@@ -253,26 +260,26 @@ static int libpng_(Main_size)(lua_State *L) {
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
   if (!fp)
-    abort_("[get_png_size] File %s could not be opened for reading", filename);
+    luaL_error(L, "[get_png_size] File %s could not be opened for reading", filename);
   fread_ret = fread(header, 1, 8, fp);
   if (fread_ret != 8)
-    abort_("[get_png_size] File %s error reading header", filename);
+    luaL_error(L, "[get_png_size] File %s error reading header", filename);
   
   if (png_sig_cmp(header, 0, 8))
-    abort_("[get_png_size] File %s is not recognized as a PNG file", filename);
+    luaL_error(L, "[get_png_size] File %s is not recognized as a PNG file", filename);
   
   /* initialize stuff */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   
   if (!png_ptr)
-    abort_("[get_png_size] png_create_read_struct failed");
+    luaL_error(L, "[get_png_size] png_create_read_struct failed");
   
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
-    abort_("[get_png_size] png_create_info_struct failed");
+    luaL_error(L, "[get_png_size] png_create_info_struct failed");
   
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[get_png_size] Error during init_io");
+    luaL_error(L, "[get_png_size] Error during init_io");
   
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
@@ -295,13 +302,13 @@ static int libpng_(Main_size)(lua_State *L) {
   else if (color_type == PNG_COLOR_TYPE_GA)
     depth = 2;
   else if (color_type == PNG_COLOR_TYPE_PALETTE)
-    abort_("[get_png_size] unsupported type: PALETTE");
+    luaL_error(L, "[get_png_size] unsupported type: PALETTE");
   else
-    abort_("[get_png_size] Unknown color space");
+    luaL_error(L, "[get_png_size] Unknown color space");
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
-    abort_("[get_png_size] Error during read_image");
+    luaL_error(L, "[get_png_size] Error during read_image");
   
   /* done with file */
   fclose(fp);
@@ -311,20 +318,6 @@ static int libpng_(Main_size)(lua_State *L) {
   lua_pushnumber(L, width);
 
   return 3;
-}
-
-static int libpng_(Main_load)(lua_State *L) {
-  const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = libpng_(read_png_file)(filename);
-  luaT_pushudata(L, tensor, torch_Tensor);
-  return 1;
-}
-
-static int libpng_(Main_save)(lua_State *L) {
-  const char *filename = luaL_checkstring(L, 1);
-  THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
-  libpng_(write_png_file)(filename, tensor);
-  return 0;
 }
 
 static const luaL_reg libpng_(Main__)[] =

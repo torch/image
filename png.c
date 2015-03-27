@@ -9,16 +9,6 @@
 #define PNG_DEBUG 3
 #include <png.h>
 
-void abort_(const char * s, ...)
-{
-  va_list args;
-  va_start(args, s);
-  vfprintf(stderr, s, args);
-  fprintf(stderr, "\n");
-  va_end(args);
-  abort();
-}
-
 #define torch_(NAME) TH_CONCAT_3(torch_, Real, NAME)
 #define torch_Tensor TH_CONCAT_STRING_3(torch., Real, Tensor)
 #define libpng_(NAME) TH_CONCAT_3(libpng_, Real, NAME)
