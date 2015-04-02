@@ -117,7 +117,7 @@ static int libjpeg_(Main_size)(lua_State *L)
      */
     jpeg_destroy_decompress(&cinfo);
     fclose(infile);
-    return 0;
+    luaL_error(L, "error reading JPEG object");
   }
 
   /* Now we can initialize the JPEG decompression object. */
@@ -230,7 +230,7 @@ static int libjpeg_(Main_load)(lua_State *L)
     if (infile) {
       fclose(infile);
     }
-    return 0;
+    luaL_error(L, "cannot open file for reading");
   }
   /* Now we can initialize the JPEG decompression object. */
   jpeg_create_decompress(&cinfo);
@@ -403,8 +403,7 @@ int libjpeg_(Main_save)(lua_State *L) {
   if (save_to_file == 1) {
     outfile = fopen( filename, "wb" );
     if ( !outfile ) {
-      printf("Error opening output jpeg file %s\n!", filename );
-      return -1;
+      luaL_error(L, "Error opening output jpeg file %s\n!", filename );
     }
   }
 
