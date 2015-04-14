@@ -1425,6 +1425,79 @@ int image_(Main_hflip)(lua_State *L) {
   return 0;
 }
 
+/* flip an image along a specified dimension */
+int image_(Main_flip)(lua_State *L) {
+  THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
+  long flip_dim = luaL_checklong(L, 3);
+  
+  if (dst->nDimension != src->nDimension) {
+    luaL_error(L, "image.flip: src and dst nDimension does not match");
+  }
+  
+  if (flip_dim < 1 || flip_dim > dst->nDimension) {
+    luaL_error(L, "image.flip: flip_dim out of bounds");
+  }
+  flip_dim--;  //  Make it zero indexed
+
+  // get raw pointers
+  real *dst_data = THTensor_(data)(dst);
+  real *src_data = THTensor_(data)(src);
+  if (dst_data == src_data) {  
+    luaL_error(L, "image.flip: in-place flip not supported");
+  }
+  
+  long size0 = dst->size[0];
+  long size1 = dst->size[1];
+  long size2 = dst->size[2];
+  long size3 = dst->size[3];
+  long size4 = dst->size[4];
+  long size_flip = dst->size[flip_dim];
+  
+  if (src->size[0] != size0 || src->size[1] != size1 || 
+      src->size[2] != size2 || src->size[3] != size3 || 
+      src->size[4] != size4) {
+    luaL_error(L, "image.flip: src and dst are not the same size");
+  }
+  
+  long *is = src->stride;
+  long *os = dst->stride;
+
+  long x, y, z, d, t, isrc, idst;
+  for (t = 0; t < size0; t++) {
+    for (d = 0; d < size1; d++) {
+      for (z = 0; z < size2; z++) {
+        for (y = 0; y < size3; y++) {
+          for (x = 0; x < size4; x++) {
+            isrc = t*is[0] + d*is[1] + z*is[2] + y*is[3] + x*is[4];
+            // The big switch statement here looks ugly, however on my machine
+            // gcc compiles it to a skip list, so it should be fast.
+            switch (flip_dim) {
+              case 0:
+                idst = (size0 - t - 1)*os[0] + d*os[1] + z*os[2] + y*os[3] + x*os[4];
+                break;
+              case 1:
+                idst = t*os[0] + (size1 - d - 1)*os[1] + z*os[2] + y*os[3] + x*os[4];
+                break;
+              case 2:
+                idst = t*os[0] + d*os[1] + (size2 - z - 1)*os[2] + y*os[3] + x*os[4];
+                break;
+              case 3:
+                idst = t*os[0] + d*os[1] + z*os[2] + (size3 - y - 1)*os[3] + x*os[4];
+                break;
+              case 4:
+                idst = t*os[0] + d*os[1] + z*os[2] + y*os[3] + (size4 - x - 1)*os[4];
+                break;
+            }              
+            dst_data[ idst ] = src_data[  isrc ];
+          }
+        }
+      }
+    }
+  }
+
+  return 0;
+}
 
 /*
  * Warps an image, according to an (x,y) flow field. The flow
@@ -1787,6 +1860,7 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"gaussian", image_(Main_gaussian)},
   {"vflip", image_(Main_vflip)},
   {"hflip", image_(Main_hflip)},
+  {"flip", image_(Main_flip)},
   {"colorize", image_(Main_colorize)},
   {NULL, NULL}
 };

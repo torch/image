@@ -128,6 +128,11 @@ store the output image. Otherwise, returns a new `res` Tensor.
 Flips image `src` vertically (upsize<->down). If `dst` is provided, it is used to
 store the output image. Otherwise, returns a new `res` Tensor.
 
+<a name="image.flip"/>
+### [res] image.flip([dst,] src, flip_dim) ###
+Flips image `src` along the specified dimension. If `dst` is provided, it is used to
+store the output image. Otherwise, returns a new `res` Tensor.
+
 <a name="image.minmax"/>
 ### [res] image.minmax{tensor, [min, max, ...]} ###
 Compresses image `tensor` between `min` and `max`. 
