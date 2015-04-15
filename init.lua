@@ -811,12 +811,22 @@ local function hflip(...)
                        {type='torch.Tensor', help='input image', req=true}))
       dok.error('incorrect arguments', 'image.hflip')
    end
+
+   if not src:isContiguous() then
+     dok.error('input tensor is not contiguous', 'image.hflip')
+   end
+
    dst = dst or src.new()
    local original_size = src:size()
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
    dst:resizeAs(src)
+
+   if not dst:isContiguous() then
+     dok.error('destination tensor is not contiguous', 'image.hflip')
+   end
+
    dst.image.hflip(dst, src)
    dst:resize(original_size)
    return dst
@@ -843,17 +853,90 @@ local function vflip(...)
                        {type='torch.Tensor', help='input image', req=true}))
       dok.error('incorrect arguments', 'image.vflip')
    end
+
+   if not src:isContiguous() then
+     dok.error('input tensor is not contiguous', 'image.vflip')
+   end
+
    dst = dst or src.new()
    local original_size = src:size()
    if src:nDimension() == 2 then
       src = src:new():resize(1,src:size(1),src:size(2))
    end
    dst:resizeAs(src)
+  
+   if not dst:isContiguous() then
+     dok.error('destination tensor is not contiguous', 'image.vflip')
+   end
+ 
    dst.image.vflip(dst, src)
    dst:resize(original_size)
    return dst
 end
 rawset(image, 'vflip', vflip)
+
+----------------------------------------------------------------------
+-- flip (specify dimension, up to 5D tensor)
+--
+local function flip(...)
+   local dst,src,flip_dim
+   local args = {...}
+   if select('#',...) == 3 then
+      dst = args[1]
+      src = args[2]
+      flip_dim = args[3]
+   elseif select('#',...) == 2 then
+      src = args[1]
+      flip_dim = args[2]
+   else
+      print(dok.usage('image.flip',
+                       'flips an image along a specified dimension', nil,
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='Dimension to flip', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='number', help='Dimension to flip', req=true}))
+      dok.error('incorrect arguments', 'image.flip')
+   end
+   assert(src:nDimension() <= 5, 'too many input dims (up to 5D supported)')
+   assert(flip_dim <= src:nDimension() and flip_dim >= 1, 'Bad flip dimension')
+
+   if not src:isContiguous() then
+     dok.error('input tensor is not contiguous', 'image.flip')
+   end
+
+   dst = dst or src.new()
+   local original_size = src:size()
+   local flip_dim_cpp
+   if src:nDimension() == 1 then
+      src = src:new():resize(1, 1, 1, 1, src:size(1))
+      flip_dim_cpp = flip_dim + 4
+   elseif src:nDimension() == 2 then
+      src = src:new():resize(1, 1, 1, src:size(1), src:size(2))
+      flip_dim_cpp = flip_dim + 3
+   elseif src:nDimension() == 3 then
+      src = src:new():resize(1, 1, src:size(1), src:size(2),src:size(3))
+      flip_dim_cpp = flip_dim + 2
+   elseif src:nDimension() == 4 then
+      src = src:new():resize(1, src:size(1), src:size(2), src:size(3), 
+        src:size(4))
+      flip_dim_cpp = flip_dim + 1
+   else
+      flip_dim_cpp = flip_dim
+   end
+   dst:resizeAs(src)
+
+   if not dst:isContiguous() then
+     dok.error('destination tensor is not contiguous', 'image.flip')
+   end
+
+   dst.image.flip(dst, src, flip_dim_cpp)
+   dst:resize(original_size)
+   return dst
+end
+
+rawset(image, 'flip', flip)
 
 ----------------------------------------------------------------------
 -- convolve(dst,src,ker,type)
