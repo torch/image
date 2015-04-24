@@ -274,8 +274,12 @@ static int libjpeg_(Main_load)(lua_State *L)
   /* Make a one-row-high sample array that will go away when done with image */
 
   tensor = THTensor_(newWithSize3d)(cinfo.output_components, cinfo.output_height, cinfo.output_width);
+  real *tdata = THTensor_(data)(tensor);
+  const unsigned int chans = cinfo.output_components;
+  const unsigned int height = cinfo.output_height;
+  const unsigned int width = cinfo.output_width;
   buffer = (*cinfo.mem->alloc_sarray)
-		((j_common_ptr) &cinfo, JPOOL_IMAGE, cinfo.output_width * cinfo.output_components, 1);
+    ((j_common_ptr) &cinfo, JPOOL_IMAGE, chans * width, 1);
 
   /* Step 6: while (scan lines remain to be read) */
   /*           jpeg_read_scanlines(...); */
@@ -283,21 +287,20 @@ static int libjpeg_(Main_load)(lua_State *L)
   /* Here we use the library's state variable cinfo.output_scanline as the
    * loop counter, so that we don't have to keep track ourselves.
    */
-  while (cinfo.output_scanline < cinfo.output_height) {
+  while (cinfo.output_scanline < height) {
     /* jpeg_read_scanlines expects an array of pointers to scanlines.
      * Here the array is only one element long, but you could ask for
      * more than one scanline at a time if that's more convenient.
      */
     (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-    
-    for(k = 0; k < cinfo.output_components; k++)
-    {
-      for(i = 0; i < cinfo.output_width; i++)
-        THTensor_(set3d)(tensor, k, cinfo.output_scanline-1, i, 
-                         (real)buffer[0][cinfo.output_components*i+k]);
+    const unsigned int j = cinfo.output_scanline-1;
+
+    for(k = 0; k < chans; k++) {
+      for(i = 0; i < width; i++) {
+	tdata[k * (height * width) + j * width + i] = (real)buffer[0][chans * i + k];
+      }
     }
   }
-
   /* Step 7: Finish decompression */
 
   (void) jpeg_finish_decompress(&cinfo);
