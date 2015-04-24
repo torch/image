@@ -812,8 +812,8 @@ local function hflip(...)
       dok.error('incorrect arguments', 'image.hflip')
    end
 
-   if not src:isContiguous() then
-     dok.error('input tensor is not contiguous', 'image.hflip')
+   if (src:dim() == 2) and (not src:isContiguous()) then
+     dok.error('2D input tensor is not contiguous', 'image.hflip')
    end
 
    dst = dst or src.new()
@@ -854,8 +854,8 @@ local function vflip(...)
       dok.error('incorrect arguments', 'image.vflip')
    end
 
-   if not src:isContiguous() then
-     dok.error('input tensor is not contiguous', 'image.vflip')
+   if (src:dim() == 2) and (not src:isContiguous()) then
+     dok.error('2D input tensor is not contiguous', 'image.vflip')
    end
 
    dst = dst or src.new()
