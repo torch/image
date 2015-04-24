@@ -68,17 +68,18 @@ local function todepth(img, depth)
          dok.error('image loaded has wrong #channels', 'image.todepth')
       end
    elseif depth and depth == 3 then
-      if img:nDimension() == 2 then
+      local chan = img:size(1)
+      if chan == 3 then
+         -- all good
+      elseif img:nDimension() == 2 then
          local imgrgb = img.new(3, img:size(1), img:size(2))
          imgrgb:select(1, 1):copy(img)
          imgrgb:select(1, 2):copy(img)
          imgrgb:select(1, 3):copy(img)
          img = imgrgb
-      elseif img:size(1) == 3 then
-         -- all good
-      elseif img:size(1) == 4 then
+      elseif chan == 4 then
          img = img:narrow(1,1,3)
-      elseif img:size(1) == 1 then
+      elseif chan == 1 then
          local imgrgb = img.new(3, img:size(2), img:size(3))
          imgrgb:select(1, 1):copy(img)
          imgrgb:select(1, 2):copy(img)
@@ -572,7 +573,7 @@ local function polar(...)
         src    = args[1]
         interp = args[2]
         mode   = args[3]
-      else        
+      else
         dst    = args[1]
         src    = args[2]
         interp = args[3]
@@ -625,8 +626,8 @@ local function polar(...)
       end
    else
       dok.error('interpolation must be one of: simple | bilinear', 'image.polar')
-   end  
-   return dst  
+   end
+   return dst
 end
 rawset(image, 'polar', polar)
 
@@ -646,7 +647,7 @@ local function logpolar(...)
         src    = args[1]
         interp = args[2]
         mode   = args[3]
-      else        
+      else
         dst    = args[1]
         src    = args[2]
         interp = args[3]
@@ -699,8 +700,8 @@ local function logpolar(...)
       end
    else
       dok.error('interpolation must be one of: simple | bilinear', 'image.logpolar')
-   end  
-   return dst  
+   end
+   return dst
 end
 rawset(image, 'logpolar', logpolar)
 
@@ -864,11 +865,11 @@ local function vflip(...)
       src = src:new():resize(1,src:size(1),src:size(2))
    end
    dst:resizeAs(src)
-  
+
    if not dst:isContiguous() then
      dok.error('destination tensor is not contiguous', 'image.vflip')
    end
- 
+
    dst.image.vflip(dst, src)
    dst:resize(original_size)
    return dst
@@ -919,7 +920,7 @@ local function flip(...)
       src = src:new():resize(1, 1, src:size(1), src:size(2),src:size(3))
       flip_dim_cpp = flip_dim + 2
    elseif src:nDimension() == 4 then
-      src = src:new():resize(1, src:size(1), src:size(2), src:size(3), 
+      src = src:new():resize(1, src:size(1), src:size(2), src:size(3),
         src:size(4))
       flip_dim_cpp = flip_dim + 1
    else
@@ -1768,7 +1769,7 @@ end
 --
 function image.gaussian(...)
    -- process args
-   local _, size, sigma, amplitude, normalize, width, height, 
+   local _, size, sigma, amplitude, normalize, width, height,
       sigma_horz, sigma_vert, mean_horz, mean_vert, tensor = dok.unpack(
       {...},
       'image.gaussian',
@@ -1785,7 +1786,7 @@ function image.gaussian(...)
       {arg='mean_vert', type='number', help='vertical mean', default=0.5},
       {arg='tensor', type='torch.Tensor', help='result tensor (height/width are ignored)'}
    )
-   if tensor then 
+   if tensor then
       assert(tensor:dim() == 2, "expecting 2D tensor")
       assert(tensor:nElement() > 0, "expecting non-empty tensor")
    end
