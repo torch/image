@@ -1748,18 +1748,19 @@ function image.y2jet(...)
 
    -- accept 3D grayscale
    if input:dim() == 3 and input:size(1) == 1 then
-      input = torch.Tensor(input):resize(input:size(2), input:size(3))
+      input = input.new(input):resize(input:size(2), input:size(3))
    end
 
    -- accept 1D greyscale
    if input:dim() == 1  then
-      input = torch.Tensor(input):resize(1, input:size(1))
+      input = input.new(input):resize(1, input:size(1))
    end
 
-   local output = output or torch.Tensor():typeAs(input)
+   local output = output or input.new()
    local L = input:max()
 
-   input.image.colorize(output, input-1, image.jetColormap(L))
+   local colorMap = image.jetColormap(L):typeAs(input)
+   input.image.colorize(output, input-1, colorMap)
 
    return output
 end
