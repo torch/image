@@ -61,7 +61,7 @@ local function todepth(img, depth)
       if img:nDimension() == 2 then
          -- all good
       elseif img:size(1) == 3 or img:size(1) == 4 then
-         img = image.rgb2y(img:narrow(1,1,3))[1]
+	 img = image.rgb2y(img:narrow(1,1,3))[1]
       elseif img:size(1) == 2 then
          img = img:narrow(1,1,1)
       elseif img:size(1) ~= 1 then
@@ -1468,7 +1468,7 @@ function image.rgb2y(...)
    local outputY = output[1]
 
    -- convert
-   outputY:zero():add(0.299, inputRed):add(0.587, inputGreen):add(0.114, inputBlue)
+   input.image.rgb2y(input, outputY)
 
    -- return YUV image
    return output

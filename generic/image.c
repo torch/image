@@ -1838,6 +1838,37 @@ int image_(Main_colorize)(lua_State *L) {
   return 0;
 }
 
+int image_(Main_rgb2y)(lua_State *L) {
+  THTensor *rgb = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *yim = luaT_checkudata(L, 2, torch_Tensor);
+
+  luaL_argcheck(L, rgb->nDimension == 3, 1, "image.rgb2y: src not 3D");
+  luaL_argcheck(L, yim->nDimension == 2, 2, "image.rgb2y: dst not 2D");
+  luaL_argcheck(L, rgb->size[1] == yim->size[0], 2,
+		"image.rgb2y: src and dst not of same height");
+  luaL_argcheck(L, rgb->size[2] == yim->size[1], 2,
+		"image.rgb2y: src and dst not of same width");
+
+  int y,x;
+  real r,g,b,yc;
+  const int height = rgb->size[1];
+  const int width = rgb->size[2];
+  for (y=0; y<height; y++) {
+    for (x=0; x<width; x++) {
+      // get Rgb
+      r = THTensor_(get3d)(rgb, 0, y, x);
+      g = THTensor_(get3d)(rgb, 1, y, x);
+      b = THTensor_(get3d)(rgb, 2, y, x);
+
+      yc = (real) ((0.299 * (float) r)
+		   + (0.587 * (float) g)
+		   + (0.114 * (float) b));
+      THTensor_(set2d)(yim, y, x, yc);
+    }
+  }
+  return 0;
+}
+
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
@@ -1851,6 +1882,7 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"cropNoScale", image_(Main_cropNoScale)},
   {"warp", image_(Main_warp)},
   {"saturate", image_(Main_saturate)},
+  {"rgb2y",   image_(Main_rgb2y)},
   {"rgb2hsv", image_(Main_rgb2hsv)},
   {"rgb2hsl", image_(Main_rgb2hsl)},
   {"hsv2rgb", image_(Main_hsv2rgb)},
