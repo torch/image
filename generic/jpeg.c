@@ -48,6 +48,8 @@ struct my_error_mgr {
   struct jpeg_error_mgr pub;	/* "public" fields */
 
   jmp_buf setjmp_buffer;	/* for return to caller */
+
+  char msg[JMSG_LENGTH_MAX]; /* last error message */
 };
 
 typedef struct my_error_mgr * my_error_ptr;
@@ -63,12 +65,23 @@ libjpeg_(Main_error) (j_common_ptr cinfo)
   /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
   my_error_ptr myerr = (my_error_ptr) cinfo->err;
 
-  /* Always display the message. */
-  /* We could postpone this until after returning, if we chose. */
+  /* See below. */
   (*cinfo->err->output_message) (cinfo);
 
   /* Return control to the setjmp point */
   longjmp(myerr->setjmp_buffer, 1);
+}
+
+/*
+ * Here's the routine that will replace the standard output_message method:
+ */
+
+METHODDEF(void)
+libjpeg_(Main_output_message) (j_common_ptr cinfo)
+{
+  my_error_ptr myerr = (my_error_ptr) cinfo->err;
+
+  (*cinfo->err->format_message) (cinfo, myerr->msg);
 }
 
 
@@ -110,6 +123,7 @@ static int libjpeg_(Main_size)(lua_State *L)
   /* We set up the normal JPEG error routines, then override error_exit. */
   cinfo.err = jpeg_std_error(&jerr.pub);
   jerr.pub.error_exit = libjpeg_(Main_error);
+  jerr.pub.output_message = libjpeg_(Main_output_message);
   /* Establish the setjmp return context for my_error_exit to use. */
   if (setjmp(jerr.setjmp_buffer)) {
     /* If we get here, the JPEG code has signaled an error.
@@ -117,7 +131,7 @@ static int libjpeg_(Main_size)(lua_State *L)
      */
     jpeg_destroy_decompress(&cinfo);
     fclose(infile);
-    luaL_error(L, "error reading JPEG object");
+    luaL_error(L, jerr.msg);
   }
 
   /* Now we can initialize the JPEG decompression object. */
@@ -221,6 +235,7 @@ static int libjpeg_(Main_load)(lua_State *L)
   /* We set up the normal JPEG error routines, then override error_exit. */
   cinfo.err = jpeg_std_error(&jerr.pub);
   jerr.pub.error_exit = libjpeg_(Main_error);
+  jerr.pub.output_message = libjpeg_(Main_output_message);
   /* Establish the setjmp return context for my_error_exit to use. */
   if (setjmp(jerr.setjmp_buffer)) {
     /* If we get here, the JPEG code has signaled an error.
@@ -230,7 +245,7 @@ static int libjpeg_(Main_load)(lua_State *L)
     if (infile) {
       fclose(infile);
     }
-    luaL_error(L, "cannot open file for reading");
+    luaL_error(L, jerr.msg);
   }
   /* Now we can initialize the JPEG decompression object. */
   jpeg_create_decompress(&cinfo);
