@@ -1090,8 +1090,10 @@ local function toDisplayTensor(...)
       for i,img in ipairs(input) do
          packed[i]:copy(input[i])
       end
-   else
+   elseif torch.isTensor(input) then
       packed:resize(input:size()):copy(input)
+   else
+      error('Unknown or incompatbile type of input: ' .. torch.type(input))
    end
 
    -- scale each
