@@ -496,7 +496,7 @@ int libjpeg_(Main_save)(lua_State *L) {
   return 1;
 }
 
-static const luaL_reg libjpeg_(Main__)[] =
+static const luaL_Reg libjpeg_(Main__)[] =
 {
   {"size", libjpeg_(Main_size)},
   {"load", libjpeg_(Main_load)},

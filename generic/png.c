@@ -386,7 +386,7 @@ static int libpng_(Main_size)(lua_State *L)
   return 3;
 }
 
-static const luaL_reg libpng_(Main__)[] =
+static const luaL_Reg libpng_(Main__)[] =
 {
   {"load", libpng_(Main_load)},
   {"size", libpng_(Main_size)},
