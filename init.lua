@@ -92,17 +92,48 @@ local function todepth(img, depth)
    return img
 end
 
+local function isPNG(magicTensor)
+    pngMagic = torch.ByteTensor({0x89,0x50,0x4e,0x47})
+    return torch.all(torch.eq(magicTensor, pngMagic))
+end
+
+local function isJPG(magicTensor)
+    jpgMagic = torch.ByteTensor({0xff, 0xd8, 0xff, 0xe0})
+    return torch.all(torch.eq(magicTensor, jpgMagic))
+end
+
+local function decompress(tensor, depth, tensortype)
+    if torch.typename(tensor) ~= 'torch.ByteTensor' then
+        dok.error('Input tensor must be a byte tensor',
+                  'image.decompress')
+    end
+    if isJPG(tensor[{{1,4}}]) then
+        return image.decompressJPG(tensor, depth, tensortype)
+    elseif isPNG(tensor[{{1,4}}]) then
+        return image.decompressPNG(tensor, depth, tensortype)
+    else
+        dok.error('Input must be either jpg or png format',
+                  'image.decompress')
+    end
+end
+rawset(image, 'decompress', decompress)
+
+local function processPNG(img, depth, tensortype)
+    local MAXVAL = 255
+    if tensortype ~= 'byte' then
+        img:mul(1/MAXVAL)
+    end
+    img = todepth(img, depth)
+    return img
+end
+
 local function loadPNG(filename, depth, tensortype)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
-   local MAXVAL = 255
-   local a = template(tensortype).libpng.load(filename)
-   if tensortype ~= 'byte' then
-      a:mul(1/MAXVAL)
-   end
-   a = todepth(a, depth)
-   return a
+   local load_from_file = 1
+   local a = template(tensortype).libpng.load(load_from_file, filename)
+   return processPNG(a, depth, tensortype)
 end
 rawset(image, 'loadPNG', loadPNG)
 
@@ -117,6 +148,25 @@ local function savePNG(filename, tensor)
    a.libpng.save(filename, a)
 end
 rawset(image, 'savePNG', savePNG)
+
+local function decompressPNG(tensor, depth, tensortype)
+    if not xlua.require 'libpng' then
+        dok.error('libpng package not found, please install libpng',
+                  'image.decompressPNG')
+    end
+    if torch.typename(tensor) ~= 'torch.ByteTensor' then
+        dok.error('Input tensor (with compressed png) must be a byte tensor',
+                  'image.decompressPNG')
+    end
+    local load_from_file = 0
+    local a = template(tensortype).libpng.load(load_from_file, tensor)
+    if a == nil then
+        return nil
+    else
+        return processPNG(a, depth, tensortype)
+    end
+end
+rawset(image, 'decompressPNG', decompressPNG)
 
 function image.getPNGsize(filename)
    if not xlua.require 'libpng' then
