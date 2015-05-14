@@ -10,10 +10,30 @@
  *
  * Clement: modified for Torch7.
  */
+#include <assert.h>
+
+/*
+ * Bookkeeping struct for reading png data from memory
+ */
+typedef struct {
+  unsigned char* buffer;
+  png_size_t offset;
+  png_size_t length;
+} libpng_(inmem_buffer);
+
+/*
+ * Call back for reading png data from memory
+ */
+void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t length) 
+{
+  libpng_(inmem_buffer)* src = png_get_io_ptr(pngPtrSrc);
+  assert(src->offset+length <= src->length);
+  memcpy(dest, src->buffer + src->offset, length);
+  src->offset += length;
+}
 
 static int libpng_(Main_load)(lua_State *L) 
 {
-  const char *file_name = luaL_checkstring(L, 1);
 
   png_byte header[8];    // 8 is the maximum size that can be checked
 
@@ -24,33 +44,52 @@ static int libpng_(Main_load)(lua_State *L)
   png_infop info_ptr;
   png_bytep * row_pointers;
   size_t fread_ret;
+  FILE* fp;
+  libpng_(inmem_buffer) inmem = {0};    /* source memory (if loading from memory) */
+  
+  const int load_from_file = luaL_checkint(L, 1);
 
+  if (load_from_file == 1){
+    const char *file_name = luaL_checkstring(L, 2);
    /* open file and test for it being a png */
-  FILE *fp = fopen(file_name, "rb");
-  if (!fp)
-    luaL_error(L, "[read_png_file] File %s could not be opened for reading", file_name);
-  fread_ret = fread(header, 1, 8, fp);
-  if (fread_ret != 8)
-    luaL_error(L, "[read_png_file] File %s error reading header", file_name);
-  if (png_sig_cmp(header, 0, 8))
-    luaL_error(L, "[read_png_file] File %s is not recognized as a PNG file", file_name);
-
+    fp = fopen(file_name, "rb");
+    if (!fp)
+      luaL_error(L, "[read_png_file] File %s could not be opened for reading", file_name);
+    fread_ret = fread(header, 1, 8, fp);
+    if (fread_ret != 8)
+      luaL_error(L, "[read_png_file] File %s error reading header", file_name);
+    if (png_sig_cmp(header, 0, 8))
+      luaL_error(L, "[read_png_file] File %s is not recognized as a PNG file", file_name);
+  } else {
+    /* We're loading from a ByteTensor */
+    THByteTensor *src = luaT_checkudata(L, 2, "torch.ByteTensor");
+    inmem.buffer = THByteTensor_data(src);
+    inmem.length = src->size[0];
+    inmem.offset = 8;
+    fp = NULL;
+    if (png_sig_cmp(inmem.buffer, 0, 8))
+      luaL_error(L, "[read_png_byte_tensor] ByteTensor is not recognized as a PNG file");
+  }
   /* initialize stuff */
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (!png_ptr)
-    luaL_error(L, "[read_png_file] png_create_read_struct failed");
+    luaL_error(L, "[read_png] png_create_read_struct failed");
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
-    luaL_error(L, "[read_png_file] png_create_info_struct failed");
+    luaL_error(L, "[read_png] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[read_png_file] Error during init_io");
+    luaL_error(L, "[read_png] Error during init_io");
 
-  png_init_io(png_ptr, fp);
+  if (load_from_file == 1){
+    png_init_io(png_ptr, fp);
+  } else {
+    /* set the read callback */
+    png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_(userReadData));
+  }
   png_set_sig_bytes(png_ptr, 8);
-
   png_read_info(png_ptr, info_ptr);
 
   width      = png_get_image_width(png_ptr, info_ptr);
@@ -131,7 +170,9 @@ static int libpng_(Main_load)(lua_State *L)
   png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
   /* done with file */
-  fclose(fp);
+  if (fp) {
+    fclose(fp);
+  }
 
   /* return tensor */
   luaT_pushudata(L, tensor, torch_Tensor);
