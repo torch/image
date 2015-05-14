@@ -12,12 +12,18 @@
  */
 #include <assert.h>
 
+/*
+ * Bookkeeping struct for reading png data from memory
+ */
 typedef struct {
   unsigned char* buffer;
   png_size_t offset;
   png_size_t length;
 } libpng_(inmem_buffer);
 
+/*
+ * Call back for reading png data from memory
+ */
 void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t length) 
 {
   libpng_(inmem_buffer)* src = png_get_io_ptr(pngPtrSrc);
@@ -80,6 +86,7 @@ static int libpng_(Main_load)(lua_State *L)
   if (load_from_file == 1){
     png_init_io(png_ptr, fp);
   } else {
+    /* set the read callback */
     png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_(userReadData));
   }
   png_set_sig_bytes(png_ptr, 8);
