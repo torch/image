@@ -303,7 +303,8 @@ static int image_(Main_rotate)(lua_State *L)
   xc=src_width/2.0;
   yc=src_height/2.0;
 
-  sincosf(theta, &sin_theta, &cos_theta);
+  sin_theta = sinf(theta);
+  cos_theta = cosf(theta);
 
   for(j = 0; j < dst_height; j++) {
     jd=j;
