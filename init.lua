@@ -127,6 +127,15 @@ local function processPNG(img, depth, tensortype)
     return img
 end
 
+local function processPNG16(img, depth, tensortype)
+    local MAXVAL = 65535
+    if tensortype ~= 'byte' then
+	img:mul(1/MAXVAL)
+    end
+    img = todepth(img, depth)
+    return img
+end
+
 local function loadPNG(filename, depth, tensortype)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
@@ -136,6 +145,16 @@ local function loadPNG(filename, depth, tensortype)
    return processPNG(a, depth, tensortype)
 end
 rawset(image, 'loadPNG', loadPNG)
+
+local function loadPNG16(filename, depth, tensortype)
+   if not xlua.require 'libpng' then
+      dok.error('libpng package not found, please install libpng','image.loadPNG16')
+   end
+   local load_from_file = 1
+   local a = template(tensortype).libpng.load(load_from_file, filename)
+   return processPNG16(a, depth, tensortype)
+end
+rawset(image, 'loadPNG16', loadPNG16)
 
 local function savePNG(filename, tensor)
    if not xlua.require 'libpng' then
