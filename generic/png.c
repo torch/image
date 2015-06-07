@@ -148,13 +148,30 @@ static int libpng_(Main_load)(lua_State *L)
 
   /* convert image to dest tensor */
   int x,k;
-  for (k=0; k<depth; k++) {
-    for (y=0; y<height; y++) {
-      png_byte* row = row_pointers[y];
-      for (x=0; x<width; x++) {
-        *tensor_data++ = (real)row[x*depth+k];
-        //png_byte val = row[x*depth+k];
-        //THTensor_(set3d)(tensor, k, y, x, (real)val);
+  if ((png_get_bit_depth(png_ptr, info_ptr) == 16) && (sizeof(real) > 1)) {
+    for (k=0; k<depth; k++) {
+      for (y=0; y<height; y++) {
+	png_byte* row = row_pointers[y];
+	for (x=0; x<width; x++) {
+	  // PNG is big-endian
+	  int val = ((int)row[x*depth*2+k] << 8) + row[x*depth*2+k+1];
+	  *tensor_data++ = (real)val;
+	}
+      }
+    }
+  } else {
+    int stride = depth;
+    if (png_get_bit_depth(png_ptr, info_ptr) == 16) {
+      stride = 2 * depth;
+    }
+    for (k=0; k<depth; k++) {
+      for (y=0; y<height; y++) {
+	png_byte* row = row_pointers[y];
+	for (x=0; x<width; x++) {
+	  *tensor_data++ = (real)row[x*stride+k];
+	  //png_byte val = row[x*depth+k];
+	  //THTensor_(set3d)(tensor, k, y, x, (real)val);
+	}
       }
     }
   }
