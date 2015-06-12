@@ -1,13 +1,8 @@
 require 'image'
-require 'paths'
-
-torch.setdefaulttensortype('torch.DoubleTensor')
-torch.setnumthreads(4)
 
 -- Create an instance of the test framework
 local mytester = torch.Tester()
 local precision_mean = 1e-3
-local precision_std = 1e-1
 local test = {}
 
 function checkPNG(imfile, depth, tensortype, want)
