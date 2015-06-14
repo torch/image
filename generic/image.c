@@ -257,6 +257,7 @@ static int image_(Main_rotate)(lua_State *L)
   THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
   float theta = luaL_checknumber(L, 3);
+  float cos_theta, sin_theta;
   real *src, *dst;
   long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height, dst_depth;
   long src_stride0, src_stride1, src_stride2, src_width, src_height, src_depth;
@@ -302,14 +303,17 @@ static int image_(Main_rotate)(lua_State *L)
   xc=src_width/2.0;
   yc=src_height/2.0;
 
+  sin_theta = sinf(theta);
+  cos_theta = cosf(theta);
+
   for(j = 0; j < dst_height; j++) {
     jd=j;
     for(i = 0; i < dst_width; i++) {
       float val = -1;
       id= i;
 
-      ii=(long)( cos(theta)*(id-xc)-sin(theta)*(jd-yc) );
-      jj=(long)( cos(theta)*(jd-yc)+sin(theta)*(id-xc) );
+      ii=(long)( cos_theta*(id-xc)-sin_theta*(jd-yc) );
+      jj=(long)( cos_theta*(jd-yc)+sin_theta*(id-xc) );
       ii+=(long) xc; jj+=(long) yc;
 
       /* rotated corners are blank */
