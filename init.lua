@@ -1954,18 +1954,18 @@ function image.gaussianpyramid(...)
    end
    if src:nDimension() == 2 then
       for i = 1,#scales do
-         dst[i] = dst[i] or torch.Tensor()
+         dst[i] = dst[i] or src.new()
          dst[i]:resize(src:size(1)*scales[i], src:size(2)*scales[i])
       end
    elseif src:nDimension() == 3 then
       for i = 1,#scales do
-         dst[i] = dst[i] or torch.Tensor()
+         dst[i] = dst[i] or src.new()
          dst[i]:resize(src:size(1), src:size(2)*scales[i], src:size(3)*scales[i])
       end
    else
       dok.error('src image must be 2D or 3D', 'image.gaussianpyramid')
    end
-   local k = image.gaussian{width=3, normalize=true}
+   local k = image.gaussian{width=3, normalize=true}:typeAs(src)
    local tmp = src
    for i = 1,#scales do
       if scales[i] == 1 then
