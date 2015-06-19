@@ -37,7 +37,7 @@ static int libpng_(Main_load)(lua_State *L)
 
   png_byte header[8];    // 8 is the maximum size that can be checked
 
-  int width, height;
+  int width, height, bit_depth;
   png_byte color_type;
   
   png_structp png_ptr;
@@ -95,6 +95,7 @@ static int libpng_(Main_load)(lua_State *L)
   width      = png_get_image_width(png_ptr, info_ptr);
   height     = png_get_image_height(png_ptr, info_ptr);
   color_type = png_get_color_type(png_ptr, info_ptr);
+  bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
   png_read_update_info(png_ptr, info_ptr);
 
   /* get depth */
@@ -105,7 +106,7 @@ static int libpng_(Main_load)(lua_State *L)
     depth = 3;
   else if (color_type == PNG_COLOR_TYPE_GRAY)
   {
-    if(png_get_bit_depth(png_ptr, info_ptr) < 8)
+    if(bit_depth < 8)
     {
       png_set_expand_gray_1_2_4_to_8(png_ptr);
       png_read_update_info(png_ptr, info_ptr);
@@ -123,7 +124,7 @@ static int libpng_(Main_load)(lua_State *L)
   else
     luaL_error(L, "[read_png_file] Unknown color space");
 
-  if(png_get_bit_depth(png_ptr, info_ptr) < 8)
+  if(bit_depth < 8)
   {
     png_set_strip_16(png_ptr);
     png_read_update_info(png_ptr, info_ptr);
@@ -148,13 +149,31 @@ static int libpng_(Main_load)(lua_State *L)
 
   /* convert image to dest tensor */
   int x,k;
-  for (k=0; k<depth; k++) {
-    for (y=0; y<height; y++) {
-      png_byte* row = row_pointers[y];
-      for (x=0; x<width; x++) {
-        *tensor_data++ = (real)row[x*depth+k];
-        //png_byte val = row[x*depth+k];
-        //THTensor_(set3d)(tensor, k, y, x, (real)val);
+  if ((bit_depth == 16) && (sizeof(real) > 1)) {
+    for (k=0; k<depth; k++) {
+      for (y=0; y<height; y++) {
+	png_byte* row = row_pointers[y];
+	for (x=0; x<width; x++) {
+	  // PNG is big-endian
+	  int val = ((int)row[(x*depth+k)*2] << 8) + row[(x*depth+k)*2+1];
+	  *tensor_data++ = (real)val;
+	}
+      }
+    }
+  } else {
+    int stride = 1;
+    if (bit_depth == 16) {
+      /* PNG has 16 bit color depth, but the tensor type is byte. */
+      stride = 2;
+    }
+    for (k=0; k<depth; k++) {
+      for (y=0; y<height; y++) {
+	png_byte* row = row_pointers[y];
+	for (x=0; x<width; x++) {
+	  *tensor_data++ = (real)row[(x*depth+k)*stride];
+	  //png_byte val = row[x*depth+k];
+	  //THTensor_(set3d)(tensor, k, y, x, (real)val);
+	}
       }
     }
   }
@@ -176,7 +195,13 @@ static int libpng_(Main_load)(lua_State *L)
 
   /* return tensor */
   luaT_pushudata(L, tensor, torch_Tensor);
-  return 1;
+
+  if (bit_depth < 8) {
+    bit_depth = 8;
+  }
+  lua_pushnumber(L, bit_depth);
+
+  return 2;
 }
 
 static int libpng_(Main_save)(lua_State *L)

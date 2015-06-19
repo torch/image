@@ -118,8 +118,9 @@ local function decompress(tensor, depth, tensortype)
 end
 rawset(image, 'decompress', decompress)
 
-local function processPNG(img, depth, tensortype)
+local function processPNG(img, depth, bit_depth, tensortype)
     local MAXVAL = 255
+    if bit_depth == 16 then MAXVAL = 65535 end
     if tensortype ~= 'byte' then
         img:mul(1/MAXVAL)
     end
@@ -132,8 +133,8 @@ local function loadPNG(filename, depth, tensortype)
       dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
    local load_from_file = 1
-   local a = template(tensortype).libpng.load(load_from_file, filename)
-   return processPNG(a, depth, tensortype)
+   local a, bit_depth = template(tensortype).libpng.load(load_from_file, filename)
+   return processPNG(a, depth, bit_depth, tensortype)
 end
 rawset(image, 'loadPNG', loadPNG)
 
