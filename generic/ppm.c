@@ -155,7 +155,7 @@ int libppm_(Main_save)(lua_State *L) {
   return 1;
 }
 
-static const luaL_reg libppm_(Main__)[] =
+static const luaL_Reg libppm_(Main__)[] =
 {
   {"load", libppm_(Main_load)},
   {"save", libppm_(Main_save)},

@@ -5,6 +5,7 @@ require 'image'
 -- - one using the c-based gaussian function
 -- This test is not particularly rigorous, but the function is very simple, so
 -- I'm not convinced it needs to be more complicated
+local unpack = unpack or table.unpack
 
 sigma_horz = 0.1 + math.random() * 0.3;  -- [0.1, 0.4] 
 sigma_vert = 0.1 + math.random() * 0.3;  -- [0.1, 0.4]

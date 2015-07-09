@@ -7,6 +7,7 @@ torch.setnumthreads(8)
 local precision = 1e-5
 local mytester = torch.Tester()
 local test = {}
+local unpack = unpack or table.unpack
 
 -- This is a correlated test (which is kinda lazy).  We're assuming HFLIP is OK.
 function test.FlipAgainstHFlip()

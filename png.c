@@ -22,9 +22,21 @@ DLL_EXPORT int luaopen_libpng(lua_State *L)
   libpng_DoubleMain_init(L);
   libpng_ByteMain_init(L);
 
-  luaL_register(L, "libpng.double", libpng_DoubleMain__);
-  luaL_register(L, "libpng.float", libpng_FloatMain__);
-  luaL_register(L, "libpng.byte", libpng_ByteMain__);
+  lua_newtable(L);
+  lua_pushvalue(L, -1);
+  lua_setglobal(L, "libpng");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libpng_DoubleMain__, 0);
+  lua_setfield(L, -2, "double");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libpng_FloatMain__, 0);
+  lua_setfield(L, -2, "float");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libpng_ByteMain__, 0);
+  lua_setfield(L, -2, "byte");
 
   return 1;
 }

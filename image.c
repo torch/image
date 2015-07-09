@@ -45,9 +45,21 @@ DLL_EXPORT int luaopen_libimage(lua_State *L)
   image_DoubleMain_init(L);
   image_ByteMain_init(L);
 
-  luaL_register(L, "image.double", image_DoubleMain__); 
-  luaL_register(L, "image.float", image_FloatMain__);
-  luaL_register(L, "image.byte", image_ByteMain__);
+  lua_newtable(L);
+  lua_pushvalue(L, -1);
+  lua_setglobal(L, "image");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, image_DoubleMain__, 0);
+  lua_setfield(L, -2, "double");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, image_FloatMain__, 0);
+  lua_setfield(L, -2, "float");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, image_ByteMain__, 0);
+  lua_setfield(L, -2, "byte");
 
   return 1;
 }

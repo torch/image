@@ -50,9 +50,21 @@ DLL_EXPORT int luaopen_libppm(lua_State *L)
   libppm_DoubleMain_init(L);
   libppm_ByteMain_init(L);
 
-  luaL_register(L, "libppm.double", libppm_DoubleMain__);
-  luaL_register(L, "libppm.float", libppm_FloatMain__);
-  luaL_register(L, "libppm.byte", libppm_ByteMain__);
+  lua_newtable(L);
+  lua_pushvalue(L, -1);
+  lua_setglobal(L, "libppm");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libppm_DoubleMain__, 0);
+  lua_setfield(L, -2, "double");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libppm_FloatMain__, 0);
+  lua_setfield(L, -2, "float");
+
+  lua_newtable(L);
+  luaT_setfuncs(L, libppm_ByteMain__, 0);
+  lua_setfield(L, -2, "byte");
 
   return 1;
 }
