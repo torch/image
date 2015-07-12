@@ -54,7 +54,7 @@ static int libppm_(Main_load)(lua_State *L)
     int c,i;
     C = 3;
     r = (unsigned char *)malloc(W*H*C);
-    for (i=0; i<W*H*3; i++) {
+    for (i=0; i<W*H*C; i++) {
       fscanf ( fp, "%d", &c );
       r[i] = 255*c / D;
     }
@@ -62,7 +62,7 @@ static int libppm_(Main_load)(lua_State *L)
     int c,i;
     C = 1;
     r = (unsigned char *)malloc(W*H*C);
-    for (i=0; i<W*H*3; i++) {
+    for (i=0; i<W*H*C; i++) {
       fscanf ( fp, "%d", &c );
       r[i] = 255*c / D;
     }
