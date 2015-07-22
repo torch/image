@@ -87,7 +87,8 @@ Rescale the height and width of image `src` to have
 width `width` and height `height`.  Variable `mode` specifies 
 type of interpolation to be used. Valid values include 
 [bilinear](https://en.wikipedia.org/wiki/Bilinear_interpolation)
-(the default) or *simple* interpolation. Returns a new `res` Tensor.
+(the default), [bicubic](https://en.wikipedia.org/wiki/Bicubic_interpolation),
+or *simple* interpolation. Returns a new `res` Tensor.
 
 ### [res] image.scale(src, size, [mode]) ###
 Rescale the height and width of image `src`. 
