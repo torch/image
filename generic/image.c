@@ -1677,7 +1677,7 @@ int image_(Main_warp)(lua_State *L) {
             long y_pix = floor(iy);
 
             // Precalculate the L(x) function evaluations in the u and v direction
-            const long rad = 3;  // This is a tunable parameter: 2 to 3 is OK
+            #define rad (3)  // This is a tunable parameter: 2 to 3 is OK
             float Lu[2 * rad];  // L(x) for u direction
             float Lv[2 * rad];  // L(x) for v direction
             for (u=x_pix-rad+1, i=0; u<=x_pix+rad; u++, i++) {
