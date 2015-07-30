@@ -47,14 +47,14 @@ static long image_(Main_op_depth)( THTensor *T){
   return 1; /* greyscale */
 }
 
-static void image_(Main_scale_rowcol)(THTensor *Tsrc,
-                                      THTensor *Tdst,
-                                      long src_start,
-                                      long dst_start,
-                                      long src_stride,
-                                      long dst_stride,
-                                      long src_len,
-                                      long dst_len ) {
+static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
+                                            THTensor *Tdst,
+                                            long src_start,
+                                            long dst_start,
+                                            long src_stride,
+                                            long dst_stride,
+                                            long src_len,
+                                            long dst_len ) {
 
   real *src= THTensor_(data)(Tsrc);
   real *dst= THTensor_(data)(Tdst);
@@ -110,6 +110,61 @@ static void image_(Main_scale_rowcol)(THTensor *Tsrc,
   }
 }
 
+static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
+                                           THTensor *Tdst,
+                                           long src_start,
+                                           long dst_start,
+                                           long src_stride,
+                                           long dst_stride,
+                                           long src_len,
+                                           long dst_len ) {
+
+  real *src= THTensor_(data)(Tsrc);
+  real *dst= THTensor_(data)(Tdst);
+
+  if ( dst_len == src_len ){
+    long i;
+    for( i = 0; i < dst_len; i++ )
+      dst[ dst_start + i*dst_stride ] = src[ src_start + i*src_stride ];
+  } else {
+    long di;
+    float si_f;
+    long si_i;
+    float scale = (float)(src_len - 1) / (dst_len - 1);
+
+    for( di = 0; di < dst_len - 1; di++ ) {
+      long dst_pos = dst_start + di*dst_stride;
+      si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
+
+      real p0;
+      real p1 = src[ src_start + si_i * src_stride ];
+      real p2 = src[ src_start + (si_i + 1) * src_stride ];
+      real p3;
+      if (si_i > 0) {
+        p0 = src[ src_start + (si_i - 1) * src_stride ];
+      } else {
+        p0 = 2*p1 - p2;
+      }
+      if (si_i + 2 < src_len) {
+        p3 = src[ src_start + (si_i + 2) * src_stride ];
+      } else {
+        p3 = 2*p2 - p1;
+      }
+
+      real a0 = p1;
+      real a1 = -(real)1/(real)2*p0 + (real)1/(real)2*p2;
+      real a2 = p0 - (real)5/(real)2*p1 + (real)2*p2 - (real)1/(real)2*p3;
+      real a3 = -(real)1/(real)2*p0 + (real)3/(real)2*p1 - (real)3/(real)2*p2 +
+                (real)1/(real)2*p3;
+
+      dst[dst_pos] = a0 + si_f * (a1 + si_f * (a2 + a3 * si_f));
+    }
+
+    dst[ dst_start + (dst_len - 1) * dst_stride ] =
+      src[ src_start + (src_len - 1) * src_stride ];
+  }
+}
+
 static int image_(Main_scaleBilinear)(lua_State *L) {
 
   THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
@@ -147,27 +202,90 @@ static int image_(Main_scaleBilinear)(lua_State *L) {
   for(k=0;k<image_(Main_op_depth)(Tsrc);k++) {
     /* compress/expand rows first */
     for(j = 0; j < src_height; j++) {
-      image_(Main_scale_rowcol)(Tsrc,
-				Ttmp,
-				0*src_stride2+j*src_stride1+k*src_stride0,
-				0*tmp_stride2+j*tmp_stride1+k*tmp_stride0,
-				src_stride2,
-				tmp_stride2,
-				src_width,
-				tmp_width );
+      image_(Main_scaleLinear_rowcol)(Tsrc,
+                                      Ttmp,
+                                      0*src_stride2+j*src_stride1+k*src_stride0,
+                                      0*tmp_stride2+j*tmp_stride1+k*tmp_stride0,
+                                      src_stride2,
+                                      tmp_stride2,
+                                      src_width,
+                                      tmp_width );
 
     }
 
     /* then columns */
     for(i = 0; i < dst_width; i++) {
-      image_(Main_scale_rowcol)(Ttmp,
-				Tdst,
-				i*tmp_stride2+0*tmp_stride1+k*tmp_stride0,
-				i*dst_stride2+0*dst_stride1+k*dst_stride0,
-				tmp_stride1,
-				dst_stride1,
-				tmp_height,
-				dst_height );
+      image_(Main_scaleLinear_rowcol)(Ttmp,
+                                      Tdst,
+                                      i*tmp_stride2+0*tmp_stride1+k*tmp_stride0,
+                                      i*dst_stride2+0*dst_stride1+k*dst_stride0,
+                                      tmp_stride1,
+                                      dst_stride1,
+                                      tmp_height,
+                                      dst_height );
+    }
+  }
+  THTensor_(free)(Ttmp);
+  return 0;
+}
+
+static int image_(Main_scaleBicubic)(lua_State *L) {
+
+  THTensor *Tsrc = luaT_checkudata(L, 1, torch_Tensor);
+  THTensor *Tdst = luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *Ttmp;
+  long dst_stride0, dst_stride1, dst_stride2, dst_width, dst_height;
+  long src_stride0, src_stride1, src_stride2, src_width, src_height;
+  long tmp_stride0, tmp_stride1, tmp_stride2, tmp_width, tmp_height;
+  long i, j, k;
+
+  image_(Main_op_validate)(L, Tsrc,Tdst);
+
+  int ndims;
+  if (Tdst->nDimension == 3) ndims = 3;
+  else ndims = 2;
+
+  Ttmp = THTensor_(newWithSize2d)(Tsrc->size[ndims-2], Tdst->size[ndims-1]);
+
+  dst_stride0= image_(Main_op_stride)(Tdst,0);
+  dst_stride1= image_(Main_op_stride)(Tdst,1);
+  dst_stride2= image_(Main_op_stride)(Tdst,2);
+  src_stride0= image_(Main_op_stride)(Tsrc,0);
+  src_stride1= image_(Main_op_stride)(Tsrc,1);
+  src_stride2= image_(Main_op_stride)(Tsrc,2);
+  tmp_stride0= image_(Main_op_stride)(Ttmp,0);
+  tmp_stride1= image_(Main_op_stride)(Ttmp,1);
+  tmp_stride2= image_(Main_op_stride)(Ttmp,2);
+  dst_width=   Tdst->size[ndims-1];
+  dst_height=  Tdst->size[ndims-2];
+  src_width=   Tsrc->size[ndims-1];
+  src_height=  Tsrc->size[ndims-2];
+  tmp_width=   Ttmp->size[1];
+  tmp_height=  Ttmp->size[0];
+
+  for(k=0;k<image_(Main_op_depth)(Tsrc);k++) {
+    /* compress/expand rows first */
+    for(j = 0; j < src_height; j++) {
+      image_(Main_scaleCubic_rowcol)(Tsrc,
+                                     Ttmp,
+                                     0*src_stride2+j*src_stride1+k*src_stride0,
+                                     0*tmp_stride2+j*tmp_stride1+k*tmp_stride0,
+                                     src_stride2,
+                                     tmp_stride2,
+                                     src_width,
+                                     tmp_width );
+    }
+
+    /* then columns */
+    for(i = 0; i < dst_width; i++) {
+      image_(Main_scaleCubic_rowcol)(Ttmp,
+                                     Tdst,
+                                     i*tmp_stride2+0*tmp_stride1+k*tmp_stride0,
+                                     i*dst_stride2+0*dst_stride1+k*dst_stride0,
+                                     tmp_stride1,
+                                     dst_stride1,
+                                     tmp_height,
+                                     dst_height );
     }
   }
   THTensor_(free)(Ttmp);
@@ -1876,6 +1994,7 @@ int image_(Main_rgb2y)(lua_State *L) {
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
+  {"scaleBicubic", image_(Main_scaleBicubic)},
   {"rotate", image_(Main_rotate)},
   {"rotateBilinear", image_(Main_rotateBilinear)},
   {"polar", image_(Main_polar)},

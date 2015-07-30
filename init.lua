@@ -500,15 +500,15 @@ local function scale(...)
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='destination width', req=true},
                        {type='number', help='destination height', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='mode: bilinear | bicubic |simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='input image', req=true},
                        {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or MAX', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='mode: bilinear | bicubic | simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='destination image', req=true},
                        {type='torch.Tensor', help='input image', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'}))
+                       {type='string', help='mode: bilinear | bicubic | simple', default='bilinear'}))
       dok.error('incorrect arguments', 'image.scale')
    end
    if size then
@@ -548,10 +548,12 @@ local function scale(...)
    mode = mode or 'bilinear'
    if mode=='bilinear' then
       src.image.scaleBilinear(src,dst)
+   elseif mode=='bicubic' then
+      src.image.scaleBicubic(src,dst)
    elseif mode=='simple' then
       src.image.scaleSimple(src,dst)
    else
-      dok.error('mode must be one of: simple | bilinear', 'image.scale')
+      dok.error('mode must be one of: simple | bicubic | bilinear', 'image.scale')
    end
    return dst
 end
