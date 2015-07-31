@@ -65,12 +65,19 @@ static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
     long si_i;
     float scale = (float)(src_len - 1) / (dst_len - 1);
 
-    for( di = 0; di < dst_len - 1; di++ ) {
-      long dst_pos = dst_start + di*dst_stride;
-      si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
+    if ( src_len == 1 ) {
+      for( di = 0; di < dst_len - 1; di++ ) {
+        long dst_pos = dst_start + di*dst_stride;
+        dst[dst_pos] = src[ src_start ];
+      }
+    } else {
+      for( di = 0; di < dst_len - 1; di++ ) {
+        long dst_pos = dst_start + di*dst_stride;
+        si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
 
-      dst[dst_pos] = (1 - si_f) * src[ src_start + si_i * src_stride ] +
-        si_f * src[ src_start + (si_i + 1) * src_stride ];
+        dst[dst_pos] = (1 - si_f) * src[ src_start + si_i * src_stride ] +
+          si_f * src[ src_start + (si_i + 1) * src_stride ];
+      }
     }
 
     dst[ dst_start + (dst_len - 1) * dst_stride ] =
@@ -130,7 +137,11 @@ static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
     long di;
     float si_f;
     long si_i;
-    float scale = (float)(src_len - 1) / (dst_len - 1);
+    float scale;
+    if (dst_len == 1)
+      scale = (float)(src_len - 1);
+    else
+      scale = (float)(src_len - 1) / (dst_len - 1);
 
     for( di = 0; di < dst_len - 1; di++ ) {
       long dst_pos = dst_start + di*dst_stride;
@@ -568,13 +579,13 @@ static int image_(Main_polar)(lua_State *L)
     long i, j, k;
     float id, jd, a, r, m, midY, midX;
     long ii,jj;
-    
+
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
     luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "polar: dst not 2 or 3 dimensional");
-    
+
     src= THTensor_(data)(Tsrc);
     dst= THTensor_(data)(Tdst);
-    
+
     dst_stride0 = 0;
     dst_stride1 = Tdst->stride[Tdst->nDimension-2];
     dst_stride2 = Tdst->stride[Tdst->nDimension-1];
@@ -585,7 +596,7 @@ static int image_(Main_polar)(lua_State *L)
         dst_stride0 = Tdst->stride[0];
         dst_depth = Tdst->size[0];
     }
-    
+
     src_stride0 = 0;
     src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
     src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
@@ -596,13 +607,13 @@ static int image_(Main_polar)(lua_State *L)
         src_stride0 = Tsrc->stride[0];
         src_depth = Tsrc->size[0];
     }
-    
+
     if( Tsrc->nDimension==3 && Tdst->nDimension==3 && ( src_depth!=dst_depth) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-        
+
     if( (Tsrc->nDimension!=Tdst->nDimension) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-            
+
     // compute maximum distance
     midY = (float) src_height / 2.0;
     midX = (float) src_width  / 2.0;
@@ -612,7 +623,7 @@ static int image_(Main_polar)(lua_State *L)
     else {
       m = (src_width < src_height) ? midX : midY;
     }
-    
+
     // loop to fill polar image
     for(j = 0; j < dst_height; j++) {               // orientation loop
         jd = (float) j;
@@ -621,15 +632,15 @@ static int image_(Main_polar)(lua_State *L)
             float val = -1;
             id = (float) i;
             r = (m * id) / (float) dst_width;       // current distance
-            
+
             jj = (long) floor( r * cos(a) + midY);  // y-location in source image
             ii = (long) floor(-r * sin(a) + midX);  // x-location in source image
-            
+
             if(ii>src_width-1) val=0;
             if(jj>src_height-1) val=0;
             if(ii<0) val=0;
             if(jj<0) val=0;
-            
+
             if(Tsrc->nDimension==2)
             {
                 if(val==-1)
@@ -661,13 +672,13 @@ static int image_(Main_polarBilinear)(lua_State *L)
     long i, j, k;
     float id, jd, a, r, m, midY, midX;
     long ii_0, ii_1, jj_0, jj_1;
-    
+
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
     luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "polar: dst not 2 or 3 dimensional");
-    
+
     src= THTensor_(data)(Tsrc);
     dst= THTensor_(data)(Tdst);
-    
+
     dst_stride0 = 0;
     dst_stride1 = Tdst->stride[Tdst->nDimension-2];
     dst_stride2 = Tdst->stride[Tdst->nDimension-1];
@@ -678,7 +689,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
         dst_stride0 = Tdst->stride[0];
         dst_depth = Tdst->size[0];
     }
-    
+
     src_stride0 = 0;
     src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
     src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
@@ -689,13 +700,13 @@ static int image_(Main_polarBilinear)(lua_State *L)
         src_stride0 = Tsrc->stride[0];
         src_depth = Tsrc->size[0];
     }
-    
+
     if( Tsrc->nDimension==3 && Tdst->nDimension==3 && ( src_depth!=dst_depth) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     if( (Tsrc->nDimension!=Tdst->nDimension) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     // compute maximum distance
     midY = (float) src_height / 2.0;
     midX = (float) src_width  / 2.0;
@@ -705,7 +716,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
     else {
       m = (src_width < src_height) ? midX : midY;
     }
-    
+
     // loop to fill polar image
     for(j = 0; j < dst_height; j++) {                 // orientation loop
         jd = (float) j;
@@ -715,24 +726,24 @@ static int image_(Main_polarBilinear)(lua_State *L)
             real ri, rj, wi, wj;
             id = (float) i;
             r = (m * id) / (float) dst_width;         // current distance
-            
+
             rj =  r * cos(a) + midY;                  // y-location in source image
             ri = -r * sin(a) + midX;                  // x-location in source image
-            
+
             ii_0=(long)floor(ri);
             ii_1=ii_0 + 1;
             jj_0=(long)floor(rj);
             jj_1=jj_0 + 1;
             wi = ri - ii_0;
             wj = rj - jj_0;
-            
+
             // switch to nearest interpolation when bilinear is impossible
             if(ii_1>src_width-1 || jj_1>src_height-1 || ii_0<0 || jj_0<0) {
                 if(ii_0>src_width-1) val=0;
                 if(jj_0>src_height-1) val=0;
                 if(ii_0<0) val=0;
                 if(jj_0<0) val=0;
-                
+
                 if(Tsrc->nDimension==2)
                 {
                     if(val==-1)
@@ -750,7 +761,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
                     }
                 }
             }
-            
+
             // bilinear interpolation
             else {
                 if(Tsrc->nDimension==2) {
@@ -789,13 +800,13 @@ static int image_(Main_logPolar)(lua_State *L)
     long i, j, k;
     float id, jd, a, r, m, midY, midX, fw;
     long ii,jj;
-    
+
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
     luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "polar: dst not 2 or 3 dimensional");
-    
+
     src= THTensor_(data)(Tsrc);
     dst= THTensor_(data)(Tdst);
-    
+
     dst_stride0 = 0;
     dst_stride1 = Tdst->stride[Tdst->nDimension-2];
     dst_stride2 = Tdst->stride[Tdst->nDimension-1];
@@ -806,7 +817,7 @@ static int image_(Main_logPolar)(lua_State *L)
         dst_stride0 = Tdst->stride[0];
         dst_depth = Tdst->size[0];
     }
-    
+
     src_stride0 = 0;
     src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
     src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
@@ -817,13 +828,13 @@ static int image_(Main_logPolar)(lua_State *L)
         src_stride0 = Tsrc->stride[0];
         src_depth = Tsrc->size[0];
     }
-    
+
     if( Tsrc->nDimension==3 && Tdst->nDimension==3 && ( src_depth!=dst_depth) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     if( (Tsrc->nDimension!=Tdst->nDimension) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     // compute maximum distance
     midY = (float) src_height / 2.0;
     midX = (float) src_width  / 2.0;
@@ -833,7 +844,7 @@ static int image_(Main_logPolar)(lua_State *L)
     else {
         m = (src_width < src_height) ? midX : midY;
     }
-    
+
     // loop to fill polar image
     fw = log(m) / (float) dst_width;
     for(j = 0; j < dst_height; j++) {               // orientation loop
@@ -842,17 +853,17 @@ static int image_(Main_logPolar)(lua_State *L)
         for(i = 0; i < dst_width; i++) {            // radius loop
             float val = -1;
             id = (float) i;
-            
+
             r = exp(id * fw);
-            
+
             jj = (long) floor( r * cos(a) + midY);  // y-location in source image
             ii = (long) floor(-r * sin(a) + midX);  // x-location in source image
-            
+
             if(ii>src_width-1) val=0;
             if(jj>src_height-1) val=0;
             if(ii<0) val=0;
             if(jj<0) val=0;
-            
+
             if(Tsrc->nDimension==2)
             {
                 if(val==-1)
@@ -884,13 +895,13 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
     long i, j, k;
     float id, jd, a, r, m, midY, midX, fw;
     long ii_0, ii_1, jj_0, jj_1;
-    
+
     luaL_argcheck(L, Tsrc->nDimension==2 || Tsrc->nDimension==3, 1, "polar: src not 2 or 3 dimensional");
     luaL_argcheck(L, Tdst->nDimension==2 || Tdst->nDimension==3, 2, "polar: dst not 2 or 3 dimensional");
-    
+
     src= THTensor_(data)(Tsrc);
     dst= THTensor_(data)(Tdst);
-    
+
     dst_stride0 = 0;
     dst_stride1 = Tdst->stride[Tdst->nDimension-2];
     dst_stride2 = Tdst->stride[Tdst->nDimension-1];
@@ -901,7 +912,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
         dst_stride0 = Tdst->stride[0];
         dst_depth = Tdst->size[0];
     }
-    
+
     src_stride0 = 0;
     src_stride1 = Tsrc->stride[Tsrc->nDimension-2];
     src_stride2 = Tsrc->stride[Tsrc->nDimension-1];
@@ -912,13 +923,13 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
         src_stride0 = Tsrc->stride[0];
         src_depth = Tsrc->size[0];
     }
-    
+
     if( Tsrc->nDimension==3 && Tdst->nDimension==3 && ( src_depth!=dst_depth) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     if( (Tsrc->nDimension!=Tdst->nDimension) ) {
         luaL_error(L, "image.polar: src and dst depths do not match"); }
-    
+
     // compute maximum distance
     midY = (float) src_height / 2.0;
     midX = (float) src_width  / 2.0;
@@ -928,7 +939,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
     else {
         m = (src_width < src_height) ? midX : midY;
     }
-    
+
     // loop to fill polar image
     fw = log(m) / (float) dst_width;
     for(j = 0; j < dst_height; j++) {                 // orientation loop
@@ -938,26 +949,26 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
             float val = -1;
             real ri, rj, wi, wj;
             id = (float) i;
-            
+
             r = exp(id * fw);
-            
+
             rj =  r * cos(a) + midY;                  // y-location in source image
             ri = -r * sin(a) + midX;                  // x-location in source image
-            
+
             ii_0=(long)floor(ri);
             ii_1=ii_0 + 1;
             jj_0=(long)floor(rj);
             jj_1=jj_0 + 1;
             wi = ri - ii_0;
             wj = rj - jj_0;
-            
+
             // switch to nearest interpolation when bilinear is impossible
             if(ii_1>src_width-1 || jj_1>src_height-1 || ii_0<0 || jj_0<0) {
                 if(ii_0>src_width-1) val=0;
                 if(jj_0>src_height-1) val=0;
                 if(ii_0<0) val=0;
                 if(jj_0<0) val=0;
-                
+
                 if(Tsrc->nDimension==2)
                 {
                     if(val==-1)
@@ -975,7 +986,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
                     }
                 }
             }
-            
+
             // bilinear interpolation
             else {
                 if(Tsrc->nDimension==2) {
@@ -1552,11 +1563,11 @@ int image_(Main_flip)(lua_State *L) {
   THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
   long flip_dim = luaL_checklong(L, 3);
-  
+
   if (dst->nDimension != src->nDimension) {
     luaL_error(L, "image.flip: src and dst nDimension does not match");
   }
-  
+
   if (flip_dim < 1 || flip_dim > dst->nDimension) {
     luaL_error(L, "image.flip: flip_dim out of bounds");
   }
@@ -1565,23 +1576,23 @@ int image_(Main_flip)(lua_State *L) {
   // get raw pointers
   real *dst_data = THTensor_(data)(dst);
   real *src_data = THTensor_(data)(src);
-  if (dst_data == src_data) {  
+  if (dst_data == src_data) {
     luaL_error(L, "image.flip: in-place flip not supported");
   }
-  
+
   long size0 = dst->size[0];
   long size1 = dst->size[1];
   long size2 = dst->size[2];
   long size3 = dst->size[3];
   long size4 = dst->size[4];
   long size_flip = dst->size[flip_dim];
-  
-  if (src->size[0] != size0 || src->size[1] != size1 || 
-      src->size[2] != size2 || src->size[3] != size3 || 
+
+  if (src->size[0] != size0 || src->size[1] != size1 ||
+      src->size[2] != size2 || src->size[3] != size3 ||
       src->size[4] != size4) {
     luaL_error(L, "image.flip: src and dst are not the same size");
   }
-  
+
   long *is = src->stride;
   long *os = dst->stride;
 
@@ -1610,7 +1621,7 @@ int image_(Main_flip)(lua_State *L) {
               case 4:
                 idst = t*os[0] + d*os[1] + z*os[2] + y*os[3] + (size4 - x - 1)*os[4];
                 break;
-            }              
+            }
             dst_data[ idst ] = src_data[  isrc ];
           }
         }
