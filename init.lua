@@ -160,11 +160,11 @@ local function decompressPNG(tensor, depth, tensortype)
                   'image.decompressPNG')
     end
     local load_from_file = 0
-    local a = template(tensortype).libpng.load(load_from_file, tensor)
+    local a, bit_depth = template(tensortype).libpng.load(load_from_file, tensor)
     if a == nil then
         return nil
     else
-        return processPNG(a, depth, tensortype)
+        return processPNG(a, depth, bit_depth, tensortype)
     end
 end
 rawset(image, 'decompressPNG', decompressPNG)
