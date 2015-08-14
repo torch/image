@@ -174,7 +174,7 @@ images requiring parameter Tensors like a warp `field` or a convolution
 `kernel`.
 
 <a name="image.warp"/>
-### [res] image.warp([dst,]src,field,[mode,offset,clamp]) ###
+### [res] image.warp([dst,]src,field,[mode,offset,clamp_mode,pad_val]) ###
 Warps image `src` (of size`KxHxW`) 
 according to flow field `field`. The latter has size `2xHxW` where the 
 first dimension is for the `(y,x)` flow field. String `mode` can 
@@ -182,8 +182,9 @@ take on values [lanczos](https://en.wikipedia.org/wiki/Lanczos_resampling),
 [bicubic](https://en.wikipedia.org/wiki/Bicubic_interpolation),
 [bilinear](https://en.wikipedia.org/wiki/Bilinear_interpolation) (the default), 
 or *simple*. When `offset` is true (the default), `(x,y)` is added to the flow field.
-The `clamp` variable specifies how to handle the interpolation of samples off the input image.
-Permitted values are strings *clamp* (the default) or *pad*. 
+The `clamp_mode` variable specifies how to handle the interpolation of samples off the input image.
+Permitted values are strings *clamp* (the default) or *pad*.
+When `clamp_mode` equals `pad`, the user can specify the padding value with `pad_val` (default = 0). Note: setting this value when `clamp_mode` equals `clamp` will result in an error.
 If `dst` is specified, it is used to store the result of the warp.
 Otherwise, returns a new `res` Tensor.
 

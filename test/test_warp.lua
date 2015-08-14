@@ -129,5 +129,11 @@ t1 = sys.clock()
 print("Rotation Time lanczos = " .. (t1 - t0))  -- Not a robust measure (should average)
 image.display{image = im_lanczos, zoom = 4, legend = 'rotation lanczos'}
 
+im_lanczos = image.warp(im, flow, 'lanczos', false, 'pad')
+image.display{image = im_lanczos, zoom = 4, legend = 'rotation lanczos (default pad)'}
+
+im_lanczos = image.warp(im, flow, 'lanczos', false, 'pad', 1)
+image.display{image = im_lanczos, zoom = 4, legend = 'rotation lanczos (pad 1)'}
+
 image.display{image = im, zoom = 4, legend = 'source image'}
 
