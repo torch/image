@@ -1644,6 +1644,7 @@ int image_(Main_warp)(lua_State *L) {
   int mode = lua_tointeger(L, 4);
   int offset_mode = lua_toboolean(L, 5);
   int clamp_mode = lua_tointeger(L, 6);
+  real pad_value = (real)lua_tonumber(L, 7);
 
   // dims
   int width = dst->size[2];
@@ -1680,7 +1681,7 @@ int image_(Main_warp)(lua_State *L) {
       if (off_image == 1 && clamp_mode == 1) {
         // We're off the image and we're clamping the input image to 0
         for (k=0; k<channels; k++) {
-          dst_data[ k*os[0] + y*os[1] + x*os[2] ] = 0;
+          dst_data[ k*os[0] + y*os[1] + x*os[2] ] = pad_value;
         }
       } else {
         ix = MAX(ix,0); ix = MIN(ix,src_width-1);

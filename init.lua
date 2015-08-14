@@ -766,6 +766,7 @@ local function warp(...)
    local mode = 'bilinear'
    local offset_mode = true
    local clamp_mode = 'clamp'
+   local pad_value = 0
    local args = {...}
    local nargs = select('#',...)
    local bad_args = false
@@ -780,7 +781,12 @@ local function warp(...)
          mode = args[3]
          if nargs >= 4 then offset_mode = args[4] end
          if nargs >= 5 then clamp_mode = args[5] end
-         if nargs >= 6 then bad_args = true end
+         if nargs >= 6 then
+           assert(clamp_mode == 'pad', 'pad_value can only be specified if' ..
+                                       ' clamp_mode = "pad"')
+           pad_value = args[6]
+         end
+         if nargs >= 7 then bad_args = true end
       else
          -- With Destination tensor
          dst = args[1]
@@ -789,7 +795,12 @@ local function warp(...)
          if nargs >= 4 then mode = args[4] end
          if nargs >= 5 then offset_mode = args[5] end
          if nargs >= 6 then clamp_mode = args[6] end
-         if nargs >= 7 then bad_args = true end
+         if nargs >= 7 then
+           assert(clamp_mode == 'pad', 'pad_value can only be specified if' ..
+                                       ' clamp_mode = "pad"')
+           pad_value = args[7]
+         end
+         if nargs >= 8 then bad_args = true end
       end
    end
    if bad_args then
@@ -806,7 +817,8 @@ local function warp(...)
          {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
          {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
          {type='string', help='offset mode (add (x,y) to flow field)', default=true},
-         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'}))
+         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'},
+         {type='number', help='pad value: value to pad image. Can only be set when clamp mode equals "pad"', default=0}))
       dok.error('incorrect arguments', 'image.warp')
    end
    -- This is a little messy, but convert mode string to an enum
@@ -837,7 +849,7 @@ local function warp(...)
    dst = dst or src.new()
    dst:resize(src:size(1), field:size(2), field:size(3))
 
-   src.image.warp(dst, src, field, mode, offset_mode, clamp_mode)
+   src.image.warp(dst, src, field, mode, offset_mode, clamp_mode, pad_value)
    if dim2 then
       dst = dst[1]
    end
