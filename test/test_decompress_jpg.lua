@@ -51,9 +51,11 @@ function test.LoadInvalid()
   local img_binary = torch.rand(file_size_bytes):mul(255):byte()
   
   -- Now decompress the image from the ByteTensor
-  local img_from_tensor = image.decompressJPG(img_binary)
+  local ok, img_from_tensor = pcall(function()
+    return image.decompressJPG(img_binary)
+  end)
   
-  mytester:assert(img_from_tensor == nil, 
+  mytester:assert(not ok or img_from_tensor == nil,
     'A non-nil was returned on an invalid input! ')
 end
 

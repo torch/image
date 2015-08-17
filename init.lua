@@ -138,15 +138,22 @@ local function loadPNG(filename, depth, tensortype)
 end
 rawset(image, 'loadPNG', loadPNG)
 
+local function clampImage(tensor)
+   if tensor:type() == 'torch.ByteTensor' then
+      return tensor
+   end
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
+   a.image.saturate(tensor) -- bound btwn 0 and 1
+   a:mul(255)               -- remap to [0..255]
+   return a
+end
+
 local function savePNG(filename, tensor)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libpng.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libpng.save(filename, tensor)
 end
 rawset(image, 'savePNG', savePNG)
 
@@ -222,13 +229,10 @@ local function saveJPG(filename, tensor)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
+   tensor = clampImage(tensor)
    local save_to_file = 1
    local quality = 75
-   a.libjpeg.save(filename, a, save_to_file, quality)
+   tensor.libjpeg.save(filename, tensor, save_to_file, quality)
 end
 rawset(image, 'saveJPG', saveJPG)
 
@@ -244,14 +248,11 @@ local function compressJPG(tensor, quality)
       dok.error('libjpeg package not found, please install libjpeg',
          'image.compressJPG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
+   tensor = clampImage(tensor)
    local b = torch.ByteTensor()
    local save_to_file = 0
    quality = quality or 75
-   a.libjpeg.save("", a, save_to_file, quality, b)
+   tensor.libjpeg.save("", tensor, save_to_file, quality, b)
    return b
 end
 rawset(image, 'compressJPG', compressJPG)
@@ -280,11 +281,8 @@ local function savePPM(filename, tensor)
    if tensor:nDimension() ~= 3 or tensor:size(1) ~= 3 then
       dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libppm.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libppm.save(filename, tensor)
 end
 rawset(image, 'savePPM', savePPM)
 
@@ -293,11 +291,8 @@ local function savePGM(filename, tensor)
    if tensor:nDimension() == 3 and tensor:size(1) ~= 1 then
       dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libppm.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libppm.save(filename, tensor)
 end
 rawset(image, 'savePGM', savePGM)
 
