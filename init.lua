@@ -143,8 +143,8 @@ local function clampImage(tensor)
       return tensor
    end
    local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(tensor) -- bound btwn 0 and 1
-   a:mul(255)               -- remap to [0..255]
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(255)          -- remap to [0..255]
    return a
 end
 
