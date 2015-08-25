@@ -401,6 +401,10 @@ static int image_(Main_rotate)(lua_State *L)
   src= THTensor_(data)(Tsrc);
   dst= THTensor_(data)(Tdst);
 
+  if (dst == src) {
+    luaL_error(L, "image.rotate: in-place rotate not supported");
+  }
+
   dst_stride0 = 0;
   dst_stride1 = Tdst->stride[Tdst->nDimension-2];
   dst_stride2 = Tdst->stride[Tdst->nDimension-1];
@@ -489,6 +493,10 @@ static int image_(Main_rotateBilinear)(lua_State *L)
 
   src= THTensor_(data)(Tsrc);
   dst= THTensor_(data)(Tdst);
+
+  if (dst == src) {
+    luaL_error(L, "image.rotate: in-place rotate not supported");
+  }
 
   dst_stride0 = 0;
   dst_stride1 = Tdst->stride[Tdst->nDimension-2];
