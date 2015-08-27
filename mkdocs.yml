@@ -1,0 +1,14 @@
+site_name: image
+theme : simplex
+repo_url : https://github.com/torch/image
+use_directory_urls : false
+markdown_extensions: [extra]
+docs_dir : doc
+pages:
+- [index.md, Image]
+- [saveload.md, Saving and Loading]
+- [simpletransform.md, Simple Transformations]
+- [paramtransform.md, Parameterized Transformations]
+- [gui.md, Graphical User Interfaces]
+- [colorspace.md, Color Space Conversions]
+- [tensorconstruct.md, Tensor Constructors]
