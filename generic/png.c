@@ -96,7 +96,7 @@ static int libpng_(Main_load)(lua_State *L)
   height     = png_get_image_height(png_ptr, info_ptr);
   color_type = png_get_color_type(png_ptr, info_ptr);
   bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
-  png_read_update_info(png_ptr, info_ptr);
+  
 
   /* get depth */
   int depth = 0;
@@ -109,7 +109,6 @@ static int libpng_(Main_load)(lua_State *L)
     if(bit_depth < 8)
     {
       png_set_expand_gray_1_2_4_to_8(png_ptr);
-      png_read_update_info(png_ptr, info_ptr);
     }
     depth = 1;
   }
@@ -119,7 +118,6 @@ static int libpng_(Main_load)(lua_State *L)
     {
       depth = 3;
       png_set_expand(png_ptr);
-      png_read_update_info(png_ptr, info_ptr);
     }
   else
     luaL_error(L, "[read_png_file] Unknown color space");
@@ -127,8 +125,9 @@ static int libpng_(Main_load)(lua_State *L)
   if(bit_depth < 8)
   {
     png_set_strip_16(png_ptr);
-    png_read_update_info(png_ptr, info_ptr);
   }
+  
+  png_read_update_info(png_ptr, info_ptr);
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
