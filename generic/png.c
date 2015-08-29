@@ -22,6 +22,13 @@ typedef struct {
 } libpng_(inmem_buffer);
 
 /*
+ * Error message wrapper (single member struct to preserve `str` size info)
+ */
+typedef struct {
+  char str[256];
+} libpng_(errmsg);
+
+/*
  * Call back for reading png data from memory
  */
 void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t length) 
@@ -32,7 +39,19 @@ void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t len
   src->offset += length;
 }
 
-static int libpng_(Main_load)(lua_State *L) 
+/*
+ * Custom error handling function (see `png_set_error_fn`)
+ */
+static void libpng_(error_fn)(png_structp png_ptr, png_const_charp error_msg)
+{
+  libpng_(errmsg) *errmsg = png_get_error_ptr(png_ptr);
+  int max = sizeof(errmsg->str) - 1;
+  strncpy(errmsg->str, error_msg, max);
+  errmsg->str[max] = '\0';
+  longjmp(png_jmpbuf(png_ptr), 1);
+}
+
+static int libpng_(Main_load)(lua_State *L)
 {
 
   png_byte header[8];    // 8 is the maximum size that can be checked
@@ -46,7 +65,8 @@ static int libpng_(Main_load)(lua_State *L)
   size_t fread_ret;
   FILE* fp;
   libpng_(inmem_buffer) inmem = {0};    /* source memory (if loading from memory) */
-  
+  libpng_(errmsg) errmsg;
+
   const int load_from_file = luaL_checkint(L, 1);
 
   if (load_from_file == 1){
@@ -76,12 +96,14 @@ static int libpng_(Main_load)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[read_png] png_create_read_struct failed");
 
+  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[read_png] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[read_png] Error during init_io");
+    luaL_error(L, "[read_png] Error during init_io: %s", errmsg.str);
 
   if (load_from_file == 1){
     png_init_io(png_ptr, fp);
@@ -131,7 +153,7 @@ static int libpng_(Main_load)(lua_State *L)
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
-     luaL_error(L, "[read_png_file] Error during read_image");
+    luaL_error(L, "[read_png_file] Error during read_image: %s", errmsg.str);
 
   /* alloc tensor */
   THTensor *tensor = THTensor_(newWithSize3d)(depth, height, width);
@@ -215,6 +237,7 @@ static int libpng_(Main_save)(lua_State *L)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep * row_pointers;
+  libpng_(errmsg) errmsg;
 
   /* get dims and contiguous tensor */
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
@@ -249,18 +272,20 @@ static int libpng_(Main_save)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[write_png_file] png_create_write_struct failed");
 
+  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[write_png_file] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during init_io");
+    luaL_error(L, "[write_png_file] Error during init_io: %s", errmsg.str);
 
   png_init_io(png_ptr, fp);
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during writing header");
+    luaL_error(L, "[write_png_file] Error during writing header: %s", errmsg.str);
 
   png_set_IHDR(png_ptr, info_ptr, width, height,
          bit_depth, color_type, PNG_INTERLACE_NONE,
@@ -288,13 +313,13 @@ static int libpng_(Main_save)(lua_State *L)
 
   /* write bytes */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during writing bytes");
+    luaL_error(L, "[write_png_file] Error during writing bytes: %s", errmsg.str);
 
   png_write_image(png_ptr, row_pointers);
 
   /* end write */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during end of write");
+    luaL_error(L, "[write_png_file] Error during end of write: %s", errmsg.str);
 
   /* cleanup png structs */
   png_write_end(png_ptr, NULL);
@@ -321,6 +346,7 @@ static int libpng_(Main_size)(lua_State *L)
 
   png_structp png_ptr;
   png_infop info_ptr;
+  libpng_(errmsg) errmsg;
   size_t fread_ret;
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
@@ -338,14 +364,16 @@ static int libpng_(Main_size)(lua_State *L)
   
   if (!png_ptr)
     luaL_error(L, "[get_png_size] png_create_read_struct failed");
-  
+
+  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[get_png_size] png_create_info_struct failed");
   
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[get_png_size] Error during init_io");
-  
+    luaL_error(L, "[get_png_size] Error during init_io: %s", errmsg.str);
+
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
   
@@ -371,10 +399,6 @@ static int libpng_(Main_size)(lua_State *L)
   else
     luaL_error(L, "[get_png_size] Unknown color space");
 
-  /* read file */
-  if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[get_png_size] Error during read_image");
-  
   /* done with file */
   fclose(fp);
 
