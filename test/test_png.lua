@@ -5,7 +5,19 @@ local mytester = torch.Tester()
 local precision_mean = 1e-3
 local test = {}
 
-function checkPNG(imfile, depth, tensortype, want)
+local function toBlob(filename)
+  local f = torch.DiskFile(filename, 'r')
+  f:binary()
+  f:seekEnd()
+  local size = f:position() - 1
+  f:seek(1)
+  local blob = torch.ByteTensor(size)
+  f:readByte(blob:storage())
+  f:close()
+  return blob
+end
+
+local function checkPNG(imfile, depth, tensortype, want)
   local img = image.load(imfile, depth, tensortype)
   -- Tensors have to be converted to double, since assertTensorEq does not support ByteTensor
   print('img: ', img)
@@ -42,6 +54,20 @@ function test.LoadPNG()
 
   local rgb16float = torch.FloatTensor({{{1, 0, 0, 32767/65535, 16383/65535, 0}}})
   checkPNG('rgb16-2x1.png', 3, 'float', rgb16float)
+end
+
+function test.DecompressPNG()
+  mytester:assertTensorEq(
+    image.load('rgb2x1.png'),
+    image.decompressPNG(toBlob('rgb2x1.png')),
+    precision_mean,
+    'decompressed and loaded images should be equal'
+  )
+end
+
+function test.LoadCorruptedPNG()
+  local ok, _ = pcall(image.load, 'corrupt-ihdr.png')
+  mytester:assert(not ok, 'corrupted image should not be loaded')
 end
 
 -- Now run the test above
