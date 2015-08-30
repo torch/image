@@ -10,46 +10,6 @@
  *
  * Clement: modified for Torch7.
  */
-#include <assert.h>
-
-/*
- * Bookkeeping struct for reading png data from memory
- */
-typedef struct {
-  unsigned char* buffer;
-  png_size_t offset;
-  png_size_t length;
-} libpng_(inmem_buffer);
-
-/*
- * Error message wrapper (single member struct to preserve `str` size info)
- */
-typedef struct {
-  char str[256];
-} libpng_(errmsg);
-
-/*
- * Call back for reading png data from memory
- */
-void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t length) 
-{
-  libpng_(inmem_buffer)* src = png_get_io_ptr(pngPtrSrc);
-  assert(src->offset+length <= src->length);
-  memcpy(dest, src->buffer + src->offset, length);
-  src->offset += length;
-}
-
-/*
- * Custom error handling function (see `png_set_error_fn`)
- */
-static void libpng_(error_fn)(png_structp png_ptr, png_const_charp error_msg)
-{
-  libpng_(errmsg) *errmsg = png_get_error_ptr(png_ptr);
-  int max = sizeof(errmsg->str) - 1;
-  strncpy(errmsg->str, error_msg, max);
-  errmsg->str[max] = '\0';
-  longjmp(png_jmpbuf(png_ptr), 1);
-}
 
 static int libpng_(Main_load)(lua_State *L)
 {
@@ -64,8 +24,8 @@ static int libpng_(Main_load)(lua_State *L)
   png_bytep * row_pointers;
   size_t fread_ret;
   FILE* fp;
-  libpng_(inmem_buffer) inmem = {0};    /* source memory (if loading from memory) */
-  libpng_(errmsg) errmsg;
+  libpng_inmem_buffer inmem = {0};    /* source memory (if loading from memory) */
+  libpng_errmsg errmsg;
 
   const int load_from_file = luaL_checkint(L, 1);
 
@@ -96,7 +56,7 @@ static int libpng_(Main_load)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[read_png] png_create_read_struct failed");
 
-  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
@@ -109,7 +69,7 @@ static int libpng_(Main_load)(lua_State *L)
     png_init_io(png_ptr, fp);
   } else {
     /* set the read callback */
-    png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_(userReadData));
+    png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_userReadData);
   }
   png_set_sig_bytes(png_ptr, 8);
   png_read_info(png_ptr, info_ptr);
@@ -237,7 +197,7 @@ static int libpng_(Main_save)(lua_State *L)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep * row_pointers;
-  libpng_(errmsg) errmsg;
+  libpng_errmsg errmsg;
 
   /* get dims and contiguous tensor */
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
@@ -272,7 +232,7 @@ static int libpng_(Main_save)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[write_png_file] png_create_write_struct failed");
 
-  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
@@ -346,7 +306,7 @@ static int libpng_(Main_size)(lua_State *L)
 
   png_structp png_ptr;
   png_infop info_ptr;
-  libpng_(errmsg) errmsg;
+  libpng_errmsg errmsg;
   size_t fread_ret;
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
@@ -365,7 +325,7 @@ static int libpng_(Main_size)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[get_png_size] png_create_read_struct failed");
 
-  png_set_error_fn(png_ptr, &errmsg, libpng_(error_fn), NULL);
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
