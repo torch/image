@@ -433,11 +433,11 @@ static int image_(Main_rotate)(lua_State *L)
   if( (Tsrc->nDimension!=Tdst->nDimension) )
     luaL_error(L, "image.rotate: src and dst depths do not match");
 
-  xc=src_width/2.0;
-  yc=src_height/2.0;
+  xc = (src_width-1)/2.0;
+  yc = (src_height-1)/2.0;
 
-  sin_theta = sinf(theta);
-  cos_theta = cosf(theta);
+  sin_theta = sin(theta);
+  cos_theta = cos(theta);
 
   for(j = 0; j < dst_height; j++) {
     jd=j;
@@ -445,9 +445,8 @@ static int image_(Main_rotate)(lua_State *L)
       float val = -1;
       id= i;
 
-      ii=(long)( cos_theta*(id-xc)-sin_theta*(jd-yc) );
-      jj=(long)( cos_theta*(jd-yc)+sin_theta*(id-xc) );
-      ii+=(long) xc; jj+=(long) yc;
+      ii = (long) round(cos_theta*(id-xc) - sin_theta*(jd-yc) + xc);
+      jj = (long) round(cos_theta*(jd-yc) + sin_theta*(id-xc) + yc);
 
       /* rotated corners are blank */
       if(ii>src_width-1) val=0;
@@ -526,8 +525,8 @@ static int image_(Main_rotateBilinear)(lua_State *L)
   if( (Tsrc->nDimension!=Tdst->nDimension) )
     luaL_error(L, "image.rotate: src and dst depths do not match");
 
-  xc=src_width/2.0;
-  yc=src_height/2.0;
+  xc = (src_width-1)/2.0;
+  yc = (src_height-1)/2.0;
 
   for(j = 0; j < dst_height; j++) {
     jd=j;
@@ -538,19 +537,22 @@ static int image_(Main_rotateBilinear)(lua_State *L)
       ri = cos(theta)*(id-xc)-sin(theta)*(jd-yc);
       rj = cos(theta)*(jd-yc)+sin(theta)*(id-xc);
 
-      ii_0=(long)floor(ri);
-      ii_1=ii_0 + 1;
-      jj_0=(long)floor(rj);
-      jj_1=jj_0 + 1;
-      wi = ri - ii_0;
-      wj = rj - jj_0;
-      ii_0+=(long) xc; ii_1+=(long) xc; jj_0+=(long) yc;jj_1+=(long) yc;
+      ii_0 = (long)floor(ri+xc);
+      ii_1 = ii_0 + 1;
+      jj_0 = (long)floor(rj+yc);
+      jj_1 = jj_0 + 1;
+      wi = ri+xc-ii_0;
+      wj = rj+yc-jj_0;
 
-      /* rotated corners are blank */
-      if(ii_1>src_width-1) val=0;
-      if(jj_1>src_height-1) val=0;
-      if(ii_0<0) val=0;
-      if(jj_0<0) val=0;
+      /* default to the closest value when interpolating on image boundaries (either image pixel or 0) */
+      if(ii_1==src_width && wi<0.5) ii_1 = ii_0;
+      else if(ii_1>=src_width) val=0;
+      if(jj_1==src_height && wj<0.5) jj_1 = jj_0;
+      else if(jj_1>=src_height) val=0;
+      if(ii_0==-1 && wi>0.5) ii_0 = ii_1;
+      else if(ii_0<0) val=0;
+      if(jj_0==-1 && wj>0.5) jj_0 = jj_1;
+      else if(jj_0<0) val=0;
 
       if(Tsrc->nDimension==2) {
         if(val==-1)
