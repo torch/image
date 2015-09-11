@@ -1642,6 +1642,48 @@ int image_(Main_flip)(lua_State *L) {
   return 0;
 }
 
+static inline real image_(Main_cubicInterpolate)(real p0, real p1, real p2, real p3, real x)
+{
+  return p1 + 0.5 * x * (p2 - p0 + x * (2 * p0 - 5 * p1 + 4 * p2 - p3 + x * (3 * (p1 - p2) + p3 - p0)));
+}
+
+static inline image_(Main_bicubicInterpolate)(
+  real* src, long* is, long* size, real ix, real iy,
+  real* dst, long *os,
+  real pad_value, int bounds_check)
+{
+  int i, j, k;
+  real arr[4], p[4];
+
+  // Calculate fractional and integer components
+  long x_pix = floor(ix);
+  long y_pix = floor(iy);
+  real dx = ix - (real)x_pix;
+  real dy = iy - (real)y_pix;
+
+  for (k=0; k<size[0]; k++) {
+    #pragma unroll
+    for (i = 0; i < 4; i++) {
+      long v = y_pix + i - 1;
+      real* data = &src[k * is[0] + v * is[1]];
+
+      #pragma unroll
+      for (j = 0; j < 4; j++) {
+        long u = x_pix + j - 1;
+        if (bounds_check && (v < 0 || v >= size[2] || u < 0 || u >= size[3])) {
+          p[j] = pad_value;
+        } else {
+          p[j] = data[u * is[2]];
+        }
+      }
+
+      arr[i] = image_(Main_cubicInterpolate)(p[0], p[1], p[2], p[3], dx);
+    }
+
+    dst[k * os[0]] = image_(Main_cubicInterpolate)(arr[0], arr[1], arr[2], arr[3], dy);
+  }
+}
+
 /*
  * Warps an image, according to an (x,y) flow field. The flow
  * field is in the space of the destination image, each vector
@@ -1741,61 +1783,15 @@ int image_(Main_warp)(lua_State *L) {
           break;
         case 2:  // Bicubic
           {
-	        // Calculate fractional and integer components
-            long x_pix = floor(ix);
-            long y_pix = floor(iy);
-            real dx = ix - (real)x_pix;
-            real dy = iy - (real)y_pix;
+            // We only need to do bounds checking if ix or iy are near the edge
+            int edge = !(iy >= 1 && iy < height - 2 && ix >= 1 && ix < width - 2);
 
-            real C[4];
-            for (k=0; k<channels; k++) {
-              // Sweep by rows through the samples (to calculate final cubic coefs)
-              for (jj = 0; jj <= 3; jj++) {
-                v = y_pix - 1 + jj;
-                // We need to clamp all uv values to image border: hopefully
-                // branch prediction and compiler reordering takes care of all
-                // the conditionals (since the branch probabilities are heavily
-                // skewed).  Alternatively an inline "getPixelSafe" function would
-                // would be clearer here, but cannot be done with lua?
-                v = MAX(MIN((long)(src_height-1), v), 0);
-                long ofst = k * is[0] + v * is[1];
-                u = x_pix;
-                u = MAX(MIN((long)(src_width-1), u), 0);
-                real a0 = src_data[ofst + u * is[2]];
-                u = x_pix - 1;
-                u = MAX(MIN((long)(src_width-1), u), 0);
-                real d0 = src_data[ofst + u * is[2]] - a0;
-                u = x_pix + 1;
-                u = MAX(MIN((long)(src_width-1), u), 0);
-                real d2 = src_data[ofst + u * is[2]] - a0;
-                u = x_pix + 2;
-                u = MAX(MIN((long)(src_width-1), u), 0);
-                real d3 = src_data[ofst + u * is[2]] - a0;
-
-                // Note: there are mostly static casts, optimizer will take care of
-                // of it for us (prevents compiler warnings in new gcc)
-                real a1 =  -(real)1/(real)3*d0 + d2 -(real)1/(real)6*d3;
-                real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
-                real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 +
-                  (real)1/(real)6*d3;
-                C[jj] = a0 + dx * (a1 + dx * (a2 + a3 * dx));
-              }
-
-              real d0 = C[0]-C[1];
-              real d2 = C[2]-C[1];
-              real d3 = C[3]-C[1];
-              real a0 = C[1];
-              real a1 = -(real)1/(real)3*d0 + d2 - (real)1/(real)6*d3;
-              real a2 = (real)1/(real)2*d0 + (real)1/(real)2*d2;
-              real a3 = -(real)1/(real)6*d0 - (real)1/(real)2*d2 +
-                (real)1/(real)6*d3;
-              real Cc = a0 + dy * (a1 + dy * (a2 + a3 * dy));
-
-              // I assume that since the image is stored as reals we don't have
-              // to worry about clamping to min and max int (to prevent over or
-              // underflow)
-              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = Cc;
-	        }
+            real* dst = dst_data + y*os[1] + x*os[2];
+            if (edge) {
+              image_(Main_bicubicInterpolate)(src_data, is, src->size, ix, iy, dst, os, pad_value, 1);
+            } else {
+              image_(Main_bicubicInterpolate)(src_data, is, src->size, ix, iy, dst, os, pad_value, 0);
+            }
           }
           break;
         case 3:  // Lanczos
