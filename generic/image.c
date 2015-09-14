@@ -1670,7 +1670,7 @@ static inline image_(Main_bicubicInterpolate)(
       #pragma unroll
       for (j = 0; j < 4; j++) {
         long u = x_pix + j - 1;
-        if (bounds_check && (v < 0 || v >= size[2] || u < 0 || u >= size[3])) {
+        if (bounds_check && (v < 0 || v >= size[1] || u < 0 || u >= size[2])) {
           p[j] = pad_value;
         } else {
           p[j] = data[u * is[2]];
@@ -1784,7 +1784,7 @@ int image_(Main_warp)(lua_State *L) {
         case 2:  // Bicubic
           {
             // We only need to do bounds checking if ix or iy are near the edge
-            int edge = !(iy >= 1 && iy < height - 2 && ix >= 1 && ix < width - 2);
+            int edge = !(iy >= 1 && iy < src_height - 2 && ix >= 1 && ix < src_width - 2);
 
             real* dst = dst_data + y*os[1] + x*os[2];
             if (edge) {
