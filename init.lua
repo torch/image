@@ -93,12 +93,15 @@ local function todepth(img, depth)
 end
 
 local function isPNG(magicTensor)
-    pngMagic = torch.ByteTensor({0x89,0x50,0x4e,0x47})
+    local pngMagic = torch.ByteTensor({0x89,0x50,0x4e,0x47})
     return torch.all(torch.eq(magicTensor, pngMagic))
 end
 
 local function isJPG(magicTensor)
-    jpgMagic = torch.ByteTensor({0xff, 0xd8, 0xff, 0xe0})
+    -- There are many valid 4th bytes, so only check the first 3 bytes.
+    -- libjpeg should support most if not all of these:
+    -- source: http://filesignatures.net/?page=all&order=SIGNATURE&alpha=J
+    local jpgMagic = torch.ByteTensor({0xff, 0xd8, 0xff})
     return torch.all(torch.eq(magicTensor, jpgMagic))
 end
 
@@ -107,7 +110,7 @@ local function decompress(tensor, depth, tensortype)
         dok.error('Input tensor must be a byte tensor',
                   'image.decompress')
     end
-    if isJPG(tensor[{{1,4}}]) then
+    if isJPG(tensor[{{1,3}}]) then
         return image.decompressJPG(tensor, depth, tensortype)
     elseif isPNG(tensor[{{1,4}}]) then
         return image.decompressPNG(tensor, depth, tensortype)
