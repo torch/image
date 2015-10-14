@@ -35,6 +35,8 @@ require 'xlua'
 require 'dok'
 require 'libimage'
 
+local rational = require 'rational'
+
 ----------------------------------------------------------------------
 -- types lookups
 --
@@ -519,16 +521,18 @@ local function scale(...)
       local imax = math.max(iwidth,iheight)
       local omax = tonumber(size)
       if omax then
-         height = iheight / imax * omax
-         width = iwidth / imax * omax
+         local sc = rational(omax, imax)
+         height = (rational(iheight)*sc)()
+         width = (rational(iwidth)*sc)()
       else
          width,height = size:gfind('(%d*)x(%d*)')()
          if not width or not height then
             local imin = math.min(iwidth,iheight)
-            local omin = size:gfind('%^(%d*)')()
+            local omin = tonumber(size:gfind('%^(%d*)')())
             if omin then
-               height = iheight / imin * omin
-               width = iwidth / imin * omin
+               local sc = rational(omin, imin)
+               height = (rational(iheight)*sc)()
+               width = (rational(iwidth)*sc)()
             end
          end
       end
