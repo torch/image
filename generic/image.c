@@ -1647,7 +1647,7 @@ static inline real image_(Main_cubicInterpolate)(real p0, real p1, real p2, real
   return p1 + 0.5 * x * (p2 - p0 + x * (2 * p0 - 5 * p1 + 4 * p2 - p3 + x * (3 * (p1 - p2) + p3 - p0)));
 }
 
-static inline image_(Main_bicubicInterpolate)(
+static inline void image_(Main_bicubicInterpolate)(
   real* src, long* is, long* size, real ix, real iy,
   real* dst, long *os,
   real pad_value, int bounds_check)
@@ -1768,7 +1768,7 @@ int image_(Main_warp)(lua_State *L) {
                 + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se;
             }
           }
-	      break;
+          break;
         case 0:  // Simple (i.e., nearest neighbor)
           {
             // 1 nearest neighbor:
@@ -1795,7 +1795,7 @@ int image_(Main_warp)(lua_State *L) {
           }
           break;
         case 3:  // Lanczos
-	      {
+          {
             // Note: Lanczos can be made fast if the resampling period is
             // constant... and therefore the Lu, Lv can be cached and reused.
             // However, unfortunately warp makes no assumptions about resampling
@@ -1962,7 +1962,11 @@ int image_(Main_colorize)(lua_State *L) {
     for (x = 0; x < width; x++) {
       int id = THTensor_(get2d)(input, y, x);
       real check = THTensor_(get2d)(colormap, id, 0);
+#ifdef TH_REAL_IS_BYTE
+      if (check == 255) {
+#else
       if (check == -1) {
+#endif
         for (k = 0; k < channels; k++) {
           THTensor_(set2d)(colormap, id, k, ((float)rand()/(float)RAND_MAX));
         }
@@ -1985,9 +1989,9 @@ int image_(Main_rgb2y)(lua_State *L) {
   luaL_argcheck(L, rgb->nDimension == 3, 1, "image.rgb2y: src not 3D");
   luaL_argcheck(L, yim->nDimension == 2, 2, "image.rgb2y: dst not 2D");
   luaL_argcheck(L, rgb->size[1] == yim->size[0], 2,
-		"image.rgb2y: src and dst not of same height");
+                "image.rgb2y: src and dst not of same height");
   luaL_argcheck(L, rgb->size[2] == yim->size[1], 2,
-		"image.rgb2y: src and dst not of same width");
+                "image.rgb2y: src and dst not of same width");
 
   int y,x;
   real r,g,b,yc;
@@ -2001,8 +2005,8 @@ int image_(Main_rgb2y)(lua_State *L) {
       b = THTensor_(get3d)(rgb, 2, y, x);
 
       yc = (real) ((0.299 * (float) r)
-		   + (0.587 * (float) g)
-		   + (0.114 * (float) b));
+                   + (0.587 * (float) g)
+                   + (0.114 * (float) b));
       THTensor_(set2d)(yim, y, x, yc);
     }
   }
