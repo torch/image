@@ -9,6 +9,13 @@ Crops image `src` at coordinate `(x1, y1)` up to coordinate
 `(x2, y2)`. If `dst` is provided, it is used to store the output
 image. Otherwise, returns a new `res` Tensor.
 
+### [res] image.crop([dst,] src, format, width, height) ###
+Crops a `width x height` section of source image `src`. The argument
+`format` is a string specifying where to crop: it can be "c", "tl", "tr",
+"bl" or "br" for center, top left, top right, bottom left and bottom right,
+respectively.  If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
 <a name="image.translate"></a>
 ### [res] image.translate([dst,] src, x, y) ###
 Translates image `src` by `x` pixels horizontally and `y` pixels 

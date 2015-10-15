@@ -363,6 +363,7 @@ rawset(image, 'save', save)
 --
 local function crop(...)
    local dst,src,startx,starty,endx,endy
+   local format,width,height
    local args = {...}
    if select('#',...) == 6 then
       dst = args[1]
@@ -372,16 +373,31 @@ local function crop(...)
       endx = args[5]
       endy = args[6]
    elseif select('#',...) == 5 then
-      src = args[1]
-      startx = args[2]
-      starty = args[3]
-      endx = args[4]
-      endy = args[5]
+      if type(args[3]) == 'string' then
+         dst = args[1]
+         src = args[2]
+         format = args[3]
+         width = args[4]
+         height = args[5]
+      else
+         src = args[1]
+         startx = args[2]
+         starty = args[3]
+         endx = args[4]
+         endy = args[5]
+      end
    elseif select('#',...) == 4 then
-      dst = args[1]
-      src = args[2]
-      startx = args[3]
-      starty = args[4]
+      if type(args[2]) == 'string' then
+         src = args[1]
+         format = args[2]
+         width = args[3]
+         height = args[4]
+      else
+         dst = args[1]
+         src = args[2]
+         startx = args[3]
+         starty = args[4]
+      end
    elseif select('#',...) == 3 then
       src = args[1]
       startx = args[2]
@@ -400,8 +416,42 @@ local function crop(...)
                        {type='number', help='start x', req=true},
                        {type='number', help='start y', req=true},
                        {type='number', help='end x'},
-                       {type='number', help='end y'}))
+                       {type='number', help='end y'},
+                       '',
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='format: "c" or "tl" or "tr" or "bl" or "br"', req=true},
+                       {type='number', help='width', req=true},
+                       {type='number', help='height', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='format: "c" or "tl" or "tr" or "bl" or "br"', req=true},
+                       {type='number', help='width', req=true},
+                       {type='number', help='height', req=true}))
       dok.error('incorrect arguments', 'image.crop')
+   end
+   if format then
+      local iwidth,iheight
+      if src:nDimension() == 3 then
+         iwidth,iheight = src:size(3),src:size(2)
+      else
+         iwidth,iheight = src:size(2),src:size(1)
+      end
+      local x1, x2
+      if format == 'c' then
+         x1, y1 = math.floor((iwidth-width)/2), math.floor((iheight-height)/2)
+      elseif format == 'tl' then
+         x1, y1 = 0, 0
+      elseif format == 'tr' then
+         x1, y1 = iwidth-width, 0
+      elseif format == 'bl' then
+         x1, y1 = 0, iheight-height
+      elseif format == 'br' then
+         x1, y1 = iwidth-width, iheight-height
+      else
+         error('crop format must be "c"|"tl"|"tr"|"bl"|"br"')
+      end
+      return crop(dst, src, x1, y1, x1+width, y1+height)
    end
    if endx==nil then
       return src.image.cropNoScale(src,dst,startx,starty)
