@@ -19,8 +19,7 @@ using Torch's Tensor data structure.
 dependencies = {
    "torch >= 7.0",
    "sys >= 1.0",
-   "xlua >= 1.0",
-   "rational >= 1.0"
+   "xlua >= 1.0"
 }
 
 build = {
