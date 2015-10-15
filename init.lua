@@ -35,8 +35,6 @@ require 'xlua'
 require 'dok'
 require 'libimage'
 
-local rational = require 'rational'
-
 ----------------------------------------------------------------------
 -- types lookups
 --
@@ -503,7 +501,7 @@ local function scale(...)
                        {type='string', help='mode: bilinear | bicubic |simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='input image', req=true},
-                       {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or MAX', req=true},
+                       {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or "*SC" or "*SCd/SCn" or MAX', req=true},
                        {type='string', help='mode: bilinear | bicubic | simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='destination image', req=true},
@@ -512,28 +510,51 @@ local function scale(...)
       dok.error('incorrect arguments', 'image.scale')
    end
    if size then
-      local iwidth,iheight
+      local iwidth, iheight
       if src:nDimension() == 3 then
-         iwidth,iheight = src:size(3),src:size(2)
+         iwidth, iheight = src:size(3),src:size(2)
       else
-         iwidth,iheight = src:size(2),src:size(1)
+         iwidth, iheight = src:size(2),src:size(1)
       end
-      local imax = math.max(iwidth,iheight)
+
+      -- MAX?
+      local imax = math.max(iwidth, iheight)
       local omax = tonumber(size)
       if omax then
-         local sc = rational(omax, imax)
-         height = (rational(iheight)*sc)()
-         width = (rational(iwidth)*sc)()
-      else
-         width,height = size:gfind('(%d*)x(%d*)')()
-         if not width or not height then
-            local imin = math.min(iwidth,iheight)
-            local omin = tonumber(size:gfind('%^(%d*)')())
-            if omin then
-               local sc = rational(omin, imin)
-               height = (rational(iheight)*sc)()
-               width = (rational(iwidth)*sc)()
-            end
+         height = iheight*omax/imax
+         width = iwidth*omax/imax
+      end
+
+      -- WxH?
+      if not width or not height then
+         width, height = size:match('(%d+)x(%d+)')
+      end
+
+      -- ^MIN?
+      if not width or not height then
+         local imin = math.min(iwidth, iheight)
+         local omin = tonumber(size:match('%^(%d+)'))
+         if omin then
+            height = iheight*omin/imin
+            width = iwidth*omin/imin
+         end
+      end
+
+      -- *SCn/SCd?
+      if not width or not height then
+         local scn, scd = size:match('%*(%d+)%/(%d+)')
+         if scn and scd then
+            height = iheight*scn/scd
+            width = iwidth*scn/scd
+         end
+      end
+
+      -- *SC?
+      if not width or not height then
+         local sc = tonumber(size:match('%*(.+)'))
+         if sc then
+            height = iheight*sc
+            width = iwidth*sc
          end
       end
    end
