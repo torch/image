@@ -1478,8 +1478,6 @@ int image_(Main_vflip)(lua_State *L) {
 
   int width = dst->size[2];
   int height = dst->size[1];
-  int src_width = src->size[2];
-  int src_height = src->size[1];
   int channels = dst->size[0];
   long *is = src->stride;
   long *os = dst->stride;
@@ -1527,8 +1525,6 @@ int image_(Main_hflip)(lua_State *L) {
 
   int width = dst->size[2];
   int height = dst->size[1];
-  int src_width = src->size[2];
-  int src_height = src->size[1];
   int channels = dst->size[0];
   long *is = src->stride;
   long *os = dst->stride;
@@ -1574,11 +1570,11 @@ int image_(Main_flip)(lua_State *L) {
   THTensor *src = luaT_checkudata(L, 2, torch_Tensor);
   long flip_dim = luaL_checklong(L, 3);
 
-  if (dst->nDimension != src->nDimension) {
-    luaL_error(L, "image.flip: src and dst nDimension does not match");
+  if ((dst->nDimension != 5) || (src->nDimension != 5)) {
+    luaL_error(L, "image.flip: expected 5 dimensions for src and dst");
   }
 
-  if (flip_dim < 1 || flip_dim > dst->nDimension) {
+  if (flip_dim < 1 || flip_dim > dst->nDimension || flip_dim > 5) {
     luaL_error(L, "image.flip: flip_dim out of bounds");
   }
   flip_dim--;  //  Make it zero indexed
@@ -1595,7 +1591,6 @@ int image_(Main_flip)(lua_State *L) {
   long size2 = dst->size[2];
   long size3 = dst->size[3];
   long size4 = dst->size[4];
-  long size_flip = dst->size[flip_dim];
 
   if (src->size[0] != size0 || src->size[1] != size1 ||
       src->size[2] != size2 || src->size[3] != size3 ||
@@ -1606,7 +1601,7 @@ int image_(Main_flip)(lua_State *L) {
   long *is = src->stride;
   long *os = dst->stride;
 
-  long x, y, z, d, t, isrc, idst;
+  long x, y, z, d, t, isrc, idst = 0;
   for (t = 0; t < size0; t++) {
     for (d = 0; d < size1; d++) {
       for (z = 0; z < size2; z++) {
@@ -1714,7 +1709,7 @@ int image_(Main_warp)(lua_State *L) {
   real *flow_data = THTensor_(data)(flowfield);
 
   // resample
-  long k,x,y,jj,v,u,i,j;
+  long k,x,y,v,u,i,j;
   for (y=0; y<height; y++) {
     for (x=0; x<width; x++) {
       // subpixel position:
