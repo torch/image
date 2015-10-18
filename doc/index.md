@@ -3,12 +3,12 @@
 __image__ is the [Torch7 distribution](http://torch.ch/) package for processing 
 images. It contains a wide variety of functions divided into the following categories:
 
-  * [Saving and loading](doc/saveload.md) images as JPEG, PNG, PPM and PGM;
-  * [Simple transformations](doc/simpletransform.md) like translation, scaling and rotation;
-  * [Parameterized transformations](doc/paramtransform.md) like convolutions and warping;
-  * [Graphical user interfaces](doc/gui.md) like display and window;
-  * [Color Space Conversions](doc/colorspace.md) from and to RGB, YUV, Lab, and HSL;
-  * [Tensor Constructors](doc/tensorconstruct.md) for creating Lenna, Fabio and Gaussian and Laplacian kernels;
+  * [Saving and loading](saveload.md) images as JPEG, PNG, PPM and PGM;
+  * [Simple transformations](simpletransform.md) like translation, scaling and rotation;
+  * [Parameterized transformations](paramtransform.md) like convolutions and warping;
+  * [Graphical user interfaces](gui.md) like display and window;
+  * [Color Space Conversions](colorspace.md) from and to RGB, YUV, Lab, and HSL;
+  * [Tensor Constructors](tensorconstruct.md) for creating Lenna, Fabio and Gaussian and Laplacian kernels;
 
 Note that unless speficied otherwise, this package deals with images of size 
 `nChannel x height x width`.

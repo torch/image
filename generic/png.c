@@ -10,29 +10,8 @@
  *
  * Clement: modified for Torch7.
  */
-#include <assert.h>
 
-/*
- * Bookkeeping struct for reading png data from memory
- */
-typedef struct {
-  unsigned char* buffer;
-  png_size_t offset;
-  png_size_t length;
-} libpng_(inmem_buffer);
-
-/*
- * Call back for reading png data from memory
- */
-void libpng_(userReadData)(png_structp pngPtrSrc, png_bytep dest, png_size_t length) 
-{
-  libpng_(inmem_buffer)* src = png_get_io_ptr(pngPtrSrc);
-  assert(src->offset+length <= src->length);
-  memcpy(dest, src->buffer + src->offset, length);
-  src->offset += length;
-}
-
-static int libpng_(Main_load)(lua_State *L) 
+static int libpng_(Main_load)(lua_State *L)
 {
 
   png_byte header[8];    // 8 is the maximum size that can be checked
@@ -45,8 +24,9 @@ static int libpng_(Main_load)(lua_State *L)
   png_bytep * row_pointers;
   size_t fread_ret;
   FILE* fp;
-  libpng_(inmem_buffer) inmem = {0};    /* source memory (if loading from memory) */
-  
+  libpng_inmem_buffer inmem = {0};    /* source memory (if loading from memory) */
+  libpng_errmsg errmsg;
+
   const int load_from_file = luaL_checkint(L, 1);
 
   if (load_from_file == 1){
@@ -76,18 +56,20 @@ static int libpng_(Main_load)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[read_png] png_create_read_struct failed");
 
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[read_png] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[read_png] Error during init_io");
+    luaL_error(L, "[read_png] Error during init_io: %s", errmsg.str);
 
   if (load_from_file == 1){
     png_init_io(png_ptr, fp);
   } else {
     /* set the read callback */
-    png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_(userReadData));
+    png_set_read_fn(png_ptr,(png_voidp)&inmem, libpng_userReadData);
   }
   png_set_sig_bytes(png_ptr, 8);
   png_read_info(png_ptr, info_ptr);
@@ -96,7 +78,7 @@ static int libpng_(Main_load)(lua_State *L)
   height     = png_get_image_height(png_ptr, info_ptr);
   color_type = png_get_color_type(png_ptr, info_ptr);
   bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
-  png_read_update_info(png_ptr, info_ptr);
+  
 
   /* get depth */
   int depth = 0;
@@ -109,7 +91,6 @@ static int libpng_(Main_load)(lua_State *L)
     if(bit_depth < 8)
     {
       png_set_expand_gray_1_2_4_to_8(png_ptr);
-      png_read_update_info(png_ptr, info_ptr);
     }
     depth = 1;
   }
@@ -119,7 +100,6 @@ static int libpng_(Main_load)(lua_State *L)
     {
       depth = 3;
       png_set_expand(png_ptr);
-      png_read_update_info(png_ptr, info_ptr);
     }
   else
     luaL_error(L, "[read_png_file] Unknown color space");
@@ -127,12 +107,13 @@ static int libpng_(Main_load)(lua_State *L)
   if(bit_depth < 8)
   {
     png_set_strip_16(png_ptr);
-    png_read_update_info(png_ptr, info_ptr);
   }
+  
+  png_read_update_info(png_ptr, info_ptr);
 
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr)))
-     luaL_error(L, "[read_png_file] Error during read_image");
+    luaL_error(L, "[read_png_file] Error during read_image: %s", errmsg.str);
 
   /* alloc tensor */
   THTensor *tensor = THTensor_(newWithSize3d)(depth, height, width);
@@ -216,6 +197,7 @@ static int libpng_(Main_save)(lua_State *L)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep * row_pointers;
+  libpng_errmsg errmsg;
 
   /* get dims and contiguous tensor */
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
@@ -250,18 +232,20 @@ static int libpng_(Main_save)(lua_State *L)
   if (!png_ptr)
     luaL_error(L, "[write_png_file] png_create_write_struct failed");
 
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[write_png_file] png_create_info_struct failed");
 
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during init_io");
+    luaL_error(L, "[write_png_file] Error during init_io: %s", errmsg.str);
 
   png_init_io(png_ptr, fp);
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during writing header");
+    luaL_error(L, "[write_png_file] Error during writing header: %s", errmsg.str);
 
   png_set_IHDR(png_ptr, info_ptr, width, height,
          bit_depth, color_type, PNG_INTERLACE_NONE,
@@ -289,13 +273,13 @@ static int libpng_(Main_save)(lua_State *L)
 
   /* write bytes */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during writing bytes");
+    luaL_error(L, "[write_png_file] Error during writing bytes: %s", errmsg.str);
 
   png_write_image(png_ptr, row_pointers);
 
   /* end write */
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during end of write");
+    luaL_error(L, "[write_png_file] Error during end of write: %s", errmsg.str);
 
   /* cleanup png structs */
   png_write_end(png_ptr, NULL);
@@ -322,6 +306,7 @@ static int libpng_(Main_size)(lua_State *L)
 
   png_structp png_ptr;
   png_infop info_ptr;
+  libpng_errmsg errmsg;
   size_t fread_ret;
   /* open file and test for it being a png */
   FILE *fp = fopen(filename, "rb");
@@ -339,14 +324,16 @@ static int libpng_(Main_size)(lua_State *L)
   
   if (!png_ptr)
     luaL_error(L, "[get_png_size] png_create_read_struct failed");
-  
+
+  png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
+
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[get_png_size] png_create_info_struct failed");
   
   if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[get_png_size] Error during init_io");
-  
+    luaL_error(L, "[get_png_size] Error during init_io: %s", errmsg.str);
+
   png_init_io(png_ptr, fp);
   png_set_sig_bytes(png_ptr, 8);
   
@@ -372,10 +359,6 @@ static int libpng_(Main_size)(lua_State *L)
   else
     luaL_error(L, "[get_png_size] Unknown color space");
 
-  /* read file */
-  if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[get_png_size] Error during read_image");
-  
   /* done with file */
   fclose(fp);
 

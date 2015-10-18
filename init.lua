@@ -93,12 +93,15 @@ local function todepth(img, depth)
 end
 
 local function isPNG(magicTensor)
-    pngMagic = torch.ByteTensor({0x89,0x50,0x4e,0x47})
+    local pngMagic = torch.ByteTensor({0x89,0x50,0x4e,0x47})
     return torch.all(torch.eq(magicTensor, pngMagic))
 end
 
 local function isJPG(magicTensor)
-    jpgMagic = torch.ByteTensor({0xff, 0xd8, 0xff, 0xe0})
+    -- There are many valid 4th bytes, so only check the first 3 bytes.
+    -- libjpeg should support most if not all of these:
+    -- source: http://filesignatures.net/?page=all&order=SIGNATURE&alpha=J
+    local jpgMagic = torch.ByteTensor({0xff, 0xd8, 0xff})
     return torch.all(torch.eq(magicTensor, jpgMagic))
 end
 
@@ -107,7 +110,7 @@ local function decompress(tensor, depth, tensortype)
         dok.error('Input tensor must be a byte tensor',
                   'image.decompress')
     end
-    if isJPG(tensor[{{1,4}}]) then
+    if isJPG(tensor[{{1,3}}]) then
         return image.decompressJPG(tensor, depth, tensortype)
     elseif isPNG(tensor[{{1,4}}]) then
         return image.decompressPNG(tensor, depth, tensortype)
@@ -138,15 +141,22 @@ local function loadPNG(filename, depth, tensortype)
 end
 rawset(image, 'loadPNG', loadPNG)
 
+local function clampImage(tensor)
+   if tensor:type() == 'torch.ByteTensor' then
+      return tensor
+   end
+   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
+   a.image.saturate(a) -- bound btwn 0 and 1
+   a:mul(255)          -- remap to [0..255]
+   return a
+end
+
 local function savePNG(filename, tensor)
    if not xlua.require 'libpng' then
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libpng.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libpng.save(filename, tensor)
 end
 rawset(image, 'savePNG', savePNG)
 
@@ -160,11 +170,11 @@ local function decompressPNG(tensor, depth, tensortype)
                   'image.decompressPNG')
     end
     local load_from_file = 0
-    local a = template(tensortype).libpng.load(load_from_file, tensor)
+    local a, bit_depth = template(tensortype).libpng.load(load_from_file, tensor)
     if a == nil then
         return nil
     else
-        return processPNG(a, depth, tensortype)
+        return processPNG(a, depth, bit_depth, tensortype)
     end
 end
 rawset(image, 'decompressPNG', decompressPNG)
@@ -222,13 +232,10 @@ local function saveJPG(filename, tensor)
    if not xlua.require 'libjpeg' then
       dok.error('libjpeg package not found, please install libjpeg','image.saveJPG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
+   tensor = clampImage(tensor)
    local save_to_file = 1
    local quality = 75
-   a.libjpeg.save(filename, a, save_to_file, quality)
+   tensor.libjpeg.save(filename, tensor, save_to_file, quality)
 end
 rawset(image, 'saveJPG', saveJPG)
 
@@ -244,14 +251,11 @@ local function compressJPG(tensor, quality)
       dok.error('libjpeg package not found, please install libjpeg',
          'image.compressJPG')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
+   tensor = clampImage(tensor)
    local b = torch.ByteTensor()
    local save_to_file = 0
    quality = quality or 75
-   a.libjpeg.save("", a, save_to_file, quality, b)
+   tensor.libjpeg.save("", tensor, save_to_file, quality, b)
    return b
 end
 rawset(image, 'compressJPG', compressJPG)
@@ -280,11 +284,8 @@ local function savePPM(filename, tensor)
    if tensor:nDimension() ~= 3 or tensor:size(1) ~= 3 then
       dok.error('can only save 3xHxW images as PPM', 'image.savePPM')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libppm.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libppm.save(filename, tensor)
 end
 rawset(image, 'savePPM', savePPM)
 
@@ -293,11 +294,8 @@ local function savePGM(filename, tensor)
    if tensor:nDimension() == 3 and tensor:size(1) ~= 1 then
       dok.error('can only save 1xHxW or HxW images as PGM', 'image.savePGM')
    end
-   local MAXVAL = 255
-   local a = torch.Tensor():resize(tensor:size()):copy(tensor)
-   a.image.saturate(a) -- bound btwn 0 and 1
-   a:mul(MAXVAL)       -- remap to [0..255]
-   a.libppm.save(filename, a)
+   tensor = clampImage(tensor)
+   tensor.libppm.save(filename, tensor)
 end
 rawset(image, 'savePGM', savePGM)
 
@@ -365,6 +363,7 @@ rawset(image, 'save', save)
 --
 local function crop(...)
    local dst,src,startx,starty,endx,endy
+   local format,width,height
    local args = {...}
    if select('#',...) == 6 then
       dst = args[1]
@@ -374,16 +373,31 @@ local function crop(...)
       endx = args[5]
       endy = args[6]
    elseif select('#',...) == 5 then
-      src = args[1]
-      startx = args[2]
-      starty = args[3]
-      endx = args[4]
-      endy = args[5]
+      if type(args[3]) == 'string' then
+         dst = args[1]
+         src = args[2]
+         format = args[3]
+         width = args[4]
+         height = args[5]
+      else
+         src = args[1]
+         startx = args[2]
+         starty = args[3]
+         endx = args[4]
+         endy = args[5]
+      end
    elseif select('#',...) == 4 then
-      dst = args[1]
-      src = args[2]
-      startx = args[3]
-      starty = args[4]
+      if type(args[2]) == 'string' then
+         src = args[1]
+         format = args[2]
+         width = args[3]
+         height = args[4]
+      else
+         dst = args[1]
+         src = args[2]
+         startx = args[3]
+         starty = args[4]
+      end
    elseif select('#',...) == 3 then
       src = args[1]
       startx = args[2]
@@ -402,8 +416,42 @@ local function crop(...)
                        {type='number', help='start x', req=true},
                        {type='number', help='start y', req=true},
                        {type='number', help='end x'},
-                       {type='number', help='end y'}))
+                       {type='number', help='end y'},
+                       '',
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='format: "c" or "tl" or "tr" or "bl" or "br"', req=true},
+                       {type='number', help='width', req=true},
+                       {type='number', help='height', req=true},
+                       '',
+                       {type='torch.Tensor', help='destination', req=true},
+                       {type='torch.Tensor', help='input image', req=true},
+                       {type='string', help='format: "c" or "tl" or "tr" or "bl" or "br"', req=true},
+                       {type='number', help='width', req=true},
+                       {type='number', help='height', req=true}))
       dok.error('incorrect arguments', 'image.crop')
+   end
+   if format then
+      local iwidth,iheight
+      if src:nDimension() == 3 then
+         iwidth,iheight = src:size(3),src:size(2)
+      else
+         iwidth,iheight = src:size(2),src:size(1)
+      end
+      local x1, x2
+      if format == 'c' then
+         x1, y1 = math.floor((iwidth-width)/2), math.floor((iheight-height)/2)
+      elseif format == 'tl' then
+         x1, y1 = 0, 0
+      elseif format == 'tr' then
+         x1, y1 = iwidth-width, 0
+      elseif format == 'bl' then
+         x1, y1 = 0, iheight-height
+      elseif format == 'br' then
+         x1, y1 = iwidth-width, iheight-height
+      else
+         error('crop format must be "c"|"tl"|"tr"|"bl"|"br"')
+      end
+      return crop(dst, src, x1, y1, x1+width, y1+height)
    end
    if endx==nil then
       return src.image.cropNoScale(src,dst,startx,starty)
@@ -500,38 +548,63 @@ local function scale(...)
                        {type='torch.Tensor', help='input image', req=true},
                        {type='number', help='destination width', req=true},
                        {type='number', help='destination height', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string', help='mode: bilinear | bicubic |simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='input image', req=true},
-                       {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or MAX', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'},
+                       {type='string | number', help='destination size: "WxH" or "MAX" or "^MIN" or "*SC" or "*SCd/SCn" or MAX', req=true},
+                       {type='string', help='mode: bilinear | bicubic | simple', default='bilinear'},
                        '',
                        {type='torch.Tensor', help='destination image', req=true},
                        {type='torch.Tensor', help='input image', req=true},
-                       {type='string', help='mode: bilinear | simple', default='bilinear'}))
+                       {type='string', help='mode: bilinear | bicubic | simple', default='bilinear'}))
       dok.error('incorrect arguments', 'image.scale')
    end
    if size then
-      local iwidth,iheight
+      local iwidth, iheight
       if src:nDimension() == 3 then
-         iwidth,iheight = src:size(3),src:size(2)
+         iwidth, iheight = src:size(3),src:size(2)
       else
-         iwidth,iheight = src:size(2),src:size(1)
+         iwidth, iheight = src:size(2),src:size(1)
       end
-      local imax = math.max(iwidth,iheight)
+
+      -- MAX?
+      local imax = math.max(iwidth, iheight)
       local omax = tonumber(size)
       if omax then
-         height = iheight / imax * omax
-         width = iwidth / imax * omax
-      else
-         width,height = size:gfind('(%d*)x(%d*)')()
-         if not width or not height then
-            local imin = math.min(iwidth,iheight)
-            local omin = size:gfind('%^(%d*)')()
-            if omin then
-               height = iheight / imin * omin
-               width = iwidth / imin * omin
-            end
+         height = iheight*omax/imax
+         width = iwidth*omax/imax
+      end
+
+      -- WxH?
+      if not width or not height then
+         width, height = size:match('(%d+)x(%d+)')
+      end
+
+      -- ^MIN?
+      if not width or not height then
+         local imin = math.min(iwidth, iheight)
+         local omin = tonumber(size:match('%^(%d+)'))
+         if omin then
+            height = iheight*omin/imin
+            width = iwidth*omin/imin
+         end
+      end
+
+      -- *SCn/SCd?
+      if not width or not height then
+         local scn, scd = size:match('%*(%d+)%/(%d+)')
+         if scn and scd then
+            height = iheight*scn/scd
+            width = iwidth*scn/scd
+         end
+      end
+
+      -- *SC?
+      if not width or not height then
+         local sc = tonumber(size:match('%*(.+)'))
+         if sc then
+            height = iheight*sc
+            width = iwidth*sc
          end
       end
    end
@@ -548,10 +621,12 @@ local function scale(...)
    mode = mode or 'bilinear'
    if mode=='bilinear' then
       src.image.scaleBilinear(src,dst)
+   elseif mode=='bicubic' then
+      src.image.scaleBicubic(src,dst)
    elseif mode=='simple' then
       src.image.scaleSimple(src,dst)
    else
-      dok.error('mode must be one of: simple | bilinear', 'image.scale')
+      dok.error('mode must be one of: simple | bicubic | bilinear', 'image.scale')
    end
    return dst
 end
@@ -764,6 +839,7 @@ local function warp(...)
    local mode = 'bilinear'
    local offset_mode = true
    local clamp_mode = 'clamp'
+   local pad_value = 0
    local args = {...}
    local nargs = select('#',...)
    local bad_args = false
@@ -778,7 +854,12 @@ local function warp(...)
          mode = args[3]
          if nargs >= 4 then offset_mode = args[4] end
          if nargs >= 5 then clamp_mode = args[5] end
-         if nargs >= 6 then bad_args = true end
+         if nargs >= 6 then
+           assert(clamp_mode == 'pad', 'pad_value can only be specified if' ..
+                                       ' clamp_mode = "pad"')
+           pad_value = args[6]
+         end
+         if nargs >= 7 then bad_args = true end
       else
          -- With Destination tensor
          dst = args[1]
@@ -787,7 +868,12 @@ local function warp(...)
          if nargs >= 4 then mode = args[4] end
          if nargs >= 5 then offset_mode = args[5] end
          if nargs >= 6 then clamp_mode = args[6] end
-         if nargs >= 7 then bad_args = true end
+         if nargs >= 7 then
+           assert(clamp_mode == 'pad', 'pad_value can only be specified if' ..
+                                       ' clamp_mode = "pad"')
+           pad_value = args[7]
+         end
+         if nargs >= 8 then bad_args = true end
       end
    end
    if bad_args then
@@ -804,7 +890,8 @@ local function warp(...)
          {type='torch.Tensor', help='(y,x) flow field (2xHxW)', req=true},
          {type='string', help='mode: lanczos | bicubic | bilinear | simple', default='bilinear'},
          {type='string', help='offset mode (add (x,y) to flow field)', default=true},
-         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'}))
+         {type='string', help='clamp mode: how to handle interp of samples off the input image (clamp | pad)', default='clamp'},
+         {type='number', help='pad value: value to pad image. Can only be set when clamp mode equals "pad"', default=0}))
       dok.error('incorrect arguments', 'image.warp')
    end
    -- This is a little messy, but convert mode string to an enum
@@ -835,7 +922,7 @@ local function warp(...)
    dst = dst or src.new()
    dst:resize(src:size(1), field:size(2), field:size(3))
 
-   src.image.warp(dst, src, field, mode, offset_mode, clamp_mode)
+   src.image.warp(dst, src, field, mode, offset_mode, clamp_mode, pad_value)
    if dim2 then
       dst = dst[1]
    end
