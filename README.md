@@ -1,6 +1,6 @@
 # image Package Reference Manual #
 
-[![Build Status](https://travis-ci.org/torch/image.svg)](https://travis-ci.org/torch/image)
+[![Build Status](https://travis-ci.org/torch/image.svg)](https://travis-ci.org/torch/image) 
 
 __image__ is the [Torch7 distribution](http://torch.ch/) package for processing 
 images. It contains a wide variety of functions divided into the following categories:
