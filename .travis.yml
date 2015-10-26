@@ -33,6 +33,8 @@ addons:
     - unzip 
     - gnuplot
     - gnuplot-x11 
+    - libgraphicsmagick1-dev
+    - imagemagick 
 before_script: 
 - export ROOT_TRAVIS_DIR=$(pwd)
 - export INSTALL_PREFIX=~/torch/install
@@ -50,6 +52,7 @@ script:
 - ${INSTALL_PREFIX}/bin/luajit -limage -e "print('image loaded succesfully')"
 - cd test
 - ${INSTALL_PREFIX}/bin/luarocks install totem
+- ${INSTALL_PREFIX}/bin/luarocks install graphicsmagick
 - ${INSTALL_PREFIX}/bin/luajit ./test_compress_jpg.lua
 - ${INSTALL_PREFIX}/bin/luajit ./test_conversion.lua
 - ${INSTALL_PREFIX}/bin/luajit ./test_decompress_jpg.lua
