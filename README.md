@@ -18,7 +18,7 @@ Note that unless speficied otherwise, this package deals with images of size
 ## Install
 
 The easiest way to install this package it by following the [intructions](http://torch.ch/docs/getting-started.html) 
-to install [Torch7](www.torch.ch), which includes __image__. 
+to install [Torch7](http://www.torch.ch), which includes __image__. 
 Otherwise, to update or manually re-install it:
 
 ```bash
