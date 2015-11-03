@@ -15,6 +15,16 @@
 #define M_PI    3.14159265358979323846
 #endif
 
+
+static inline real image_(FromDouble)(double x) {
+  #ifdef TH_REAL_IS_BYTE
+  if( x <= 0 ) return 0;
+  if( x >= 255 ) return 255;
+  #endif
+  return x;
+}
+
+
 static void image_(Main_op_validate)( lua_State *L,  THTensor *Tsrc, THTensor *Tdst){
 
   long src_depth = 1;
@@ -117,6 +127,19 @@ static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
   }
 }
 
+
+static inline real image_(Main_cubicInterpolate)(double p0, double p1,
+                                                 double p2, double p3,
+                                                 double x) {
+  double a0 = p1;
+  double a1 = p2 - p0;
+  double a2 = 2 * p0 - 5 * p1 + 4 * p2 - p3;
+  double a3 = 3 * (p1 - p2) + p3 - p0;
+  double v = a0 + 0.5 * x * (a1 + x * (a2 + x * a3));
+  return image_(FromDouble)(v);
+}
+
+
 static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
                                            THTensor *Tdst,
                                            long src_start,
@@ -147,28 +170,22 @@ static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
       long dst_pos = dst_start + di*dst_stride;
       si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
 
-      real p0;
-      real p1 = src[ src_start + si_i * src_stride ];
-      real p2 = src[ src_start + (si_i + 1) * src_stride ];
-      real p3;
+      double p0;
+      double p1 = src[ src_start + si_i * src_stride ];
+      double p2 = src[ src_start + (si_i + 1) * src_stride ];
+      double p3;
       if (si_i > 0) {
         p0 = src[ src_start + (si_i - 1) * src_stride ];
       } else {
-        p0 = 2*p1 - p2;
+        p0 = 2 * p1 - p2;
       }
       if (si_i + 2 < src_len) {
         p3 = src[ src_start + (si_i + 2) * src_stride ];
       } else {
-        p3 = 2*p2 - p1;
+        p3 = 2 * p2 - p1;
       }
 
-      real a0 = p1;
-      real a1 = -(real)1/(real)2*p0 + (real)1/(real)2*p2;
-      real a2 = p0 - (real)5/(real)2*p1 + (real)2*p2 - (real)1/(real)2*p3;
-      real a3 = -(real)1/(real)2*p0 + (real)3/(real)2*p1 - (real)3/(real)2*p2 +
-                (real)1/(real)2*p3;
-
-      dst[dst_pos] = a0 + si_f * (a1 + si_f * (a2 + a3 * si_f));
+      dst[dst_pos] = image_(Main_cubicInterpolate)(p0, p1, p2, p3, si_f);
     }
 
     dst[ dst_start + (dst_len - 1) * dst_stride ] =
@@ -1635,11 +1652,6 @@ int image_(Main_flip)(lua_State *L) {
   }
 
   return 0;
-}
-
-static inline real image_(Main_cubicInterpolate)(real p0, real p1, real p2, real p3, real x)
-{
-  return p1 + 0.5 * x * (p2 - p0 + x * (2 * p0 - 5 * p1 + 4 * p2 - p3 + x * (3 * (p1 - p2) + p3 - p0)));
 }
 
 static inline void image_(Main_bicubicInterpolate)(
