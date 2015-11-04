@@ -110,6 +110,10 @@ local function decompress(tensor, depth, tensortype)
         dok.error('Input tensor must be a byte tensor',
                   'image.decompress')
     end
+    if tensor:nElement() < 4 then
+    	dok.error('Input must be either jpg or png format',
+                  'image.decompress')
+    end
     if isJPG(tensor[{{1,3}}]) then
         return image.decompressJPG(tensor, depth, tensortype)
     elseif isPNG(tensor[{{1,4}}]) then
