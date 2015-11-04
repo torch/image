@@ -10,10 +10,19 @@ local function getTestImagePath(name)
   return paths.concat(sys.fpath(), 'assets', name)
 end
 
+
+local function toByteTensor(x)
+  x[torch.lt(x, 0)] = 0
+  x[torch.gt(x, 255)] = 255
+  return x:type('torch.ByteTensor')
+end
+
+
 local function assertByteTensorEq(actual, expected, rcond, msg)
   rcond = rcond or 1e-5
   tester:assertTensorEq(actual:double(), expected:double(), rcond, msg)
 end
+
 
 ----------------------------------------------------------------------
 -- Flip test
@@ -140,6 +149,20 @@ function test.gaussian()
       tester:assertlt(im1:add(-1, im2):sum(), precision, "Incorrect gaussian")
    end
 end
+
+
+function test.byteGaussian()
+  local expected = toByteTensor(image.gaussian{
+      amplitude = 1000,
+      tensor = torch.FloatTensor(5, 5),
+  })
+  local actual = image.gaussian{
+      amplitude = 1000,
+      tensor = torch.ByteTensor(5, 5),
+  }
+  assertByteTensorEq(actual, expected)
+end
+
 
 ----------------------------------------------------------------------
 -- Gaussian pyramid test
