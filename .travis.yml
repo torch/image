@@ -51,16 +51,6 @@ script:
 - ${INSTALL_PREFIX}/bin/luarocks make 
 - ${INSTALL_PREFIX}/bin/luajit -limage -e "print('image loaded succesfully')"
 - cd test
-- ${INSTALL_PREFIX}/bin/luarocks install totem
 - ${INSTALL_PREFIX}/bin/luarocks install graphicsmagick
-- ${INSTALL_PREFIX}/bin/luajit ./test_compress_jpg.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_conversion.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_decompress_jpg.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_flip.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_gaussian.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_gaussianpyramid.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_png.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_ppm.lua
 - ${INSTALL_PREFIX}/bin/luajit ./test_rotate.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_scale.lua
-- ${INSTALL_PREFIX}/bin/luajit ./test_vflip.lua
+- ${INSTALL_PREFIX}/bin/luajit -limage -e "t=image.test(); if t.errors[1] then os.exit(1) end"
