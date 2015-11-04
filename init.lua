@@ -36,6 +36,11 @@ require 'dok'
 require 'libimage'
 
 ----------------------------------------------------------------------
+-- include unit test function
+--
+include('test.lua')
+
+----------------------------------------------------------------------
 -- types lookups
 --
 local type2tensor = {
@@ -1449,9 +1454,9 @@ rawset(image, 'window', window)
 local function lena()
    local fname = 'lena'
    if xlua.require 'libjpeg' then
-      lena = image.load(paths.concat(sys.fpath(), fname .. '.jpg'), 3)
+      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.jpg'), 3)
    elseif xlua.require 'libpng' then
-      lena = image.load(paths.concat(sys.fpath(), fname .. '.png'), 3)
+      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.png'), 3)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
    end
@@ -1468,9 +1473,9 @@ rawset(image, 'lena', lena)
 local function fabio()
    local fname = 'fabio'
    if xlua.require 'libjpeg' then
-      lena = image.load(paths.concat(sys.fpath(), fname .. '.jpg'), 1)
+      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.jpg'), 1)
    elseif xlua.require 'libpng' then
-      lena = image.load(paths.concat(sys.fpath(), fname .. '.png'), 1)
+      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.png'), 1)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.fabio')
    end

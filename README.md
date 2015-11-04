@@ -25,6 +25,12 @@ Otherwise, to update or manually re-install it:
 $ luarocks install image
 ```
 
+You can test your install with:
+
+```bash
+$ luajit -limage -e "image.test()"
+```
+
 ## Usage
 
 ```lua
