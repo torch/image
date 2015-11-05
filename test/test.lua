@@ -10,6 +10,11 @@ local function getTestImagePath(name)
   return paths.concat(sys.fpath(), 'assets', name)
 end
 
+local function assertByteTensorEq(actual, expected, rcond, msg)
+  rcond = rcond or 1e-5
+  tester:assertTensorEq(actual:double(), expected:double(), rcond, msg)
+end
+
 ----------------------------------------------------------------------
 -- Flip test
 --
@@ -164,7 +169,7 @@ end
 function test.bilinearUpscale()
   local im = outerProduct{1, 2, 4, 2}
   local expected = outerProduct{1, 1.5, 2, 3, 4, 3, 2}
-  local actual = image.scale(im, expected:size(1), expected:size(2), 'bilinear')
+  local actual = image.scale(im, expected:size(2), expected:size(1), 'bilinear')
   tester:assertTensorEq(actual, expected, 1e-5)
 end
 
@@ -172,7 +177,7 @@ end
 function test.bilinearDownscale()
   local im = outerProduct{1, 2, 4, 2}
   local expected = outerProduct{1.25, 3, 2.5}
-  local actual = image.scale(im, expected:size(1), expected:size(2), 'bilinear')
+  local actual = image.scale(im, expected:size(2), expected:size(1), 'bilinear')
   tester:assertTensorEq(actual, expected, 1e-5)
 end
 
@@ -180,7 +185,7 @@ end
 function test.bicubicUpscale()
   local im = outerProduct{1, 2, 4, 2}
   local expected = outerProduct{1, 1.4375, 2, 3.1875, 4, 3.25, 2}
-  local actual = image.scale(im, expected:size(1), expected:size(2), 'bicubic')
+  local actual = image.scale(im, expected:size(2), expected:size(1), 'bicubic')
   tester:assertTensorEq(actual, expected, 1e-5)
 end
 
@@ -188,8 +193,27 @@ end
 function test.bicubicDownscale()
   local im = outerProduct{1, 2, 4, 2}
   local expected = outerProduct{1, 3.1875, 2}
-  local actual = image.scale(im, expected:size(1), expected:size(2), 'bicubic')
+  local actual = image.scale(im, expected:size(2), expected:size(1), 'bicubic')
   tester:assertTensorEq(actual, expected, 1e-5)
+end
+
+
+function test.bicubicUpscale_ByteTensor()
+  local im = torch.ByteTensor{{0, 1, 32}}
+  local expected = torch.ByteTensor{{0, 0, 9, 32}}
+  local actual = image.scale(im, expected:size(2), expected:size(1), 'bicubic')
+  assertByteTensorEq(actual, expected)
+end
+
+
+function test.bilinearUpscale_ByteTensor()
+  local im = torch.ByteTensor{{1, 2},
+                              {2, 3}}
+  local expected = torch.ByteTensor{{1, 1, 2},
+                                    {1, 1, 2},
+                                    {2, 2, 3}}
+  local actual = image.scale(im, expected:size(2), expected:size(1))
+  assertByteTensorEq(actual, expected)
 end
 
 ----------------------------------------------------------------------
@@ -205,7 +229,8 @@ function flip_tests.test_transformation_largeByteImage(flip)
     local f_real, f_byte
     f_real = image[flip](x_real)
     f_byte = image[flip](x_byte)
-    tester:assertTensorEq(f_real:byte():double(), f_byte:double(), 1e-16, flip .. ':  result for double and byte images do not match')
+    assertByteTensorEq(f_real:byte(), f_byte, 1e-16,
+        flip .. ':  result for double and byte images do not match')
 end
 
 function flip_tests.test_inplace(flip)
@@ -262,11 +287,7 @@ end
 -- decompress jpg test
 --
 function test.CompareLoadAndDecompress()
-  -- This test breaks if someone removes lena from the repo or does not have graphics magick installed
-  local ok, gm = pcall(require, 'graphicsmagick')
-  if not ok then
-    error('This test require the graphicsmagick package to run. You can install it with "luarocks install graphicsmagick".')
-  end
+  -- This test breaks if someone removes lena from the repo
   local imfile = getTestImagePath('lena.jpg')
   if not paths.filep(imfile) then
     error(imfile .. ' is missing!')
@@ -277,11 +298,19 @@ function test.CompareLoadAndDecompress()
   
   -- Make sure the returned image width and height match the height and width
   -- reported by graphicsmagick (just a sanity check)
-  local info = gm.info(imfile)
-  local w = info.width
-  local h = info.height
-  tester:assert(w == img:size(3), 'image dimension error ')
-  tester:assert(h == img:size(3), 'image dimension error ')
+  local ok, gm = pcall(require, 'graphicsmagick')
+  if not ok then
+    -- skip this part of the test if graphicsmagick is not installed
+    print('\ntest.CompareLoadAndDecompress partially requires the ' ..
+          'graphicsmagick package to run. You can install it with ' ..
+          '"luarocks install graphicsmagick".')
+  else
+    local info = gm.info(imfile)
+    local w = info.width
+    local h = info.height
+    tester:assert(w == img:size(3), 'image dimension error ')
+    tester:assert(h == img:size(3), 'image dimension error ')
+  end
   
   -- Now load the raw binary from the source file into a ByteTensor
   local fin = torch.DiskFile(imfile, 'r')
@@ -387,8 +416,8 @@ local function checkPNG(imfile, depth, tensortype, want)
   -- Tensors have to be converted to double, since assertTensorEq does not support ByteTensor
   --print('img: ', img)
   --print('want: ', want)
-  tester:assertTensorEq(img:double(), want:double(), precision_mean,
-                          string.format('%s: pixel values are unexpected', imfile))
+  assertByteTensorEq(img, want, precision_mean,
+                    string.format('%s: pixel values are unexpected', imfile))
 end
 
 function test.LoadPNG()
