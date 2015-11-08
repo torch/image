@@ -41,35 +41,46 @@ static int libppm_(Main_load)(lua_State *L)
   //printf("Loading PPM\nMAGIC: %c%c\nWidth: %ld, Height: %ld\nChannels: %d, Bits-per-pixel: %d\n", p, n, W, H, D, bps);
 
   // load data
+  int ok = 1;
+  size_t s;
   unsigned char *r = NULL;
   if ( n=='6' ) {
     C = 3;
-    r = (unsigned char *)malloc(W*H*C*bpc);
-    fread ( r, 1, W*H*C*bpc, fp );
+    s = W*H*C*bpc;
+    r = malloc(s);
+    if (fread ( r, 1, s, fp ) < s) ok = 0;
   } else if ( n=='5' ) {
     C = 1;
-    r = (unsigned char *)malloc(W*H*C*bpc);
-    fread ( r, 1, W*H*C*bpc, fp );
+    s = W*H*C*bpc;
+    r = malloc(s);
+    if (fread ( r, 1, s, fp ) < s) ok = 0;
   } else if ( n=='3' ) {
     int c,i;
     C = 3;
-    r = (unsigned char *)malloc(W*H*C);
-    for (i=0; i<W*H*C; i++) {
-      fscanf ( fp, "%d", &c );
+    s = W*H*C;
+    r = malloc(s);
+    for (i=0; i<s; i++) {
+      if (fscanf ( fp, "%d", &c ) != 1) { ok = 0; break; }
       r[i] = 255*c / D;
     }
   } else if ( n=='2' ) {
     int c,i;
     C = 1;
-    r = (unsigned char *)malloc(W*H*C);
-    for (i=0; i<W*H*C; i++) {
-      fscanf ( fp, "%d", &c );
+    s = W*H*C;
+    r = malloc(s);
+    for (i=0; i<s; i++) {
+      if (fscanf ( fp, "%d", &c ) != 1) { ok = 0; break; }
       r[i] = 255*c / D;
     }
   } else {
     W=H=C=0;
     fclose ( fp );
-    luaL_error(L, "corrupted file");
+    luaL_error(L, "unsupported magic number: P%c", n);
+  }
+
+  if (!ok) {
+    fclose ( fp );
+    luaL_error(L, "corrupted file or read error");
   }
 
   // export tensor

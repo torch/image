@@ -473,7 +473,7 @@ function test.test_ppmload()
     -- This makes possible to implement a non regression test vs. the former
     -- PPM loader which had for effect to skip the first 85 pixels because of
     -- a header parser bug
-    local img = image.load(getTestImagePath("test.ppm"))
+    local img = image.load(getTestImagePath("P6.ppm"))
     local pix = img[{ {}, {1}, {1} }]
 
     -- Check the first pixel is blue
@@ -487,7 +487,7 @@ function test.test_pgmaload()
     -- ascii.ppm is a PGMA file (ascii pgm)
     -- example comes from ehere
     -- http://people.sc.fsu.edu/~jburkardt/data/pgma/pgma.html
-    local img = image.load(getTestImagePath("ascii.pgm"), 1, 'byte')
+    local img = image.load(getTestImagePath("P2.pgm"), 1, 'byte')
     local max_gray = 15 -- 4th line of ascii.pgm
     local ascii_val = 3 -- pixel (2,2) in the file
     local pix_val = math.floor(255 * ascii_val / max_gray)
@@ -505,11 +505,18 @@ function test.test_pgmload()
     -- This makes possible to implement a non regression test vs. the former
     -- PPM loader which had for effect to skip the first 85 pixels because of
     -- a header parser bug
-    local img = image.load(getTestImagePath("test.pgm"))
+    local img = image.load(getTestImagePath("P5.pgm"))
     local pix = img[{ {}, {1}, {1} }]
 
     local ref = torch.zeros(1, 1, 1); ref[1][1][1] = 0.07
     tester:assertTensorEq(pix, ref, 0.001, "PPM load: first pixel check failed")
+end
+
+function test.test_pbmload()
+   -- test.pbm is a Portable BitMap (not supported)
+   local ok, msg = pcall(image.loadPPM, getTestImagePath("P4.pbm"))
+   tester:assert(not ok, "PBM format should not be loaded")
+   tester:assert(string.match(msg, "unsupported magic number"))
 end
 
 
