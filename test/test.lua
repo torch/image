@@ -1,5 +1,4 @@
 local test = {}
-torch.setdefaulttensortype('torch.DoubleTensor')
 local precision = 1e-4
 local precision_mean = 1e-3
 local precision_std = 1e-1
@@ -521,11 +520,14 @@ end
 
 
 function image.test(tests, seed)
+   local defaultTensorType = torch.getdefaulttensortype()
+   torch.setdefaulttensortype('torch.DoubleTensor')
    seed = seed or os.time()
    print('seed: ', seed)
    math.randomseed(seed)
    tester = torch.Tester()
    tester:add(test)
    tester:run(tests)
+   torch.setdefaulttensortype(defaultTensorType)
    return tester
 end
