@@ -1385,6 +1385,10 @@ local function display(...)
          else
             w = w or qtwidget.newwindow(x,y,legend)
          end
+         if w.window and not w.window.visible then
+            -- make sure window is visible
+            w.window.visible = true
+         end
          if w.isclosure then
             -- window was created with gui, just update closure
             local closure = w
