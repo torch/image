@@ -2241,4 +2241,15 @@ function image.dilate(im,kern,pad)
    return conv:gt(0):typeAs(im)
 end
 
+--- Draw a rectangle
+function image.rectangle(img,x1,y1,x2,y2,thickness,rgb)
+   local thickness = thickness or 1
+   local rgb = rgb or {1.0,0.0,0.0}
+   -- Draw
+   img.image.fill_rectangle(img,x1-thickness/2,y1+thickness/2,x1+thickness/2,y2-thickness/2,unpack(rgb))
+   img.image.fill_rectangle(img,x1-thickness/2,y1-thickness/2,x2+thickness/2,y1+thickness/2,unpack(rgb))
+   img.image.fill_rectangle(img,x2-thickness/2,y1+thickness/2,x2+thickness/2,y2-thickness/2,unpack(rgb))
+   img.image.fill_rectangle(img,x1-thickness/2,y2-thickness/2,x2+thickness/2,y2+thickness/2,unpack(rgb))
+end
+
 return image

@@ -9,6 +9,7 @@ images. It contains a wide variety of functions divided into the following categ
   * [Graphical user interfaces](gui.md) like display and window;
   * [Color Space Conversions](colorspace.md) from and to RGB, YUV, Lab, and HSL;
   * [Tensor Constructors](tensorconstruct.md) for creating Lenna, Fabio and Gaussian and Laplacian kernels;
+  * [Drawing](drawing.md) basic geometrical figures;
 
 Note that unless speficied otherwise, this package deals with images of size 
 `nChannel x height x width`.
