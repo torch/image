@@ -1879,7 +1879,7 @@ function image.rgb2nrgb(...)
 end
 
 ----------------------------------------------------------------------
--- image.y2yet(image)
+-- image.y2jet(image)
 -- Converts a L-levels (1-L) greyscale image into a jet heat-map
 --
 function image.y2jet(...)
@@ -1896,9 +1896,6 @@ function image.y2jet(...)
       error('Invalid input for image.y2jet()')
    end
 
-   -- just use double
-   if torch.type(input) ~= 'torch.DoubleTensor' then input = input:double() end
-
    -- accept 3D grayscale
    if input:dim() == 3 and input:size(1) == 1 then
       input = input.new(input):resize(input:size(2), input:size(3))
@@ -1912,7 +1909,16 @@ function image.y2jet(...)
    local output = output or input.new()
    local L = input:max()
 
-   local colorMap = image.jetColormap(L):typeAs(input)
+   local colorMap = image.jetColormap(L)
+   if torch.type(input) == 'torch.ByteTensor' then
+     colorMap = colorMap:mul(255):round()
+     colorMap[torch.lt(colorMap, 0)] = 0
+     colorMap[torch.gt(colorMap, 255)] = 255
+     colorMap = colorMap:byte()
+   else
+     colorMap = colorMap:typeAs(input)
+   end
+
    input.image.colorize(output, input-1, colorMap)
 
    return output

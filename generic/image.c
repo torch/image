@@ -15,12 +15,20 @@
 #define M_PI    3.14159265358979323846
 #endif
 
+#undef temp_t
+#if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
+#define temp_t real
+#else
+#define temp_t float
+#endif
 
-static inline real image_(FromDouble)(double x) {
-  #ifdef TH_REAL_IS_BYTE
+
+static inline real image_(FromIntermediate)(temp_t x) {
+#ifdef TH_REAL_IS_BYTE
+  x += 0.5;
   if( x <= 0 ) return 0;
   if( x >= 255 ) return 255;
-  #endif
+#endif
   return x;
 }
 
@@ -85,8 +93,9 @@ static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
         long dst_pos = dst_start + di*dst_stride;
         si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
 
-        dst[dst_pos] = (1 - si_f) * src[ src_start + si_i * src_stride ] +
-          si_f * src[ src_start + (si_i + 1) * src_stride ];
+        dst[dst_pos] = image_(FromIntermediate)(
+            (1 - si_f) * src[ src_start + si_i * src_stride ] +
+            si_f * src[ src_start + (si_i + 1) * src_stride ]);
       }
     }
 
@@ -116,7 +125,7 @@ static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
             acc += si1_f * src[ src_start + si1_i*src_stride ];
             n += si1_f;
           }
-        dst[ dst_start + di*dst_stride ] = acc / n;
+        dst[ dst_start + di*dst_stride ] = image_(FromIntermediate)(acc / n);
         si0_i = si1_i; si0_f = si1_f;
       }
   }
@@ -128,15 +137,16 @@ static void image_(Main_scaleLinear_rowcol)(THTensor *Tsrc,
 }
 
 
-static inline real image_(Main_cubicInterpolate)(double p0, double p1,
-                                                 double p2, double p3,
-                                                 double x) {
-  double a0 = p1;
-  double a1 = p2 - p0;
-  double a2 = 2 * p0 - 5 * p1 + 4 * p2 - p3;
-  double a3 = 3 * (p1 - p2) + p3 - p0;
-  double v = a0 + 0.5 * x * (a1 + x * (a2 + x * a3));
-  return image_(FromDouble)(v);
+static inline temp_t image_(Main_cubicInterpolate)(temp_t p0,
+                                                   temp_t p1,
+                                                   temp_t p2,
+                                                   temp_t p3,
+                                                   temp_t x) {
+  temp_t a0 = p1;
+  temp_t a1 = p2 - p0;
+  temp_t a2 = 2 * p0 - 5 * p1 + 4 * p2 - p3;
+  temp_t a3 = 3 * (p1 - p2) + p3 - p0;
+  return a0 + 0.5 * x * (a1 + x * (a2 + x * a3));
 }
 
 
@@ -170,10 +180,10 @@ static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
       long dst_pos = dst_start + di*dst_stride;
       si_f = di * scale; si_i = (long)si_f; si_f -= si_i;
 
-      double p0;
-      double p1 = src[ src_start + si_i * src_stride ];
-      double p2 = src[ src_start + (si_i + 1) * src_stride ];
-      double p3;
+      temp_t p0;
+      temp_t p1 = src[ src_start + si_i * src_stride ];
+      temp_t p2 = src[ src_start + (si_i + 1) * src_stride ];
+      temp_t p3;
       if (si_i > 0) {
         p0 = src[ src_start + (si_i - 1) * src_stride ];
       } else {
@@ -185,7 +195,8 @@ static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
         p3 = 2 * p2 - p1;
       }
 
-      dst[dst_pos] = image_(Main_cubicInterpolate)(p0, p1, p2, p3, si_f);
+      temp_t value = image_(Main_cubicInterpolate)(p0, p1, p2, p3, si_f);
+      dst[dst_pos] = image_(FromIntermediate)(value);
     }
 
     dst[ dst_start + (dst_len - 1) * dst_stride ] =
@@ -383,14 +394,14 @@ static int image_(Main_scaleSimple)(lua_State *L)
       if(Tsrc->nDimension==2)
         {
           val=src[ii*src_stride2+jj*src_stride1];
-          dst[i*dst_stride2+j*dst_stride1] = val;
+          dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
         }
       else
         {
           for(k=0;k<src_depth;k++)
             {
               val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
-              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
             }
         }
     }
@@ -475,7 +486,7 @@ static int image_(Main_rotate)(lua_State *L)
         {
           if(val==-1)
             val=src[ii*src_stride2+jj*src_stride1];
-          dst[i*dst_stride2+j*dst_stride1] = val;
+          dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
         }
       else
         {
@@ -484,7 +495,7 @@ static int image_(Main_rotate)(lua_State *L)
             {
               if(do_copy)
                 val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
-              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
             }
         }
     }
@@ -549,7 +560,7 @@ static int image_(Main_rotateBilinear)(lua_State *L)
     jd=j;
     for(i = 0; i < dst_width; i++) {
       float val = -1;
-      real ri, rj, wi, wj;
+      temp_t ri, rj, wi, wj;
       id= i;
       ri = cos(theta)*(id-xc)-sin(theta)*(jd-yc);
       rj = cos(theta)*(jd-yc)+sin(theta)*(id-xc);
@@ -577,7 +588,7 @@ static int image_(Main_rotateBilinear)(lua_State *L)
             + wi * (1.0 - wj) * src[ii_1*src_stride2+jj_0*src_stride1]
             + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1]
             + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1];
-        dst[i*dst_stride2+j*dst_stride1] = val;
+        dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
       } else {
         int do_copy=0; if(val==-1) do_copy=1;
         for(k=0;k<src_depth;k++) {
@@ -587,7 +598,7 @@ static int image_(Main_rotateBilinear)(lua_State *L)
               + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1+k*src_stride0]
               + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1+k*src_stride0];
           }
-          dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+          dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
         }
       }
     }
@@ -672,7 +683,7 @@ static int image_(Main_polar)(lua_State *L)
             {
                 if(val==-1)
                     val=src[ii*src_stride2+jj*src_stride1];
-                dst[i*dst_stride2+j*dst_stride1] = val;
+                dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
             }
             else
             {
@@ -681,7 +692,7 @@ static int image_(Main_polar)(lua_State *L)
                 {
                     if(do_copy)
                         val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
-                    dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                    dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                 }
             }
         }
@@ -750,7 +761,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
         a = (2 * M_PI * jd) / (float) dst_height;     // current angle
         for(i = 0; i < dst_width; i++) {              // radius loop
             float val = -1;
-            real ri, rj, wi, wj;
+            temp_t ri, rj, wi, wj;
             id = (float) i;
             r = (m * id) / (float) dst_width;         // current distance
 
@@ -775,7 +786,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
                 {
                     if(val==-1)
                         val=src[ii_0*src_stride2+jj_0*src_stride1];
-                    dst[i*dst_stride2+j*dst_stride1] = val;
+                    dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
                 }
                 else
                 {
@@ -784,7 +795,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
                     {
                         if(do_copy)
                             val=src[ii_0*src_stride2+jj_0*src_stride1+k*src_stride0];
-                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                     }
                 }
             }
@@ -797,7 +808,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
                         + wi * (1.0 - wj) * src[ii_1*src_stride2+jj_0*src_stride1]
                         + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1]
                         + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1];
-                    dst[i*dst_stride2+j*dst_stride1] = val;
+                    dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
                 } else {
                     int do_copy=0; if(val==-1) do_copy=1;
                     for(k=0;k<src_depth;k++) {
@@ -807,7 +818,7 @@ static int image_(Main_polarBilinear)(lua_State *L)
                             + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1+k*src_stride0]
                             + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1+k*src_stride0];
                         }
-                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                     }
                 }
             }
@@ -895,7 +906,7 @@ static int image_(Main_logPolar)(lua_State *L)
             {
                 if(val==-1)
                     val=src[ii*src_stride2+jj*src_stride1];
-                dst[i*dst_stride2+j*dst_stride1] = val;
+                dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
             }
             else
             {
@@ -904,7 +915,7 @@ static int image_(Main_logPolar)(lua_State *L)
                 {
                     if(do_copy)
                         val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
-                    dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                    dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                 }
             }
         }
@@ -974,7 +985,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
         a = (2 * M_PI * jd) / (float) dst_height;     // current angle
         for(i = 0; i < dst_width; i++) {              // radius loop
             float val = -1;
-            real ri, rj, wi, wj;
+            float ri, rj, wi, wj;
             id = (float) i;
 
             r = exp(id * fw);
@@ -1000,7 +1011,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
                 {
                     if(val==-1)
                         val=src[ii_0*src_stride2+jj_0*src_stride1];
-                    dst[i*dst_stride2+j*dst_stride1] = val;
+                    dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
                 }
                 else
                 {
@@ -1009,7 +1020,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
                     {
                         if(do_copy)
                             val=src[ii_0*src_stride2+jj_0*src_stride1+k*src_stride0];
-                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                     }
                 }
             }
@@ -1022,7 +1033,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
                         + wi * (1.0 - wj) * src[ii_1*src_stride2+jj_0*src_stride1]
                         + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1]
                         + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1];
-                    dst[i*dst_stride2+j*dst_stride1] = val;
+                    dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
                 } else {
                     int do_copy=0; if(val==-1) do_copy=1;
                     for(k=0;k<src_depth;k++) {
@@ -1032,7 +1043,7 @@ static int image_(Main_logPolarBilinear)(lua_State *L)
                             + (1.0 - wi) * wj * src[ii_0*src_stride2+jj_1*src_stride1+k*src_stride0]
                             + wi * wj * src[ii_1*src_stride2+jj_1*src_stride1+k*src_stride0];
                         }
-                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+                        dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
                     }
                 }
             }
@@ -1097,14 +1108,14 @@ static int image_(Main_cropNoScale)(lua_State *L)
       if(Tsrc->nDimension==2)
         {
           val=src[ii*src_stride2+jj*src_stride1];
-          dst[i*dst_stride2+j*dst_stride1] = val;
+          dst[i*dst_stride2+j*dst_stride1] = image_(FromIntermediate)(val);
         }
       else
         {
           for(k=0;k<src_depth;k++)
             {
               val=src[ii*src_stride2+jj*src_stride1+k*src_stride0];
-              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = val;
+              dst[i*dst_stride2+j*dst_stride1+k*dst_stride0] = image_(FromIntermediate)(val);
             }
         }
     }
@@ -1171,12 +1182,15 @@ static int image_(Main_translate)(lua_State *L)
 }
 
 static int image_(Main_saturate)(lua_State *L) {
+#ifdef TH_REAL_IS_BYTE
+  // Noop since necessarily constrained to [0, 255].
+#else
   THTensor *input = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *output = input;
 
   TH_TENSOR_APPLY2(real, output, real, input,                       \
                    *output_data = (*input_data < 0) ? 0 : (*input_data > 1) ? 1 : *input_data;)
-
+#endif
   return 1;
 }
 
@@ -1191,26 +1205,27 @@ int image_(Main_rgb2hsl)(lua_State *L) {
   THTensor *hsl = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
-  real r,g,b,h,s,l;
+  temp_t r, g, b, h, s, l;
   for (y=0; y<rgb->size[1]; y++) {
     for (x=0; x<rgb->size[2]; x++) {
       // get Rgb
       r = THTensor_(get3d)(rgb, 0, y, x);
       g = THTensor_(get3d)(rgb, 1, y, x);
       b = THTensor_(get3d)(rgb, 2, y, x);
+#ifdef TH_REAL_IS_BYTE
+      r /= 255;
+      g /= 255;
+      b /= 255;
+#endif
 
-      real mx = max(max(r, g), b);
-      real mn = min(min(r, g), b);
-      h = (mx + mn) / 2;
-      s = h;
-      l = h;
-
+      temp_t mx = max(max(r, g), b);
+      temp_t mn = min(min(r, g), b);
       if(mx == mn) {
         h = 0; // achromatic
         s = 0;
+        l = mx;
       } else {
-        real d = mx - mn;
-        s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+        temp_t d = mx - mn;
         if (mx == r) {
           h = (g - b) / d + (g < b ? 6 : 0);
         } else if (mx == g) {
@@ -1219,19 +1234,26 @@ int image_(Main_rgb2hsl)(lua_State *L) {
           h = (r - g) / d + 4;
         }
         h /= 6;
+        l = (mx + mn) / 2;
+        s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
       }
 
       // set hsl
-      THTensor_(set3d)(hsl, 0, y, x, h);
-      THTensor_(set3d)(hsl, 1, y, x, s);
-      THTensor_(set3d)(hsl, 2, y, x, l);
+#ifdef TH_REAL_IS_BYTE
+      h *= 255;
+      s *= 255;
+      l *= 255;
+#endif
+      THTensor_(set3d)(hsl, 0, y, x, image_(FromIntermediate)(h));
+      THTensor_(set3d)(hsl, 1, y, x, image_(FromIntermediate)(s));
+      THTensor_(set3d)(hsl, 2, y, x, image_(FromIntermediate)(l));
     }
   }
   return 0;
 }
 
 // helper
-static inline real image_(hue2rgb)(real p, real q, real t) {
+static inline temp_t image_(hue2rgb)(temp_t p, temp_t q, temp_t t) {
   if (t < 0.) t += 1;
   if (t > 1.) t -= 1;
   if (t < 1./6)
@@ -1255,13 +1277,18 @@ int image_(Main_hsl2rgb)(lua_State *L) {
   THTensor *rgb = luaT_checkudata(L, 2, torch_Tensor);
 
   int y,x;
-  real r,g,b,h,s,l;
+  temp_t r, g, b, h, s, l;
   for (y=0; y<hsl->size[1]; y++) {
     for (x=0; x<hsl->size[2]; x++) {
       // get hsl
       h = THTensor_(get3d)(hsl, 0, y, x);
       s = THTensor_(get3d)(hsl, 1, y, x);
       l = THTensor_(get3d)(hsl, 2, y, x);
+#ifdef TH_REAL_IS_BYTE
+      h /= 255;
+      s /= 255;
+      l /= 255;
+#endif
 
       if(s == 0) {
         // achromatic
@@ -1269,20 +1296,25 @@ int image_(Main_hsl2rgb)(lua_State *L) {
         g = l;
         b = l;
       } else {
-        real q = (l < 0.5) ? (l * (1 + s)) : (l + s - l * s);
-        real p = 2 * l - q;
-        real hr = h + 1./3;
-        real hg = h;
-        real hb = h - 1./3;
+        temp_t q = (l < 0.5) ? (l * (1 + s)) : (l + s - l * s);
+        temp_t p = 2 * l - q;
+        temp_t hr = h + 1./3;
+        temp_t hg = h;
+        temp_t hb = h - 1./3;
         r = image_(hue2rgb)(p, q, hr);
         g = image_(hue2rgb)(p, q, hg);
         b = image_(hue2rgb)(p, q, hb);
       }
 
       // set rgb
-      THTensor_(set3d)(rgb, 0, y, x, r);
-      THTensor_(set3d)(rgb, 1, y, x, g);
-      THTensor_(set3d)(rgb, 2, y, x, b);
+#ifdef TH_REAL_IS_BYTE
+      r *= 255;
+      g *= 255;
+      b *= 255;
+#endif
+      THTensor_(set3d)(rgb, 0, y, x, image_(FromIntermediate)(r));
+      THTensor_(set3d)(rgb, 1, y, x, image_(FromIntermediate)(g));
+      THTensor_(set3d)(rgb, 2, y, x, image_(FromIntermediate)(b));
     }
   }
   return 0;
@@ -1298,26 +1330,29 @@ int image_(Main_rgb2hsv)(lua_State *L) {
   THTensor *rgb = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *hsv = luaT_checkudata(L, 2, torch_Tensor);
 
-  int y,x;
-  real r,g,b,h,s,v;
+  int y, x;
+  temp_t r, g, b, h, s, v;
   for (y=0; y<rgb->size[1]; y++) {
     for (x=0; x<rgb->size[2]; x++) {
       // get Rgb
       r = THTensor_(get3d)(rgb, 0, y, x);
       g = THTensor_(get3d)(rgb, 1, y, x);
       b = THTensor_(get3d)(rgb, 2, y, x);
+#ifdef TH_REAL_IS_BYTE
+      r /= 255;
+      g /= 255;
+      b /= 255;
+#endif
 
-      real mx = max(max(r, g), b);
-      real mn = min(min(r, g), b);
-      h = mx;
-      v = mx;
-
-      real d = mx - mn;
-      s = (mx==0) ? 0 : d/mx;
-
+      temp_t mx = max(max(r, g), b);
+      temp_t mn = min(min(r, g), b);
       if(mx == mn) {
-        h = 0; // achromatic
+        // achromatic
+        h = 0;
+        s = 0;
+        v = mx;
       } else {
+        temp_t d = mx - mn;
         if (mx == r) {
           h = (g - b) / d + (g < b ? 6 : 0);
         } else if (mx == g) {
@@ -1326,12 +1361,19 @@ int image_(Main_rgb2hsv)(lua_State *L) {
           h = (r - g) / d + 4;
         }
         h /= 6;
+        s = d / mx;
+        v = mx;
       }
 
       // set hsv
-      THTensor_(set3d)(hsv, 0, y, x, h);
-      THTensor_(set3d)(hsv, 1, y, x, s);
-      THTensor_(set3d)(hsv, 2, y, x, v);
+#ifdef TH_REAL_IS_BYTE
+      h *= 255;
+      s *= 255;
+      v *= 255;
+#endif
+      THTensor_(set3d)(hsv, 0, y, x, image_(FromIntermediate)(h));
+      THTensor_(set3d)(hsv, 1, y, x, image_(FromIntermediate)(s));
+      THTensor_(set3d)(hsv, 2, y, x, image_(FromIntermediate)(v));
     }
   }
   return 0;
@@ -1347,20 +1389,25 @@ int image_(Main_hsv2rgb)(lua_State *L) {
   THTensor *hsv = luaT_checkudata(L, 1, torch_Tensor);
   THTensor *rgb = luaT_checkudata(L, 2, torch_Tensor);
 
-  int y,x;
-  real r,g,b,h,s,v;
+  int y, x;
+  temp_t r, g, b, h, s, v;
   for (y=0; y<hsv->size[1]; y++) {
     for (x=0; x<hsv->size[2]; x++) {
       // get hsv
       h = THTensor_(get3d)(hsv, 0, y, x);
       s = THTensor_(get3d)(hsv, 1, y, x);
       v = THTensor_(get3d)(hsv, 2, y, x);
+#ifdef TH_REAL_IS_BYTE
+      h /= 255;
+      s /= 255;
+      v /= 255;
+#endif
 
       int i = floor(h*6.);
-      real f = h*6-i;
-      real p = v*(1-s);
-      real q = v*(1-f*s);
-      real t = v*(1-(1-f)*s);
+      temp_t f = h*6-i;
+      temp_t p = v*(1-s);
+      temp_t q = v*(1-f*s);
+      temp_t t = v*(1-(1-f)*s);
 
       switch (i % 6) {
       case 0: r = v, g = t, b = p; break;
@@ -1373,12 +1420,36 @@ int image_(Main_hsv2rgb)(lua_State *L) {
       }
 
       // set rgb
-      THTensor_(set3d)(rgb, 0, y, x, r);
-      THTensor_(set3d)(rgb, 1, y, x, g);
-      THTensor_(set3d)(rgb, 2, y, x, b);
+#ifdef TH_REAL_IS_BYTE
+      r *= 255;
+      g *= 255;
+      b *= 255;
+#endif
+      THTensor_(set3d)(rgb, 0, y, x, image_(FromIntermediate)(r));
+      THTensor_(set3d)(rgb, 1, y, x, image_(FromIntermediate)(g));
+      THTensor_(set3d)(rgb, 2, y, x, image_(FromIntermediate)(b));
     }
   }
   return 0;
+}
+
+#ifndef TH_REAL_IS_BYTE
+/*
+ * Convert an sRGB color channel to a linear sRGB color channel.
+ */
+static inline real image_(gamma_expand_sRGB)(real nonlinear)
+{
+  return (nonlinear <= 0.04045) ? (nonlinear / 12.92)
+                                : (pow((nonlinear+0.055)/1.055, 2.4));
+}
+
+/*
+ * Convert a linear sRGB color channel to a sRGB color channel.
+ */
+static inline real image_(gamma_compress_sRGB)(real linear)
+{
+  return (linear <= 0.0031308) ? (12.92 * linear)
+                               : (1.055 * pow(linear, 1.0/2.4) - 0.055);
 }
 
 /*
@@ -1403,9 +1474,9 @@ int image_(Main_rgb2lab)(lua_State *L) {
   for (y=0; y<rgb->size[1]; y++) {
     for (x=0; x<rgb->size[2]; x++) {
       // get RGB
-      r = gamma_expand_sRGB(THTensor_(get3d)(rgb, 0, y, x));
-      g = gamma_expand_sRGB(THTensor_(get3d)(rgb, 1, y, x));
-      b = gamma_expand_sRGB(THTensor_(get3d)(rgb, 2, y, x));
+      r = image_(gamma_expand_sRGB)(THTensor_(get3d)(rgb, 0, y, x));
+      g = image_(gamma_expand_sRGB)(THTensor_(get3d)(rgb, 1, y, x));
+      b = image_(gamma_expand_sRGB)(THTensor_(get3d)(rgb, 2, y, x));
 
       // sRGB to XYZ
       double X = 0.412453 * r + 0.357580 * g + 0.180423 * b;
@@ -1480,13 +1551,22 @@ int image_(Main_lab2rgb)(lua_State *L) {
       b =  0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
 
       // set rgb
-      THTensor_(set3d)(rgb, 0, y, x, gamma_compress_sRGB(r));
-      THTensor_(set3d)(rgb, 1, y, x, gamma_compress_sRGB(g));
-      THTensor_(set3d)(rgb, 2, y, x, gamma_compress_sRGB(b));
+      THTensor_(set3d)(rgb, 0, y, x, image_(gamma_compress_sRGB(r)));
+      THTensor_(set3d)(rgb, 1, y, x, image_(gamma_compress_sRGB(g)));
+      THTensor_(set3d)(rgb, 2, y, x, image_(gamma_compress_sRGB(b)));
     }
   }
   return 0;
 }
+#else
+int image_(Main_rgb2lab)(lua_State *L) {
+  return luaL_error(L, "image.rgb2lab: not supported for torch.ByteTensor");
+}
+
+int image_(Main_lab2rgb)(lua_State *L) {
+  return luaL_error(L, "image.lab2rgb: not supported for torch.ByteTensor");
+}
+#endif // TH_REAL_IS_BYTE
 
 /* Vertically flip an image */
 int image_(Main_vflip)(lua_State *L) {
@@ -1657,18 +1737,18 @@ int image_(Main_flip)(lua_State *L) {
 }
 
 static inline void image_(Main_bicubicInterpolate)(
-  real* src, long* is, long* size, real ix, real iy,
+  real* src, long* is, long* size, temp_t ix, temp_t iy,
   real* dst, long *os,
   real pad_value, int bounds_check)
 {
   int i, j, k;
-  real arr[4], p[4];
+  temp_t arr[4], p[4];
 
   // Calculate fractional and integer components
   long x_pix = floor(ix);
   long y_pix = floor(iy);
-  real dx = ix - (real)x_pix;
-  real dy = iy - (real)y_pix;
+  temp_t dx = ix - x_pix;
+  temp_t dy = iy - y_pix;
 
   for (k=0; k<size[0]; k++) {
     #pragma unroll
@@ -1689,7 +1769,8 @@ static inline void image_(Main_bicubicInterpolate)(
       arr[i] = image_(Main_cubicInterpolate)(p[0], p[1], p[2], p[3], dx);
     }
 
-    dst[k * os[0]] = image_(Main_cubicInterpolate)(arr[0], arr[1], arr[2], arr[3], dy);
+    temp_t value = image_(Main_cubicInterpolate)(arr[0], arr[1], arr[2], arr[3], dy);
+    dst[k * os[0]] = image_(FromIntermediate)(value);
   }
 }
 
@@ -1728,8 +1809,8 @@ int image_(Main_warp)(lua_State *L) {
   for (y=0; y<height; y++) {
     for (x=0; x<width; x++) {
       // subpixel position:
-      real flow_y = flow_data[ 0*fs[0] + y*fs[1] + x*fs[2] ];
-      real flow_x = flow_data[ 1*fs[0] + y*fs[1] + x*fs[2] ];
+      float flow_y = flow_data[ 0*fs[0] + y*fs[1] + x*fs[2] ];
+      float flow_x = flow_data[ 1*fs[0] + y*fs[1] + x*fs[2] ];
       float iy = offset_mode*y + flow_y;
       float ix = offset_mode*x + flow_x;
 
@@ -1764,18 +1845,18 @@ int image_(Main_warp)(lua_State *L) {
             long iy_se = iy_nw + 1;
 
             // get surfaces to each neighbor:
-            real nw = ((real)(ix_se-ix))*(iy_se-iy);
-            real ne = ((real)(ix-ix_sw))*(iy_sw-iy);
-            real sw = ((real)(ix_ne-ix))*(iy-iy_ne);
-            real se = ((real)(ix-ix_nw))*(iy-iy_nw);
+            temp_t nw = (ix_se-ix)*(iy_se-iy);
+            temp_t ne = (ix-ix_sw)*(iy_sw-iy);
+            temp_t sw = (ix_ne-ix)*(iy-iy_ne);
+            temp_t se = (ix-ix_nw)*(iy-iy_nw);
 
             // weighted sum of neighbors:
             for (k=0; k<channels; k++) {
-              dst_data[ k*os[0] + y*os[1] + x*os[2] ] =
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = image_(FromIntermediate)(
                   src_data[ k*is[0] +               iy_nw*is[1] +              ix_nw*is[2] ] * nw
                 + src_data[ k*is[0] +               iy_ne*is[1] + MIN(ix_ne,src_width-1)*is[2] ] * ne
                 + src_data[ k*is[0] + MIN(iy_sw,src_height-1)*is[1] +              ix_sw*is[2] ] * sw
-                + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se;
+                + src_data[ k*is[0] + MIN(iy_se,src_height-1)*is[1] + MIN(ix_se,src_width-1)*is[2] ] * se);
             }
           }
           break;
@@ -1860,14 +1941,14 @@ int image_(Main_warp)(lua_State *L) {
             }
 
             for (k=0; k<channels; k++) {
-              real result = 0;
+              temp_t result = 0;
               for (u=x_pix-rad+1, i=0; u<=x_pix+rad; u++, i++) {
                 long curu = MAX(MIN((long)(src_width-1), u), 0);
                 for (v=y_pix-rad+1, j=0; v<=y_pix+rad; v++, j++) {
                   long curv = MAX(MIN((long)(src_height-1), v), 0);
-                  real Suv = src_data[k * is[0] + curv * is[1] + curu * is[2]];
+                  temp_t Suv = src_data[k * is[0] + curv * is[1] + curu * is[2]];
 
-                  real weight = (real)(Lu[i] * Lv[j]);
+                  temp_t weight = Lu[i] * Lv[j];
                   result += (Suv * weight);
                 }
               }
@@ -1877,7 +1958,7 @@ int image_(Main_warp)(lua_State *L) {
               // Again,  I assume that since the image is stored as reals we
               // don't have to worry about clamping to min and max int (to
               // prevent over or underflow)
-              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = result;
+              dst_data[ k*os[0] + y*os[1] + x*os[2] ] = image_(FromIntermediate)(result);
             }
           }
           break;
@@ -1890,6 +1971,7 @@ int image_(Main_warp)(lua_State *L) {
   return 0;
 }
 
+
 int image_(Main_gaussian)(lua_State *L) {
   THTensor *dst = luaT_checkudata(L, 1, torch_Tensor);
   long width = dst->size[1];
@@ -1898,40 +1980,40 @@ int image_(Main_gaussian)(lua_State *L) {
 
   real *dst_data = THTensor_(data)(dst);
 
-  real amplitude = (real)lua_tonumber(L, 2);
+  temp_t amplitude = (temp_t)lua_tonumber(L, 2);
   int normalize = (int)lua_toboolean(L, 3);
-  real sigma_u = (real)lua_tonumber(L, 4);
-  real sigma_v = (real)lua_tonumber(L, 5);
-  real mean_u = (real)lua_tonumber(L, 6) * (real)width + (real)0.5;
-  real mean_v = (real)lua_tonumber(L, 7) * (real)height + (real)0.5;
+  temp_t sigma_u = (temp_t)lua_tonumber(L, 4);
+  temp_t sigma_v = (temp_t)lua_tonumber(L, 5);
+  temp_t mean_u = (temp_t)lua_tonumber(L, 6) * width + 0.5;
+  temp_t mean_v = (temp_t)lua_tonumber(L, 7) * height + 0.5;
 
   // Precalculate 1/(sigma*size) for speed (for some stupid reason the pragma
   // omp declaration prevents gcc from optimizing the inside loop on my macine:
   // verified by checking the assembly output)
-  real over_sigmau = (real)1.0 / (sigma_u * (real)width);
-  real over_sigmav = (real)1.0 / (sigma_v * (real)height);
+  temp_t over_sigmau = 1.0 / (sigma_u * width);
+  temp_t over_sigmav = 1.0 / (sigma_v * height);
 
   long v, u;
-  real du, dv;
+  temp_t du, dv;
 #pragma omp parallel for private(v, u, du, dv)
   for (v = 0; v < height; v++) {
     for (u = 0; u < width; u++) {
-      du = ((real)u + 1 - mean_u) * over_sigmau;
-      dv = ((real)v + 1 - mean_v) * over_sigmav;
-      dst_data[ v*os[0] + u*os[1] ] = amplitude *
-        exp(-((du*du*0.5) + (dv*dv*0.5)));
+      du = (u + 1 - mean_u) * over_sigmau;
+      dv = (v + 1 - mean_v) * over_sigmav;
+      temp_t value = amplitude * exp(-0.5 * (du*du + dv*dv));
+      dst_data[ v*os[0] + u*os[1] ] = image_(FromIntermediate)(value);
     }
   }
 
   if (normalize) {
-    real sum = 0;
+    temp_t sum = 0;
     // We could parallelize this, but it's more trouble than it's worth
     for(v = 0; v < height; v++) {
       for(u = 0; u < width; u++) {
         sum += dst_data[ v*os[0] + u*os[1] ];
       }
     }
-    real one_over_sum = 1.0 / sum;
+    temp_t one_over_sum = 1.0 / sum;
 #pragma omp parallel for private(v, u)
     for(v = 0; v < height; v++) {
       for(u = 0; u < width; u++) {
@@ -1957,7 +2039,8 @@ int image_(Main_colorize)(lua_State *L) {
   long width = input->size[1];
 
   // generate color map if not given
-  if (THTensor_(nElement)(colormap) == 0) {
+  int noColorMap = THTensor_(nElement)(colormap) == 0;
+  if (noColorMap) {
     THTensor_(resize2d)(colormap, width*height, 3);
     THTensor_(fill)(colormap, -1);
   }
@@ -1971,14 +2054,13 @@ int image_(Main_colorize)(lua_State *L) {
   for (y = 0; y < height; y++) {
     for (x = 0; x < width; x++) {
       int id = THTensor_(get2d)(input, y, x);
-      real check = THTensor_(get2d)(colormap, id, 0);
-#ifdef TH_REAL_IS_BYTE
-      if (check == 255) {
-#else
-      if (check == -1) {
-#endif
+      if (noColorMap) {
         for (k = 0; k < channels; k++) {
-          THTensor_(set2d)(colormap, id, k, ((float)rand()/(float)RAND_MAX));
+          temp_t value = (float)rand() / (float)RAND_MAX;
+#ifdef TH_REAL_IS_BYTE
+          value *= 255;
+#endif
+          THTensor_(set2d)(colormap, id, k, image_(FromIntermediate)(value));
         }
       }
       for (k = 0; k < channels; k++) {
@@ -2003,8 +2085,8 @@ int image_(Main_rgb2y)(lua_State *L) {
   luaL_argcheck(L, rgb->size[2] == yim->size[1], 2,
                 "image.rgb2y: src and dst not of same width");
 
-  int y,x;
-  real r,g,b,yc;
+  int y, x;
+  temp_t r, g, b, yc;
   const int height = rgb->size[1];
   const int width = rgb->size[2];
   for (y=0; y<height; y++) {
@@ -2014,10 +2096,8 @@ int image_(Main_rgb2y)(lua_State *L) {
       g = THTensor_(get3d)(rgb, 1, y, x);
       b = THTensor_(get3d)(rgb, 2, y, x);
 
-      yc = (real) ((0.299 * (float) r)
-                   + (0.587 * (float) g)
-                   + (0.114 * (float) b));
-      THTensor_(set2d)(yim, y, x, yc);
+      yc = 0.299 * r + 0.587 * g + 0.114 * b;
+      THTensor_(set2d)(yim, y, x, image_(FromIntermediate)(yc));
     }
   }
   return 0;
@@ -2058,4 +2138,4 @@ void image_(Main_init)(lua_State *L)
   luaT_registeratname(L, image_(Main__), "image");
 }
 
-#endif
+#endif // TH_GENERIC_FILE
