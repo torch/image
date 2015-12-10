@@ -1507,6 +1507,7 @@ int image_(Main_vflip)(lua_State *L) {
   if (dst_data != src_data) {
       /* not in-place.
        * this branch could be removed by first duplicating the src into dst then doing inplace */
+#pragma omp parallel for private(k, x, y)
       for(k=0; k<channels; k++) {
           for (y=0; y<height; y++) {
             for (x=0; x<width; x++) {
@@ -1554,6 +1555,7 @@ int image_(Main_hflip)(lua_State *L) {
   if (dst_data != src_data) {
       /* not in-place.
        * this branch could be removed by first duplicating the src into dst then doing inplace */
+#pragma omp parallel for private(k, x, y)
       for(k=0; k<channels; k++) {
           for (y=0; y<height; y++) {
               for (x=0; x<width; x++) {
@@ -1722,6 +1724,7 @@ int image_(Main_warp)(lua_State *L) {
 
   // resample
   long k,x,y,v,u,i,j;
+#pragma omp parallel for private(k, x, y, v, u, i, j)
   for (y=0; y<height; y++) {
     for (x=0; x<width; x++) {
       // subpixel position:
