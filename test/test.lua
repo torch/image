@@ -14,6 +14,8 @@ local function assertByteTensorEq(actual, expected, rcond, msg)
   tester:assertTensorEq(actual:double(), expected:double(), rcond, msg)
 end
 
+local unpack = unpack and unpack or table.unpack -- lua52 compatibility
+
 ----------------------------------------------------------------------
 -- Flip test
 --
