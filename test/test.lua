@@ -2,19 +2,42 @@ local test = {}
 local precision = 1e-4
 local precision_mean = 1e-3
 local precision_std = 1e-1
--- Specific precision for Lab conversion
-local Lab_precision = 1e-4
+
 
 local function getTestImagePath(name)
   return paths.concat(sys.fpath(), 'assets', name)
 end
+
 
 local function assertByteTensorEq(actual, expected, rcond, msg)
   rcond = rcond or 1e-5
   tester:assertTensorEq(actual:double(), expected:double(), rcond, msg)
 end
 
+
+local function toByteTensor(x)
+  local y = torch.round(x):byte()
+  y[torch.le(x, 0)] = 0
+  y[torch.ge(x, 255)] = 255
+  return y
+end
+
+
+local function toByteImage(x)
+  return toByteTensor(torch.mul(x, 255))
+end
+
+
+local function testFunctionOnByteTensor(f, msg)
+  local lena = image.lena():float()
+  local expected = toByteImage(f(lena))
+  local actual = f(toByteImage(lena))
+  assertByteTensorEq(actual, expected, nil, msg)
+end
+
+
 local unpack = unpack and unpack or table.unpack -- lua52 compatibility
+
 
 ----------------------------------------------------------------------
 -- Flip test
@@ -142,6 +165,20 @@ function test.gaussian()
    end
 end
 
+
+function test.byteGaussian()
+  local expected = toByteTensor(image.gaussian{
+      amplitude = 1000,
+      tensor = torch.FloatTensor(5, 5),
+  })
+  local actual = image.gaussian{
+      amplitude = 1000,
+      tensor = torch.ByteTensor(5, 5),
+  }
+  assertByteTensorEq(actual, expected)
+end
+
+
 ----------------------------------------------------------------------
 -- Gaussian pyramid test
 --
@@ -210,12 +247,13 @@ end
 function test.bilinearUpscale_ByteTensor()
   local im = torch.ByteTensor{{1, 2},
                               {2, 3}}
-  local expected = torch.ByteTensor{{1, 1, 2},
-                                    {1, 1, 2},
-                                    {2, 2, 3}}
+  local expected = torch.ByteTensor{{1, 2, 2},
+                                    {2, 3, 3},
+                                    {2, 3, 3}}
   local actual = image.scale(im, expected:size(2), expected:size(1))
   assertByteTensorEq(actual, expected)
 end
+
 
 ----------------------------------------------------------------------
 -- Scale test
@@ -378,24 +416,97 @@ end
 
 ----------------------------------------------------------------------
 -- Lab conversion test
---
-function test.TestLabConversionBackAndForth()
-  -- This test breaks if someone removes lena from the repo
-  local imfile = getTestImagePath('lena.jpg')
-  if not paths.filep(imfile) then
-    error(imfile .. ' is missing!')
-  end
+-- These tests break if someone removes lena from the repo
 
-  -- Load lena directly from the filename
-  local img = image.loadJPG(imfile)
 
-  -- Convert to LAB and back to RGB
-  local lab = image.rgb2lab(img)
-  local img2 = image.lab2rgb(lab)
-  -- Compare RGB images
-  tester:assertlt((img - img2):abs():max(), Lab_precision,
-    'RGB <-> LAB conversion produces wrong results! ')
+local function testRoundtrip(forward, backward)
+  local expected = image.lena()
+  local actual = backward(forward(expected))
+  tester:assertTensorEq(actual, expected, 1e-4)
 end
+
+
+function test.rgb2lab()
+  testRoundtrip(image.rgb2lab, image.lab2rgb)
+end
+
+
+function test.rgb2hsv()
+  testRoundtrip(image.rgb2hsv, image.hsv2rgb)
+end
+
+
+function test.rgb2hsl()
+  testRoundtrip(image.rgb2hsl, image.hsl2rgb)
+end
+
+
+function test.rgb2y()
+  local x = torch.FloatTensor{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}:transpose(1, 3)
+  local actual = image.rgb2y(x)
+  local expected = torch.FloatTensor{{0.299, 0.587, 0.114}}
+  tester:assertTensorEq(actual, expected, 1e-5)
+end
+
+
+function test.y2jet()
+  local levels = torch.Tensor{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+  local expected = image.jetColormap(10)
+  local actual = image.y2jet(levels)[{{}, 1, {}}]:t()
+  tester:assertTensorEq(actual, expected, 1e-5)
+end
+
+
+function test.rgb2labByteTensor()
+  local lena = image.lena():byte()
+  tester:assertError(function () image.rgb2lab(lena) end)
+  tester:assertError(function () image.lab2rgb(lena) end)
+end
+
+
+local function testByteTensorRoundtrip(forward, backward, cond, msg)
+  local lena = toByteImage(image.lena())
+  local expected = lena
+  local actual = backward(forward(expected))
+  assertByteTensorEq(actual, expected, cond, msg)
+end
+
+
+function test.toFromByteTensor()
+  local expected = toByteImage(image.lena():float())
+  local actual = toByteImage(expected:float():div(255))
+  assertByteTensorEq(actual, expected, nil, msg)
+end
+
+
+function test.rgb2hsvByteTensor()
+  testFunctionOnByteTensor(image.rgb2hsv, 'image.rgb2hsv error for ByteTensor')
+  testFunctionOnByteTensor(image.hsv2rgb, 'image.hsv2rgb error for ByteTensor')
+  testByteTensorRoundtrip(image.rgb2hsv, image.hsv2rgb, 2,
+                          'image.rgb2hsv roundtrip error for ByteTensor')
+end
+
+
+function test.rgb2hslByteTensor()
+  testFunctionOnByteTensor(image.rgb2hsl, 'image.hsl2rgb error for ByteTensor')
+  testFunctionOnByteTensor(image.hsl2rgb, 'image.rgb2hsl error for ByteTensor')
+  testByteTensorRoundtrip(image.rgb2hsl, image.hsl2rgb, 3,
+                          'image.rgb2hsl roundtrip error for ByteTensor')
+end
+
+
+function test.rgb2yByteTensor()
+  testFunctionOnByteTensor(image.rgb2y, 'image.rgb2y error for ByteTensor')
+end
+
+
+function test.y2jetByteTensor()
+  local levels = torch.Tensor{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+  local expected = toByteImage(image.y2jet(levels))
+  local actual = image.y2jet(levels:byte())
+  assertByteTensorEq(actual, expected, nil)
+end
+
 
 ----------------------------------------------------------------------
 -- PNG test
