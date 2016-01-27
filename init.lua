@@ -269,13 +269,6 @@ local function compressJPG(tensor, quality)
 end
 rawset(image, 'compressJPG', compressJPG)
 
-function image.getJPGsize(filename)
-   if not xlua.require 'libjpeg' then
-      dok.error('libjpeg package not found, please install libjpeg','image.getJPGsize')
-   end
-   return torch.Tensor().libjpeg.size(filename)
-end
-
 local function loadPPM(filename, depth, tensortype)
    require 'libppm'
    local MAXVAL = 255
