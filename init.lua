@@ -466,8 +466,11 @@ local function crop(...)
          x = src.new(endy-starty,endx-startx)
       end
       src.image.cropNoScale(src,x,startx,starty)
-      dst = dst or src.new():resizeAs(x)
-      image.scale(dst,x)
+      if dst then
+         image.scale(dst, x)
+      else
+         dst = x
+      end
    end
    return dst
 end
