@@ -6,6 +6,10 @@
 #include <string.h>
 #include <assert.h>
 
+#if LUA_VERSION_NUM >= 503
+#define luaL_checkint(L,n)      ((int)luaL_checkinteger(L, (n)))
+#endif
+
 #define PNG_DEBUG 3
 #include <png.h>
 

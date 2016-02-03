@@ -2,6 +2,11 @@
 #include <TH.h>
 #include <luaT.h>
 
+#if LUA_VERSION_NUM >= 503
+#define luaL_checklong(L,n)     ((long)luaL_checkinteger(L, (n)))
+#endif
+
+
 #define torch_(NAME) TH_CONCAT_3(torch_, Real, NAME)
 #define torch_Tensor TH_CONCAT_STRING_3(torch., Real, Tensor)
 #define image_(NAME) TH_CONCAT_3(image_, Real, NAME)

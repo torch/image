@@ -4,6 +4,11 @@
 #include <jpeglib.h>
 #include <setjmp.h>
 
+#if LUA_VERSION_NUM >= 503
+#define luaL_checkint(L,n)      ((int)luaL_checkinteger(L, (n)))
+#endif
+
+
 #define torch_(NAME) TH_CONCAT_3(torch_, Real, NAME)
 #define torch_Tensor TH_CONCAT_STRING_3(torch., Real, Tensor)
 #define libjpeg_(NAME) TH_CONCAT_3(libjpeg_, Real, NAME)
