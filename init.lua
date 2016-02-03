@@ -35,6 +35,13 @@ require 'xlua'
 require 'dok'
 require 'libimage'
 
+local startswith = function(str, prefix)
+  return string.find(str, prefix, 1, true) == 1
+end
+
+local magicJPG = string.char(0xff, 0xd8, 0xff)
+local magicPNG = string.char(0x89, 0x50, 0x4e, 0x47)
+
 ----------------------------------------------------------------------
 -- include unit test function
 --
@@ -331,7 +338,30 @@ local function load(filename, depth, tensortype)
                        {type='string', help='type: byte | float | double'}))
       dok.error('missing file name', 'image.load')
    end
-   local ext = string.match(filename,'%.(%a+)$')
+
+   local ext
+
+   local f, err = io.open(filename, 'rb')
+   if not f then
+      error(err)
+   end
+   local hdr = f:read(4) or ''
+   f:close()
+
+   if startswith(hdr, magicJPG) then
+      ext = 'jpg'
+   elseif startswith(hdr, magicPNG) then
+      ext = 'png'
+   elseif hdr:match('^P[25]') then
+      ext = 'pgm'
+   elseif hdr:match('^P[36]') then
+      ext = 'ppm'
+   end
+
+   if not ext then
+      ext = string.match(filename,'%.(%a+)$')
+   end
+
    local tensor
    if image.is_supported(ext) then
       tensor = filetypes[ext].loader(filename, depth, tensortype)
