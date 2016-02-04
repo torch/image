@@ -7,7 +7,7 @@ static int libppm_(Main_load)(lua_State *L)
   const char *filename = luaL_checkstring(L, 1);
   FILE* fp = fopen ( filename, "r" );
   if ( !fp ) {
-    printf ( "Failed to open file '%s'!\n", filename );
+    luaL_error(L, "cannot open file <%s> for reading", filename);
   }
 
   long W,H,C;
@@ -144,7 +144,7 @@ int libppm_(Main_save)(lua_State *L) {
   // open file
   FILE* fp = fopen(filename, "w");
   if ( !fp ) {
-    luaL_error(L, "cannot open file <%s> for reading", filename);
+    luaL_error(L, "cannot open file <%s> for writing", filename);
   }
 
   // write 3 or 1 channel(s) header
