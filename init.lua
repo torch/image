@@ -45,7 +45,7 @@ local magicPNG = string.char(0x89, 0x50, 0x4e, 0x47)
 ----------------------------------------------------------------------
 -- include unit test function
 --
-include('test.lua')
+require 'image.test'
 
 ----------------------------------------------------------------------
 -- types lookups
