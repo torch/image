@@ -21,6 +21,8 @@
 #endif
 #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
 
+#include "font.c"
+
 #include "generic/image.c"
 #include "THGenerateAllTypes.h"
 

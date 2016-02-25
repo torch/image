@@ -34,6 +34,8 @@ IF (WITH_OPENMP)
   ENDIF(OPENMP_FOUND)
 ENDIF (WITH_OPENMP)
 
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+
 SET(src ppm.c)
 ADD_TORCH_PACKAGE(ppm "${src}" "${luasrc}" "Image Processing")
 TARGET_LINK_LIBRARIES(ppm luaT TH)
