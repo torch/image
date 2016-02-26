@@ -2103,6 +2103,114 @@ int image_(Main_rgb2y)(lua_State *L) {
   return 0;
 }
 
+static inline void image_(drawPixel)(THTensor *output, int y, int x,
+                                     int cr, int cg, int cb) {
+#ifdef TH_REAL_IS_BYTE
+  THTensor_(set3d)(output, 0, y, x, cr);
+  THTensor_(set3d)(output, 1, y, x, cg);
+  THTensor_(set3d)(output, 2, y, x, cb);
+#else
+  THTensor_(set3d)(output, 0, y, x, cr / 255);
+  THTensor_(set3d)(output, 1, y, x, cg / 255);
+  THTensor_(set3d)(output, 2, y, x, cb / 255);
+#endif
+}
+static inline void image_(drawChar)(THTensor *output, int x, int y, unsigned char c, int size,
+                                    int cr, int cg, int cb,
+                                    int bg_cr, int bg_cg, int bg_cb) {
+  long channels = output->size[0];
+  long height = output->size[1];
+  long width  = output->size[2];
+
+  /* out of bounds condition, return without drawing */
+  if((x >= width)            || // Clip right
+     (y >= height)           || // Clip bottom
+     ((x + 6 * size - 1) < 0) || // Clip left
+     ((y + 8 * size - 1) < 0))   // Clip top
+    return;
+
+  for(char i = 0; i < 6; i++ ) {
+    unsigned char line;
+    if (i < 5) {
+      line = *(const unsigned char *)(image_ada_font+(c*5) + i);
+    } else {
+      line = 0x0;
+    }
+    for(char j = 0; j < 8; j++, line >>= 1) {
+      if(line & 0x1) {
+        if (size == 1) {
+          image_(drawPixel)(output, y+j, x+i, cr, cg, cb);
+        }
+        else {
+          for (int ii = x+(i*size); ii < x+(i*size) + size; ii++) {
+            for (int jj = y+(j*size); jj < y+(j*size) + size; jj++) {
+              image_(drawPixel)(output, jj, ii, cr, cg, cb);
+            }
+          }
+        }
+      } else if (bg_cr != -1 && bg_cg != -1 && bg_cb != -1) {
+        if (size == 1) {
+          image_(drawPixel)(output, y+j, x+i, bg_cr, bg_cg, bg_cb);
+        } else {
+          for (int ii = x+(i*size); ii < x+(i*size) + size; ii++) {
+            for (int jj = y+(j*size); jj < y+(j*size) + size; jj++) {
+              image_(drawPixel)(output, jj, ii, bg_cr, bg_cg, bg_cb);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+int image_(Main_drawtext)(lua_State *L) {
+  // get args
+  THTensor *output = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);
+  const char* text = lua_tostring(L, 2);
+  long x = luaL_checklong(L, 3);
+  long y = luaL_checklong(L, 4);
+  int size = luaL_checkint(L, 5);
+  int cr = luaL_checkint(L, 6);
+  int cg = luaL_checkint(L, 7);
+  int cb = luaL_checkint(L, 8);
+  int bg_cr = luaL_checkint(L, 9);
+  int bg_cg = luaL_checkint(L, 10);
+  int bg_cb = luaL_checkint(L, 11);
+  int wrap = luaL_checkint(L, 12);
+
+  long len = strlen(text);
+
+  // dims
+  long channels = output->size[0];
+  long height = output->size[1];
+  long width  = output->size[2];
+
+  long cursor_y = y;
+  long cursor_x = x;
+
+  for (long cnt = 0; cnt < len; cnt++) {
+    unsigned char c = text[cnt];
+    if(c == '\n') {
+      cursor_y += size*8;
+      cursor_x  = x;
+    } else if(c == '\r') {
+      // skip em
+    } else {
+      if(wrap && ((cursor_x + size * 6) >= width)) { // Heading off edge?
+        cursor_x  = 0;            // Reset x to zero
+        cursor_y += size * 8; // Advance y one line
+      }
+      image_(drawChar)(output, cursor_x, cursor_y, c, size,
+                       cr, cg, cb,
+                       bg_cr, bg_cg, bg_cb);
+      cursor_x += size * 6;
+    }
+  }
+
+  return 0;
+}
+
+
 static const struct luaL_Reg image_(Main__) [] = {
   {"scaleSimple", image_(Main_scaleSimple)},
   {"scaleBilinear", image_(Main_scaleBilinear)},
@@ -2129,6 +2237,7 @@ static const struct luaL_Reg image_(Main__) [] = {
   {"hflip", image_(Main_hflip)},
   {"flip", image_(Main_flip)},
   {"colorize", image_(Main_colorize)},
+  {"text", image_(Main_drawtext)},
   {NULL, NULL}
 };
 

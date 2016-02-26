@@ -1950,6 +1950,29 @@ function image.y2jet(...)
    return output
 end
 
+-- color, bgcolor, size, wrap, inplace
+function image.drawText(src, text, x, y, opts)
+    opts = opts or {}
+    assert(torch.isTensor(src) and src:dim() == 3 and src:size(1) == 3,
+	   "input image has to be a 3D tensor of shape 3 x H x W ")
+    local out = src
+    if not opts.inplace then
+	out = src:clone()
+    end
+    if not text or text:gsub("%s*$", "") == '' then return out end
+    x = x or 1
+    y = y or 1
+    local color = opts.color or {255, 0, 0} -- red default
+    local bgcolor = opts.bg or {-1, -1, -1} -- no bgcolor default
+    local size = opts.size or 1
+    if opts.wrap == nil then opts.wrap = true end -- to wrap long lines or not
+    src.image.text(out, text, x, y, size,
+		   color[1], color[2], color[3],
+		   bgcolor[1], bgcolor[2], bgcolor[3],
+		   opts.wrap and 1 or 0)
+    return out
+end
+
 ----------------------------------------------------------------------
 --- Returns a gaussian kernel.
 --

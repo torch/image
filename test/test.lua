@@ -631,6 +631,24 @@ function test.test_pbmload()
    tester:assert(string.match(msg, "unsupported magic number"))
 end
 
+----------------------------------------------------------------------
+-- Text drawing test
+--
+function test.test_textdraw()
+  local types = {
+     ["torch.ByteTensor"]   = "byte",
+     ["torch.DoubleTensor"] = "double",
+     ["torch.FloatTensor"]  = "float"
+  }
+  for k,v in pairs(types) do
+    local img = image.drawText(
+       torch.zeros(3, 24, 24):type(k),
+       "foo\nbar", 2, 4, {color={255, 255, 255}, bg={255, 0, 0}}
+    )
+    checkPNG(getTestImagePath("foobar.png"), 3, v, img)
+  end
+end
+
 
 function image.test(tests, seed)
    local defaultTensorType = torch.getdefaulttensortype()
