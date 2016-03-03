@@ -6,8 +6,27 @@ like cropping, translation, scaling and rotation.
 <a name="image.crop"></a>
 ### [res] image.crop([dst,] src, x1, y1, [x2, y2]) ###
 Crops image `src` at coordinate `(x1, y1)` up to coordinate 
-`(x2, y2)`. If `dst` is provided, it is used to store the output
-image. Otherwise, returns a new `res` Tensor.
+`(x2, y2)`. The coordinate indexing is zero-based and `(x2, y2)` is non-inclusive.
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor. 
+
+```lua
+-- The indexing starts with 0 and 2 is non-inclusive coordinate.
+> require('image')
+> image.crop(torch.Tensor(3, 2, 2), 0, 0 , 2, 2) -- crop is a correct crop and the result is 3x2x2 tensor. 
+(1,.,.) = 
+  0  0
+  0  0
+
+(2,.,.) = 
+  0  0
+  0  0
+
+(3,.,.) = 
+  0  0
+  0  0
+[torch.DoubleTensor of size 3x2x2]
+```
 
 ### [res] image.crop([dst,] src, format, width, height) ###
 Crops a `width x height` section of source image `src`. The argument
