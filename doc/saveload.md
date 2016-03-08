@@ -20,6 +20,16 @@ The returned `res` Tensor has size `nChannel x height x width` where `nChannel` 
 1 (greyscale) or 3 (usually [RGB](https://en.wikipedia.org/wiki/RGB_color_model) 
 or [YUV](https://en.wikipedia.org/wiki/YUV).
 
+Usage:
+```lua
+--To load as byte tensor for rgb imagefile
+local img = image.load(imagefile,3,'byte')
+
+--To load as byte tensor for gray imagefile
+local img = image.load(imagefile,1,'byte')
+
+```
+
 <a name="image.save"></a>
 ### image.save(filename, tensor) ###
 Saves Tensor `tensor` to disk at path `filename`. The format to which 
