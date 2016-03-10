@@ -1,4 +1,4 @@
-local test = {}
+local test = torch.TestSuite()
 local precision = 1e-4
 local precision_mean = 1e-3
 local precision_std = 1e-1
@@ -331,10 +331,10 @@ function test.CompareLoadAndDecompress()
   if not paths.filep(imfile) then
     error(imfile .. ' is missing!')
   end
-  
+
   -- Load lena directly from the filename
   local img = image.loadJPG(imfile)
-  
+
   -- Make sure the returned image width and height match the height and width
   -- reported by graphicsmagick (just a sanity check)
   local ok, gm = pcall(require, 'graphicsmagick')
@@ -350,7 +350,7 @@ function test.CompareLoadAndDecompress()
     tester:assert(w == img:size(3), 'image dimension error ')
     tester:assert(h == img:size(3), 'image dimension error ')
   end
-  
+
   -- Now load the raw binary from the source file into a ByteTensor
   local fin = torch.DiskFile(imfile, 'r')
   fin:binary()
@@ -360,11 +360,11 @@ function test.CompareLoadAndDecompress()
   local img_binary = torch.ByteTensor(file_size_bytes)
   fin:readByte(img_binary:storage())
   fin:close()
-  
+
   -- Now decompress the image from the ByteTensor
   local img_from_tensor = image.decompressJPG(img_binary)
-  
-  tester:assertlt((img_from_tensor - img):abs():max(), precision, 
+
+  tester:assertlt((img_from_tensor - img):abs():max(), precision,
     'images from load and decompress dont match! ')
 end
 
@@ -372,12 +372,12 @@ function test.LoadInvalid()
   -- Make sure nothing nasty happens if we try and load a "garbage" tensor
   local file_size_bytes = 1000
   local img_binary = torch.rand(file_size_bytes):mul(255):byte()
-  
+
   -- Now decompress the image from the ByteTensor
   local ok, img_from_tensor = pcall(function()
     return image.decompressJPG(img_binary)
   end)
-  
+
   tester:assert(not ok or img_from_tensor == nil,
     'A non-nil was returned on an invalid input! ')
 end
@@ -389,15 +389,15 @@ end
 function test.CompressAndDecompress()
   -- This test is unfortunately a correlated test: it will only be valid
   -- if decompressJPG is OK.  However, since decompressJPG has it's own unit
-  -- test, this is problably fine. 
-  
+  -- test, this is problably fine.
+
   local img = image.lena()
 
   local quality = 100
   local img_compressed = image.compressJPG(img, quality)
   local size_100 = img_compressed:size(1)
   local img_decompressed = image.decompressJPG(img_compressed)
-  local err = img_decompressed - img 
+  local err = img_decompressed - img
 
   -- Now in general we will get BIG compression artifacts (even at quality=100)
   -- but they will be relatively small, so instead of a abs():max() test, we do
@@ -444,7 +444,7 @@ end
 function test.rgb2y()
   local x = torch.FloatTensor{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}:transpose(1, 3)
   local actual = image.rgb2y(x)
-  local expected = torch.FloatTensor{{0.299, 0.587, 0.114}}
+  local expected = torch.FloatTensor{{{0.299}, {0.587}, {0.114}}}
   tester:assertTensorEq(actual, expected, 1e-5)
 end
 
@@ -541,24 +541,24 @@ function test.LoadPNG()
   checkPNG(getTestImagePath('gray3x1.png'), 1, 'double', gray8double)
 
   -- Gray 16-bit PNG image with width=1, height = 2
-  local gray16byte = torch.ByteTensor({{{0, 255}}})
+  local gray16byte = torch.ByteTensor{{{0}, {255}}}
   checkPNG(getTestImagePath('gray16-1x2.png'), 1, 'byte', gray16byte)
 
-  local gray16float = torch.FloatTensor({{{0, 65534/65535}}})
+  local gray16float = torch.FloatTensor{{{0}, {65534/65535}}}
   checkPNG(getTestImagePath('gray16-1x2.png'), 1, 'float', gray16float)
 
   -- Color 8-bit PNG image with width = 2, height = 1
-  local rgb8byte = torch.ByteTensor({{{255, 0, 0, 127, 63, 0}}})
+  local rgb8byte = torch.ByteTensor{{{255, 0}}, {{0, 127}}, {{63, 0}}}
   checkPNG(getTestImagePath('rgb2x1.png'), 3, 'byte', rgb8byte)
 
-  local rgb8float = torch.FloatTensor({{{1, 0, 0, 127/255, 63/255, 0}}})
+  local rgb8float = torch.FloatTensor{{{1, 0}}, {{0, 127/255}}, {{63/255, 0}}}
   checkPNG(getTestImagePath('rgb2x1.png'), 3, 'float', rgb8float)
 
   -- Color 16-bit PNG image with width = 2, height = 1
-  local rgb16byte = torch.ByteTensor({{{255, 0, 0, 127, 63, 0}}})
+  local rgb16byte = torch.ByteTensor{{{255, 0}}, {{0, 127}}, {{63, 0}}}
   checkPNG(getTestImagePath('rgb16-2x1.png'), 3, 'byte', rgb16byte)
 
-  local rgb16float = torch.FloatTensor({{{1, 0, 0, 32767/65535, 16383/65535, 0}}})
+  local rgb16float = torch.FloatTensor{{{1, 0}}, {{0, 32767/65535}}, {{16383/65535, 0}}}
   checkPNG(getTestImagePath('rgb16-2x1.png'), 3, 'float', rgb16float)
 end
 
@@ -627,8 +627,8 @@ end
 function test.test_pbmload()
    -- test.pbm is a Portable BitMap (not supported)
    local ok, msg = pcall(image.loadPPM, getTestImagePath("P4.pbm"))
-   tester:assert(not ok, "PBM format should not be loaded")
-   tester:assert(string.match(msg, "unsupported magic number"))
+   tester:assert(ok == false, "PBM format should not be loaded")
+   tester:assert(string.match(msg, "unsupported magic number") ~= nil)
 end
 
 ----------------------------------------------------------------------
