@@ -374,12 +374,10 @@ function test.LoadInvalid()
   local img_binary = torch.rand(file_size_bytes):mul(255):byte()
 
   -- Now decompress the image from the ByteTensor
-  local ok, img_from_tensor = pcall(function()
-    return image.decompressJPG(img_binary)
-  end)
-
-  tester:assert(not ok or img_from_tensor == nil,
-    'A non-nil was returned on an invalid input! ')
+  tester:assertError(
+    function() image.decompressJPG(img_binary) end,
+    'A non-nil was returned on an invalid input!'
+  )
 end
 
 ----------------------------------------------------------------------
@@ -572,8 +570,11 @@ function test.DecompressPNG()
 end
 
 function test.LoadCorruptedPNG()
-  local ok, _ = pcall(image.load, 'corrupt-ihdr.png')
-  tester:assert(not ok, 'corrupted image should not be loaded')
+  tester:assertErrorPattern(
+    function() image.load(getTestImagePath("corrupt-ihdr.png")) end,
+    "Error during init_io",
+    "corrupted image should not be loaded or unexpected error message"
+  )
 end
 
 ----------------------------------------------------------------------
@@ -625,10 +626,12 @@ function test.test_pgmload()
 end
 
 function test.test_pbmload()
-   -- test.pbm is a Portable BitMap (not supported)
-   local ok, msg = pcall(image.loadPPM, getTestImagePath("P4.pbm"))
-   tester:assert(ok == false, "PBM format should not be loaded")
-   tester:assert(string.match(msg, "unsupported magic number") ~= nil)
+  -- test.pbm is a Portable BitMap (not supported)
+  tester:assertErrorPattern(
+    function() image.loadPPM(getTestImagePath("P4.pbm")) end,
+    "unsupported magic number",
+    "PBM format should not be loaded or unexpected error message"
+  )
 end
 
 ----------------------------------------------------------------------
