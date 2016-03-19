@@ -189,6 +189,14 @@ static int libjpeg_(Main_size)(lua_State *L)
 
 static int libjpeg_(Main_load)(lua_State *L)
 {
+  const int load_from_file = luaL_checkint(L, 1);
+
+#if !defined(HAVE_JPEG_MEM_SRC)
+  if (load_from_file != 1) {
+    luaL_error(L, JPEG_MEM_SRC_ERR_MSG);
+  }
+#endif
+
   /* This struct contains the JPEG decompression parameters and pointers to
    * working space (which is allocated as needed by the JPEG library).
    */
@@ -207,7 +215,6 @@ static int libjpeg_(Main_load)(lua_State *L)
   int i, k;
 
   THTensor *tensor = NULL;
-  const int load_from_file = luaL_checkint(L, 1);
 
   if (load_from_file == 1) {
     const char *filename = luaL_checkstring(L, 2);
@@ -369,6 +376,14 @@ static int libjpeg_(Main_load)(lua_State *L)
  *
  */
 int libjpeg_(Main_save)(lua_State *L) {
+  const int save_to_file = luaL_checkint(L, 3);
+
+#if !defined(HAVE_JPEG_MEM_DEST)
+  if (save_to_file != 1) {
+    luaL_error(L, JPEG_MEM_DEST_ERR_MSG);
+  }
+#endif
+
   unsigned char *inmem = NULL;  /* destination memory (if saving to memory) */
   unsigned long inmem_size = 0;  /* destination memory size (bytes) */
 
@@ -377,8 +392,6 @@ int libjpeg_(Main_save)(lua_State *L) {
   THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *tensor_data = THTensor_(data)(tensorc);
-
-  const int save_to_file = luaL_checkint(L, 3);
 
   THByteTensor* tensor_dest = NULL;
   if (save_to_file == 0) {
