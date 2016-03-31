@@ -30,10 +30,11 @@
 ----------------------------------------------------------------------
 
 require 'torch'
-require 'sys'
 require 'xlua'
 require 'dok'
 require 'libimage'
+
+local fpath = require 'sys.fpath'
 
 local startswith = function(str, prefix)
   return string.find(str, prefix, 1, true) == 1
@@ -1444,7 +1445,7 @@ local function window(hook_resize, hook_mousepress, hook_mousedoublepress)
    require 'qttorch'
    require 'qtwidget'
    require 'qtuiloader'
-   local pathui = paths.concat(sys.fpath(), 'win.ui')
+   local pathui = paths.concat(fpath(), 'win.ui')
    local win = qtuiloader.load(pathui)
    local painter = qt.QtLuaPainter(win.frame)
    if hook_resize then
@@ -1484,9 +1485,9 @@ rawset(image, 'window', window)
 local function lena()
    local fname = 'lena'
    if xlua.require 'libjpeg' then
-      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.jpg'), 3)
+      lena = image.load(paths.concat(fpath(), 'assets', fname .. '.jpg'), 3)
    elseif xlua.require 'libpng' then
-      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.png'), 3)
+      lena = image.load(paths.concat(fpath(), 'assets', fname .. '.png'), 3)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
    end
@@ -1503,9 +1504,9 @@ rawset(image, 'lena', lena)
 local function fabio()
    local fname = 'fabio'
    if xlua.require 'libjpeg' then
-      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.jpg'), 1)
+      lena = image.load(paths.concat(fpath(), 'assets', fname .. '.jpg'), 1)
    elseif xlua.require 'libpng' then
-      lena = image.load(paths.concat(sys.fpath(), 'assets', fname .. '.png'), 1)
+      lena = image.load(paths.concat(fpath(), 'assets', fname .. '.png'), 1)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.fabio')
    end
