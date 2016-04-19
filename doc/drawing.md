@@ -3,7 +3,7 @@
 This section includes simple routines to draw on images.
 
 <a name="image.drawText"></a>
-### [res] image.drawText(src, x, y, [options]) ###
+### [res] image.drawText(src, text, x, y, [options]) ###
 Draws text onto a 3-channel Tensor (C x H x W) at the x-offset `x` and y-offset `y`.
 
 The `options` table can be passed in to set color, background color, in-place etc.
