@@ -166,6 +166,12 @@ static void image_(Main_scaleCubic_rowcol)(THTensor *Tsrc,
     long i;
     for( i = 0; i < dst_len; i++ )
       dst[ dst_start + i*dst_stride ] = src[ src_start + i*src_stride ];
+  } else if ( src_len == 1 ) {
+     long i;
+     for( i = 0; i < dst_len - 1; i++ ) {
+       long dst_pos = dst_start + i*dst_stride;
+       dst[dst_pos] = src[ src_start ];
+     }
   } else {
     long di;
     float si_f;
