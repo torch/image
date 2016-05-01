@@ -648,6 +648,8 @@ local function scale(...)
       dok.error('could not find valid dest size', 'image.scale')
    end
    if not dst then
+      height = math.max(height, 1)
+      width = math.max(width, 1)
       if src:nDimension() == 3 then
          dst = src.new(src:size(1), height, width)
       else
