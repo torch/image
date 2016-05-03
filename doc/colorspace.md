@@ -9,6 +9,12 @@ Converts a `src` RGB image to [Lab](https://en.wikipedia.org/wiki/Lab_color_spac
 If `dst` is provided, it is used to store the output
 image. Otherwise, returns a new `res` Tensor.
 
+<a name="image.lab2rgb"></a>
+### [res] image.lab2rgb([dst,] src) ###
+Converts a `src` [Lab](https://en.wikipedia.org/wiki/Lab_color_space) image to RGB. 
+If `dst` is provided, it is used to store the output
+image. Otherwise, returns a new `res` Tensor.
+
 <a name="image.rgb2yuv"></a>
 ### [res] image.rgb2yuv([dst,] src) ###
 Converts a RGB image to YUV. If `dst` is provided, it is used to store the output
