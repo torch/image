@@ -59,13 +59,23 @@ static int libpng_(Main_load)(lua_State *L)
   png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
 
   info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr)
+  if (!info_ptr) {
+    png_destroy_read_struct(&png_ptr, NULL, NULL);
+    if (fp) {
+      fclose(fp);
+    }
     luaL_error(L, "[read_png] png_create_info_struct failed");
+  }
 
-  if (setjmp(png_jmpbuf(png_ptr)))
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    if (fp) {
+      fclose(fp);
+    }
     luaL_error(L, "[read_png] Error during init_io: %s", errmsg.str);
+  }
 
-  if (load_from_file == 1){
+  if (load_from_file == 1) {
     png_init_io(png_ptr, fp);
   } else {
     /* set the read callback */
@@ -78,42 +88,45 @@ static int libpng_(Main_load)(lua_State *L)
   height     = png_get_image_height(png_ptr, info_ptr);
   color_type = png_get_color_type(png_ptr, info_ptr);
   bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
-  
 
   /* get depth */
   int depth = 0;
-  if (color_type == PNG_COLOR_TYPE_RGBA)
+  if (color_type == PNG_COLOR_TYPE_RGBA) {
     depth = 4;
-  else if (color_type == PNG_COLOR_TYPE_RGB)
+  } else if (color_type == PNG_COLOR_TYPE_RGB) {
     depth = 3;
-  else if (color_type == PNG_COLOR_TYPE_GRAY)
-  {
-    if(bit_depth < 8)
-    {
+  } else if (color_type == PNG_COLOR_TYPE_GRAY) {
+    if (bit_depth < 8) {
       png_set_expand_gray_1_2_4_to_8(png_ptr);
     }
     depth = 1;
-  }
-  else if (color_type == PNG_COLOR_TYPE_GA)
+  } else if (color_type == PNG_COLOR_TYPE_GA) {
     depth = 2;
-  else if (color_type == PNG_COLOR_TYPE_PALETTE)
-    {
-      depth = 3;
-      png_set_expand(png_ptr);
+  } else if (color_type == PNG_COLOR_TYPE_PALETTE) {
+    depth = 3;
+    png_set_expand(png_ptr);
+  } else {
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    if (fp) {
+      fclose(fp);
     }
-  else
     luaL_error(L, "[read_png_file] Unknown color space");
+  }
 
-  if(bit_depth < 8)
-  {
+  if (bit_depth < 8) {
     png_set_strip_16(png_ptr);
   }
-  
+
   png_read_update_info(png_ptr, info_ptr);
 
   /* read file */
-  if (setjmp(png_jmpbuf(png_ptr)))
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    if (fp) {
+      fclose(fp);
+    }
     luaL_error(L, "[read_png_file] Error during read_image: %s", errmsg.str);
+  }
 
   /* alloc tensor */
   THTensor *tensor = THTensor_(newWithSize3d)(depth, height, width);
