@@ -16,10 +16,10 @@ end
 
 
 local function toByteTensor(x)
-  local y = torch.round(x):byte()
+  local y = torch.round(x)
   y[torch.le(x, 0)] = 0
   y[torch.ge(x, 255)] = 255
-  return y
+  return y:byte()
 end
 
 
