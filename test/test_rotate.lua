@@ -12,50 +12,50 @@ local function test_rotate(src, mode)
       
       -- rotate
       if mode then
-	 d1 = image.rotate(src, theta, mode)
-	 d2 = src.new():resizeAs(src)
-	 image.rotate(d2, src, theta, mode)
+         d1 = image.rotate(src, theta, mode)
+         d2 = src.new():resizeAs(src)
+         image.rotate(d2, src, theta, mode)
       else
-	 d1 = image.rotate(src, theta)
-	 d2 = src.new():resizeAs(src)
-	 image.rotate(d2, src, theta)
+         d1 = image.rotate(src, theta)
+         d2 = src.new():resizeAs(src)
+         image.rotate(d2, src, theta)
       end
+
       -- revert
       local revert = 2 * math.pi - theta
       if mode then
-	 d3 = image.rotate(d1, revert, mode)
-	 d4 = src.new():resizeAs(src)
-	 image.rotate(d4, d2, revert, mode)
+         d3 = image.rotate(d1, revert, mode)
+         d4 = src.new():resizeAs(src)
+         image.rotate(d4, d2, revert, mode)
       else
-	 d3 = image.rotate(d1, revert)
-	 d4 = src.new():resizeAs(src)
-	 image.rotate(d4, d2, revert)
+         d3 = image.rotate(d1, revert)
+         d4 = src.new():resizeAs(src)
+         image.rotate(d4, d2, revert)
       end
       
       -- diff
       if src:dim() == 3 then
-	 local cs = image.crop(src, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
-	 local c3 = image.crop(d3, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
-	 local c4 = image.crop(d4, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
-      
-	 mean_dist = mean_dist + cs:dist(c3)
-	 mean_dist = mean_dist + cs:dist(c4)
+         local cs = image.crop(src, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
+         local c3 = image.crop(d3, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
+         local c4 = image.crop(d4, src:size(2) / 4, src:size(3) / 4, src:size(2) / 4 * 3, src:size(3) / 4 * 3)
+         mean_dist = mean_dist + cs:dist(c3)
+         mean_dist = mean_dist + cs:dist(c4)
       elseif src:dim() == 2 then
-	 local cs = image.crop(src, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
-	 local c3 = image.crop(d3, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
-	 local c4 = image.crop(d4, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
-	 mean_dist = mean_dist + cs:dist(c3)
-	 mean_dist = mean_dist + cs:dist(c4)
+         local cs = image.crop(src, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
+         local c3 = image.crop(d3, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
+         local c4 = image.crop(d4, src:size(1) / 4, src:size(2) / 4, src:size(1) / 4 * 3, src:size(2) / 4 * 3)
+         mean_dist = mean_dist + cs:dist(c3)
+         mean_dist = mean_dist + cs:dist(c4)
       end
+      --[[
       if i == 1 then
-	 --[[
-	 image.display(src)
-	 image.display(d1)
-	 image.display(d2)
-	 image.display(d3)
-	 image.display(d4)
-	 --]]
+         image.display(src)
+         image.display(d1)
+         image.display(d2)
+         image.display(d3)
+         image.display(d4)
       end
+      --]]
    end
    if mode then
       print("mode = " .. mode .. ", mean dist: " .. mean_dist / (10 * 2))
