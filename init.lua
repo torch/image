@@ -1977,6 +1977,27 @@ function image.drawText(src, text, x, y, opts)
 end
 
 ----------------------------------------------------------------------
+--- Draw a rectangle on the image
+--
+-- color, bgcolor, size, wrap, inplace
+function image.drawRect(src, x1, y1, x2, y2, opts)
+   opts = opts or {}
+   assert(torch.isTensor(src) and src:dim() == 3 and src:size(1) == 3,
+    "input image has to be a 3D tensor of shape 3 x H x W ")
+   local out = src
+   if not opts.inplace then
+      out = src:clone()
+   end
+   if not (x1 and x2 and y1 and y2) then return out end
+   local color = opts.color or {255, 0, 0} -- red default
+   local lineWidth = opts.lineWidth or 1
+
+   src.image.drawRect(out, x1, y1, x2, y2, lineWidth, color[1], color[2], color[3])
+   return out
+end
+
+
+----------------------------------------------------------------------
 --- Returns a gaussian kernel.
 --
 function image.gaussian(...)
