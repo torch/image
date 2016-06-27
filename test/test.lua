@@ -652,6 +652,26 @@ function test.test_textdraw()
   end
 end
 
+----------------------------------------------------------------------
+-- Text drawing rect
+--
+function test.test_drawRect()
+  local types = {
+     ["torch.ByteTensor"]   = "byte",
+     ["torch.DoubleTensor"] = "double",
+     ["torch.FloatTensor"]  = "float"
+  }
+  for k,v in pairs(types) do
+    local bg = torch.zeros(3, 24, 12):type(k)
+    if k == 'torch.ByteTensor' then
+      bg:fill(3)
+    else
+      bg:fill(3/255)
+    end
+    local img = image.drawRect(bg, 5, 5, 10, 20, {color={255, 0, 255}})
+    checkPNG(getTestImagePath("rectangle.png"), 3, v, img)
+  end
+end
 
 function image.test(tests, seed)
    local defaultTensorType = torch.getdefaulttensortype()

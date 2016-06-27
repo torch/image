@@ -6,7 +6,7 @@ images. It contains a wide variety of functions divided into the following categ
   * [Saving and loading](saveload.md) images as JPEG, PNG, PPM and PGM;
   * [Simple transformations](simpletransform.md) like translation, scaling and rotation;
   * [Parameterized transformations](paramtransform.md) like convolutions and warping;
-  * [Simple Drawing Routines](doc/drawing.md) like drawing text on an image;
+  * [Simple Drawing Routines](doc/drawing.md) like drawing text or a rectangle on an image;
   * [Graphical user interfaces](gui.md) like display and window;
   * [Color Space Conversions](colorspace.md) from and to RGB, YUV, Lab, and HSL;
   * [Tensor Constructors](tensorconstruct.md) for creating Lenna, Fabio and Gaussian and Laplacian kernels;
