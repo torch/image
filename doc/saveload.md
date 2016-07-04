@@ -35,6 +35,7 @@ local img = image.load(imagefile,1,'byte')
 Saves Tensor `tensor` to disk at path `filename`. The format to which 
 the image is saved is extrapolated from the `filename`'s extension suffix.
 The `tensor` should be of size `nChannel x height x width`.
+To save with a minimal loss, the tensor values should lie in the range [0, 1] since the tensor is clamped between 0 and 1 before being saved to the disk.
 
 <a name="image.decompressJPG"></a>
 ### [res] image.decompressJPG(tensor, [depth, tensortype]) ###
