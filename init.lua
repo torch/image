@@ -470,7 +470,7 @@ local function crop(...)
       else
          iwidth,iheight = src:size(2),src:size(1)
       end
-      local x1, x2
+      local x1, y1
       if format == 'c' then
          x1, y1 = math.floor((iwidth-width)/2), math.floor((iheight-height)/2)
       elseif format == 'tl' then
