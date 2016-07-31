@@ -327,7 +327,7 @@ end
 --
 function test.CompareLoadAndDecompress()
   -- This test breaks if someone removes lena from the repo
-  local imfile = getTestImagePath('lena.jpg')
+  local imfile = getTestImagePath('grace_hopper_512.jpg')
   if not paths.filep(imfile) then
     error(imfile .. ' is missing!')
   end
@@ -465,7 +465,7 @@ end
 local function testByteTensorRoundtrip(forward, backward, cond, msg)
   local lena = toByteImage(image.lena())
   local expected = lena
-  local actual = backward(forward(expected))
+  local actual = backward(forward(expected))  
   assertByteTensorEq(actual, expected, cond, msg)
 end
 
@@ -480,7 +480,7 @@ end
 function test.rgb2hsvByteTensor()
   testFunctionOnByteTensor(image.rgb2hsv, 'image.rgb2hsv error for ByteTensor')
   testFunctionOnByteTensor(image.hsv2rgb, 'image.hsv2rgb error for ByteTensor')
-  testByteTensorRoundtrip(image.rgb2hsv, image.hsv2rgb, 2,
+  testByteTensorRoundtrip(image.rgb2hsv, image.hsv2rgb, 3,
                           'image.rgb2hsv roundtrip error for ByteTensor')
 end
 

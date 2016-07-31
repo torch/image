@@ -1485,7 +1485,7 @@ rawset(image, 'window', window)
 -- lena is always useful
 --
 local function lena()
-   local fname = 'lena'
+   local fname = 'grace_hopper_512'
    if xlua.require 'libjpeg' then
       lena = image.load(paths.concat(fpath(), 'assets', fname .. '.jpg'), 3)
    elseif xlua.require 'libpng' then
