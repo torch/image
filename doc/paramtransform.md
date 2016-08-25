@@ -19,6 +19,22 @@ When `clamp_mode` equals `pad`, the user can specify the padding value with `pad
 If `dst` is specified, it is used to store the result of the warp.
 Otherwise, returns a new `res` Tensor.
 
+<a name="image.affinetransform"></a>
+### [res] image.affinetransform([dst,]src,matrix,[mode,translation,clamp_mode,pad_val]) ###
+Warps image `src` (of size`KxHxW`) 
+according to `(y,x)` affine transformation defined by `matrix`. 
+The latter has size `2x2`. String `mode` can 
+take on values [lanczos](https://en.wikipedia.org/wiki/Lanczos_resampling), 
+[bicubic](https://en.wikipedia.org/wiki/Bicubic_interpolation),
+[bilinear](https://en.wikipedia.org/wiki/Bilinear_interpolation) (the default), 
+or *simple*. 
+Additional translation can be added to the image before affine transformation with `translation`.( Default is `torch.Tensor{0, 0}`.)
+The `clamp_mode` variable specifies how to handle the interpolation of samples off the input image.
+Permitted values are strings *clamp* (the default) or *pad*.
+When `clamp_mode` equals `pad`, the user can specify the padding value with `pad_val` (default = 0). Note: setting this value when `clamp_mode` equals `clamp` will result in an error.
+If `dst` is specified, it is used to store the result of the warp.
+Otherwise, returns a new `res` Tensor.
+
 <a name="image.convolve"></a>
 ### [res] image.convolve([dst,] src, kernel, [mode]) ###
 Convolves Tensor `kernel` over image `src`. Valid string values for argument 
