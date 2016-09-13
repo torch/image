@@ -952,6 +952,7 @@ local function warp(...)
       dok.error('Incorrect arguments (clamp_mode is not clamp | pad)!', 'image.warp')
    end
 
+   local field = field:typeAs(torch.Tensor()) -- coerce matrix to default tensor type
    local dim2 = false
    if src:nDimension() == 2 then
       dim2 = true
@@ -1065,14 +1066,15 @@ local function affinetransform(...)
    local grid_y = torch.ger( torch.linspace(-1,1,height), torch.ones(width) )
    local grid_x = torch.ger( torch.ones(height), torch.linspace(-1,1,width) )
 
-   local grid_xy = torch.FloatTensor()
+   local grid_xy = torch.Tensor()
    grid_xy:resize(2,height,width)
    grid_xy[1] = grid_y * ((height-1)/2) * -1
    grid_xy[2] = grid_x * ((width-1)/2) * -1
    local view_xy = grid_xy:reshape(2,height*width)
 
+   local matrix = matrix:typeAs(torch.Tensor()) -- coerce matrix to default tensor type
    local field = torch.mm(matrix, view_xy)
-   field = (grid_xy - field:reshape( 2, height, width )):double()
+   field = (grid_xy - field:reshape( 2, height, width ))
    
    -- offset field for translation
    translation = torch.Tensor(translation)
