@@ -2116,9 +2116,9 @@ static inline void image_(drawPixel)(THTensor *output, int y, int x,
   THTensor_(set3d)(output, 1, y, x, cg);
   THTensor_(set3d)(output, 2, y, x, cb);
 #else
-  THTensor_(set3d)(output, 0, y, x, cr / 255);
-  THTensor_(set3d)(output, 1, y, x, cg / 255);
-  THTensor_(set3d)(output, 2, y, x, cb / 255);
+  THTensor_(set3d)(output, 0, y, x, cr / 255.0f);
+  THTensor_(set3d)(output, 1, y, x, cg / 255.0f);
+  THTensor_(set3d)(output, 2, y, x, cb / 255.0f);
 #endif
 }
 static inline void image_(drawChar)(THTensor *output, int x, int y, unsigned char c, int size,
