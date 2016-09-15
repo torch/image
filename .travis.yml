@@ -58,5 +58,6 @@ script:
 - ${TESTLUA} -limage -e "print('image loaded succesfully')"
 - cd test
 - ${INSTALL_PREFIX}/bin/luarocks install graphicsmagick
+- ${INSTALL_PREFIX}/bin/luarocks install luaffi
 - ${TESTLUA} ./test_rotate.lua
 - ${TESTLUA} -limage -e "t=image.test(); if t.errors[1] then os.exit(1) end"
