@@ -635,6 +635,17 @@ function test.test_pbmload()
 end
 
 ----------------------------------------------------------------------
+-- Load unknown image type without extension test
+--
+function test.LoadUnknownImageTypeWithoutExtension()
+  tester:assertErrorPattern(
+    function() image.load(getTestImagePath("bmp-without-ext")) end,
+    "unable to determine image type for file",
+    "unknown image type should not be loaded or unexpected error message"
+  )
+end
+
+----------------------------------------------------------------------
 -- Text drawing test
 --
 function test.test_textdraw()

@@ -366,6 +366,8 @@ local function load(filename, depth, tensortype)
    local tensor
    if image.is_supported(ext) then
       tensor = filetypes[ext].loader(filename, depth, tensortype)
+   elseif not ext then
+      dok.error('unable to determine image type for file: ' .. filename, 'image.load')
    else
       dok.error('unknown image type: ' .. ext, 'image.load')
    end
