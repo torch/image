@@ -954,7 +954,6 @@ local function warp(...)
       dok.error('Incorrect arguments (clamp_mode is not clamp | pad)!', 'image.warp')
    end
 
-   local field = field:typeAs(torch.Tensor()) -- coerce matrix to default tensor type
    local dim2 = false
    if src:nDimension() == 2 then
       dim2 = true
