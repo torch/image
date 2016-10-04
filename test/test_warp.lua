@@ -137,3 +137,10 @@ image.display{image = im_lanczos, zoom = 4, legend = 'rotation lanczos (pad 1)'}
 
 image.display{image = im, zoom = 4, legend = 'source image'}
 
+-- ***********************************************
+-- NOW MAKE SURE BOTH FLOAT AND DOUBLE INPUTS WORK
+-- ***********************************************
+
+mtx = torch.zeros(2, 32, 32)
+out = image.warp(im:float(), mtx:float(), 'bilinear')
+out = image.warp(im:double(), mtx:double(), 'bilinear')
