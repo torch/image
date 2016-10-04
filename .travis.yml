@@ -55,9 +55,9 @@ script:
 - ${INSTALL_PREFIX}/bin/luarocks make 
 - export PATH=${INSTALL_PREFIX}/bin:$PATH
 - export TESTLUA=$(which luajit lua | head -n 1)
+- ${INSTALL_PREFIX}/bin/luarocks install luaffi
 - ${TESTLUA} -limage -e "print('image loaded succesfully')"
 - cd test
 - ${INSTALL_PREFIX}/bin/luarocks install graphicsmagick
-- ${INSTALL_PREFIX}/bin/luarocks install luaffi
 - ${TESTLUA} ./test_rotate.lua
 - ${TESTLUA} -limage -e "t=image.test(); if t.errors[1] then os.exit(1) end"
