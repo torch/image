@@ -2,6 +2,50 @@
 #define TH_GENERIC_FILE "generic/ppm.c"
 #else
 
+static int libppm_(Main_size)(lua_State *L)
+{
+  const char *filename = luaL_checkstring(L, 1);
+  FILE* fp = fopen ( filename, "r" );
+  if ( !fp ) {
+    luaL_error(L, "cannot open file <%s> for reading", filename);
+  }
+
+  long W,H,C;
+  char p,n;
+
+  // magic number
+  p = (char)getc(fp);
+  if ( p != 'P' ) {
+    W = H = 0;
+    fclose(fp);
+    luaL_error(L, "corrupted file");
+  }
+
+  n = (char)getc(fp);
+
+  // Dimensions
+  W = ppm_get_long(fp);
+  H = ppm_get_long(fp);
+
+  if ( n=='3' || n == '6') {
+    C = 3;
+  } else if ( n=='2' || n=='5' ) {
+    C = 1;
+  } else {
+    W=H=C=0;
+    fclose ( fp );
+    luaL_error(L, "unsupported magic number: P%c", n);
+  }
+
+  fclose(fp);
+
+  lua_pushnumber(L, C);
+  lua_pushnumber(L, H);
+  lua_pushnumber(L, W);
+
+  return 3;
+}
+
 static int libppm_(Main_load)(lua_State *L)
 {
   const char *filename = luaL_checkstring(L, 1);
@@ -170,6 +214,7 @@ static const luaL_Reg libppm_(Main__)[] =
 {
   {"load", libppm_(Main_load)},
   {"save", libppm_(Main_save)},
+  {"size", libppm_(Main_size)},
   {NULL, NULL}
 };
 
