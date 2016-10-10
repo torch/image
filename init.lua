@@ -309,6 +309,11 @@ local function savePGM(filename, tensor)
 end
 rawset(image, 'savePGM', savePGM)
 
+function image.getPPMsize(filename)
+   require 'libppm'
+   return torch.Tensor().libppm.size(filename)
+end
+
 local filetypes = {
    jpg = {loader = image.loadJPG, saver = image.saveJPG},
    png = {loader = image.loadPNG, saver = image.savePNG},
@@ -375,6 +380,54 @@ local function load(filename, depth, tensortype)
    return tensor
 end
 rawset(image, 'load', load)
+
+filetypes.jpg.sizer = image.getJPGsize
+filetypes.png.sizer = image.getPNGsize
+filetypes.ppm.sizer = image.getPPMsize
+filetypes.pgm.sizer = image.getPPMsize -- sim. to loadPPM not loadPGM
+
+local function getSize(filename)
+   if not filename then
+      print(dok.usage('image.getSize',
+                       'returns size of image without loading', nil,
+                       {type='string', help='path to file', req=true}))
+      dok.error('missing file name', 'image.getSize')
+   end
+
+   local ext
+
+   local f, err = io.open(filename, 'rb')
+   if not f then
+      error(err)
+   end
+   local hdr = f:read(4) or ''
+   f:close()
+
+   if startswith(hdr, magicJPG) then
+      ext = 'jpg'
+   elseif startswith(hdr, magicPNG) then
+      ext = 'png'
+   elseif hdr:match('^P[25]') then
+      ext = 'pgm'
+   elseif hdr:match('^P[36]') then
+      ext = 'ppm'
+   end
+
+   if not ext then
+      ext = string.match(filename,'%.(%a+)$')
+   end
+   local size
+   if image.is_supported(ext) then
+      size = {filetypes[ext].sizer(filename)}
+   elseif not ext then
+      dok.error('unable to determine image type for file: ' .. filename, 'image.getSize')
+   else
+      dok.error('unknown image type: ' .. ext, 'image.load')
+   end
+
+   return torch.LongTensor(size)
+end
+rawset(image, 'getSize', getSize)
 
 local function save(filename, tensor)
    if not filename or not tensor then
@@ -1076,7 +1129,7 @@ local function affinetransform(...)
    local matrix = matrix:typeAs(torch.Tensor()) -- coerce matrix to default tensor type
    local field = torch.mm(matrix, view_xy)
    field = (grid_xy - field:reshape( 2, height, width ))
-   
+
    -- offset field for translation
    translation = torch.Tensor(translation)
    field[1] = field[1] - translation[1]
