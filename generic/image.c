@@ -2227,27 +2227,30 @@ int image_(Main_drawRect)(lua_State *L) {
   int cg = luaL_checkint(L, 8);
   int cb = luaL_checkint(L, 9);
 
-  int offset = lineWidth / 2;
-  int x1 = (int) MAX(0, x1long - offset - 1);
-  int y1 = (int) MAX(0, y1long - offset - 1);
-  int x2 = (int) MIN(output->size[2] - 1, x2long - offset - 1);
-  int y2 = (int) MIN(output->size[1] - 1, y2long - offset - 1);
+  int loffset = lineWidth / 2 + 1;
+  int uoffset = lineWidth - loffset - 1;
+  int x1l = (int) MAX(0, x1long - loffset);
+  int y1l = (int) MAX(0, y1long - loffset);
+  int x1u = (int) MIN(output->size[2], x1long + uoffset + 1);
+  int y1u = (int) MIN(output->size[1], y1long + uoffset + 1);
+  int x2l = (int) MAX(0, x2long - loffset);
+  int y2l = (int) MAX(0, y2long - loffset);
+  int x2u = (int) MIN(output->size[2], x2long + uoffset + 1);
+  int y2u = (int) MIN(output->size[1], y2long + uoffset + 1);
 
-  int w = x2 - x1 + 1;
-  int h = y2 - y1 + 1;
-  for (int y = y1; y < y2 + lineWidth; y++) {
-    for (int x = x1; x < x1 + lineWidth; x++) {
+  for (int y = y1l; y < y2u; y++) {
+    for (int x = x1l; x < x1u; x++) {
       image_(drawPixel)(output, y, x, cr, cg, cb);
     }
-    for (int x = x2; x < x2 + lineWidth; x++) {
+    for (int x = x2l; x < x2u; x++) {
       image_(drawPixel)(output, y, x, cr, cg, cb);
     }
   }
-  for (int x = x1; x < x2 + lineWidth; x++) {
-    for (int y = y1; y < y1 + lineWidth; y++) {
+  for (int x = x1l; x < x2u; x++) {
+    for (int y = y1l; y < y1u; y++) {
       image_(drawPixel)(output, y, x, cr, cg, cb);
     }
-    for (int y = y2; y < y2 + lineWidth; y++) {
+    for (int y = y2l; y < y2u; y++) {
       image_(drawPixel)(output, y, x, cr, cg, cb);
     }
   }
