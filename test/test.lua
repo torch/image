@@ -410,8 +410,21 @@ function test.CompressAndDecompress()
   img_compressed = image.compressJPG(img, quality)
   local size_25 = img_compressed:size(1)
   tester:assertlt(size_25, size_100, 'compressJPG quality setting error! ')
+
 end
 
+function test.CompressAndDecompressPNG()
+  local img = image.lena()
+
+  local img_compressed_png = image.compressPNG(img)
+  local size_png = img_compressed_png:size(1)
+  local img_decompressed_png = image.decompressPNG(img_compressed_png)
+  local err_png = img_decompressed_png - img
+  local mean_err_png = err_png:mean()
+  local std_err_png  = err_png:std()
+  tester:assertlt(mean_err_png, precision_mean, 'compressPNG error is too high! ')
+  tester:assertlt(std_err_png, precision_std, 'compressPNG error is too high! ')
+end
 ----------------------------------------------------------------------
 -- Lab conversion test
 -- These tests break if someone removes lena from the repo

@@ -198,11 +198,17 @@ static int libpng_(Main_load)(lua_State *L)
   return 2;
 }
 
+
 static int libpng_(Main_save)(lua_State *L)
 {
   THTensor *tensor = luaT_checkudata(L, 2, torch_Tensor);
   const char *file_name = luaL_checkstring(L, 1);
-
+  const int save_to_file = luaL_checkint(L, 3);
+  
+  struct libpng_inmem_write_struct _inmem;
+ 
+  THByteTensor* tensor_dest = NULL;
+  
   int width=0, height=0;
   png_byte color_type = 0;
   png_byte bit_depth = 8;
@@ -211,11 +217,17 @@ static int libpng_(Main_save)(lua_State *L)
   png_infop info_ptr;
   png_bytep * row_pointers;
   libpng_errmsg errmsg;
+  FILE *fp=NULL;
 
   /* get dims and contiguous tensor */
   THTensor *tensorc = THTensor_(newContiguous)(tensor);
   real *tensor_data = THTensor_(data)(tensorc);
   long depth=0;
+  
+  if (save_to_file == 0) {
+    tensor_dest = luaT_checkudata(L, 4, "torch.ByteTensor");
+  }
+  
   if (tensorc->nDimension == 3) {
     depth = tensorc->size[0];
     height = tensorc->size[1];
@@ -234,27 +246,34 @@ static int libpng_(Main_save)(lua_State *L)
   else if (depth == 3) color_type = PNG_COLOR_TYPE_RGB;
   else if (depth == 1) color_type = PNG_COLOR_TYPE_GRAY;
 
-  /* create file */
-  FILE *fp = fopen(file_name, "wb");
-  if (!fp)
-    luaL_error(L, "[write_png_file] File %s could not be opened for writing", file_name);
-
   /* initialize stuff */
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (!png_ptr)
     luaL_error(L, "[write_png_file] png_create_write_struct failed");
-
+  
   png_set_error_fn(png_ptr, &errmsg, libpng_error_fn, NULL);
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr)
     luaL_error(L, "[write_png_file] png_create_info_struct failed");
-
-  if (setjmp(png_jmpbuf(png_ptr)))
-    luaL_error(L, "[write_png_file] Error during init_io: %s", errmsg.str);
-
-  png_init_io(png_ptr, fp);
+  
+  
+  /* create file */
+  if(save_to_file)
+  {
+    fp = fopen(file_name, "wb");
+    if (!fp)
+        luaL_error(L, "[write_png_file] File %s could not be opened for writing", file_name);
+    
+    if (setjmp(png_jmpbuf(png_ptr)))
+        luaL_error(L, "[write_png_file] Error during init_io: %s", errmsg.str);
+    png_init_io(png_ptr, fp);
+  } else {
+    _inmem.inmem=NULL;
+    _inmem.inmem_size=0;
+    png_set_write_fn(png_ptr, &_inmem, libpng_userWriteData, NULL);
+  }
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr)))
@@ -304,8 +323,16 @@ static int libpng_(Main_save)(lua_State *L)
   free(row_pointers);
 
   /* cleanup */
-  fclose(fp);
+  if(fp) fclose(fp);
   THTensor_(free)(tensorc);
+  
+  if (save_to_file == 0) {
+
+    THByteTensor_resize1d(tensor_dest, _inmem.inmem_size);  /* will fail if it's not a Byte Tensor */
+    unsigned char* tensor_dest_data = THByteTensor_data(tensor_dest);
+    memcpy(tensor_dest_data, _inmem.inmem, _inmem.inmem_size);
+    free(_inmem.inmem);
+  }
   return 0;
 }
 
