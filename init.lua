@@ -149,7 +149,7 @@ local function processPNG(img, depth, bit_depth, tensortype)
 end
 
 local function loadPNG(filename, depth, tensortype)
-   if not xlua.require 'libluajit_png' then
+   if not xlua.require 'liblua_png' then
       dok.error('libpng package not found, please install libpng','image.loadPNG')
    end
    local load_from_file = 1
@@ -169,7 +169,7 @@ local function clampImage(tensor)
 end
 
 local function savePNG(filename, tensor)
-   if not xlua.require 'libluajit_png' then
+   if not xlua.require 'liblua_png' then
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
    tensor = clampImage(tensor)
@@ -178,7 +178,7 @@ end
 rawset(image, 'savePNG', savePNG)
 
 local function decompressPNG(tensor, depth, tensortype)
-    if not xlua.require 'libluajit_png' then
+    if not xlua.require 'liblua_png' then
         dok.error('libpng package not found, please install libpng',
                   'image.decompressPNG')
     end
@@ -197,7 +197,7 @@ end
 rawset(image, 'decompressPNG', decompressPNG)
 
 function image.getPNGsize(filename)
-   if not xlua.require 'libluajit_png' then
+   if not xlua.require 'liblua_png' then
       dok.error('libpng package not found, please install libpng','image.getPNGsize')
    end
    return torch.Tensor().libpng.size(filename)
@@ -1665,7 +1665,7 @@ local function lena()
    local fname = 'grace_hopper_512'
    if xlua.require 'libjpeg' then
       lena = image.load(paths.concat(fpath(), 'assets', fname .. '.jpg'), 3)
-   elseif xlua.require 'libluajit_png' then
+   elseif xlua.require 'liblua_png' then
       lena = image.load(paths.concat(fpath(), 'assets', fname .. '.png'), 3)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.lena')
@@ -1684,7 +1684,7 @@ local function fabio()
    local fname = 'fabio'
    if xlua.require 'libjpeg' then
       lena = image.load(paths.concat(fpath(), 'assets', fname .. '.jpg'), 1)
-   elseif xlua.require 'libluajit_png' then
+   elseif xlua.require 'liblua_png' then
       lena = image.load(paths.concat(fpath(), 'assets', fname .. '.png'), 1)
    else
       dok.error('no bindings available to load images (libjpeg AND libpng missing)', 'image.fabio')
