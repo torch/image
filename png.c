@@ -61,7 +61,7 @@ libpng_error_fn(png_structp png_ptr, png_const_charp error_msg)
 #include "generic/png.c"
 #include "THGenerateAllTypes.h"
 
-DLL_EXPORT int luaopen_libpng(lua_State *L)
+DLL_EXPORT int luaopen_liblua_png(lua_State *L)
 {
   libpng_FloatMain_init(L);
   libpng_DoubleMain_init(L);
