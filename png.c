@@ -38,6 +38,25 @@ libpng_userReadData(png_structp pngPtrSrc, png_bytep dest, png_size_t length)
   src->offset += length;
 }
 
+
+struct libpng_inmem_write_struct
+{
+  unsigned char *inmem;  /* destination memory (if saving to memory) */
+  unsigned long inmem_size;  /* destination memory size (bytes) */
+};
+
+/*
+ * Call back for writing png data to memory
+ */
+static void libpng_userWriteData(png_structp  png_ptr, png_bytep data, png_size_t length) {
+    struct libpng_inmem_write_struct *p = (struct libpng_inmem_write_struct*)png_get_io_ptr(png_ptr);
+    p->inmem=realloc(p->inmem,p->inmem_size+length);
+    memmove(p->inmem+p->inmem_size,data,length);
+    p->inmem_size+=length;
+}
+
+
+
 /*
  * Error message wrapper (single member struct to preserve `str` size info)
  */

@@ -173,7 +173,8 @@ local function savePNG(filename, tensor)
       dok.error('libpng package not found, please install libpng','image.savePNG')
    end
    tensor = clampImage(tensor)
-   tensor.libpng.save(filename, tensor)
+   local save_to_file = 1
+   tensor.libpng.save(filename, tensor, save_to_file)
 end
 rawset(image, 'savePNG', savePNG)
 
@@ -202,6 +203,20 @@ function image.getPNGsize(filename)
    end
    return torch.Tensor().libpng.size(filename)
 end
+
+local function compressPNG(tensor)
+   if not xlua.require 'libpng' then
+      dok.error('libpng package not found, please install libpng',
+         'image.compressPNG')
+   end
+   tensor = clampImage(tensor)
+   local b = torch.ByteTensor()
+   local save_to_file = 0
+   tensor.libpng.save("", tensor, save_to_file, b)
+   return b
+end
+rawset(image, 'compressPNG', compressPNG)
+
 
 local function processJPG(img, depth, tensortype)
    local MAXVAL = 255
