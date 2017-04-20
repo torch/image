@@ -205,7 +205,7 @@ function image.getPNGsize(filename)
 end
 
 local function compressPNG(tensor)
-   if not xlua.require 'libpng' then
+   if not xlua.require 'liblua_png' then
       dok.error('libpng package not found, please install libpng',
          'image.compressPNG')
    end
