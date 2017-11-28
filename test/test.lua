@@ -263,7 +263,7 @@ function flip_tests.test_transformation_largeByteImage(flip)
     local x_real = image.fabio():double():mul(255)
     local x_byte = x_real:clone():byte()
 
-    assert(x_byte:size(1) > 256 and x_byte:size(2) > 256, 'Tricky case only occurs for images larger than 256 px, pick another example')
+    assert(x_byte:size(2) > 256 and x_byte:size(3) > 256, 'Tricky case only occurs for images larger than 256 px, pick another example')
 
     local f_real, f_byte
     f_real = image[flip](x_real)

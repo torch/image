@@ -72,9 +72,9 @@ end
 local function todepth(img, depth)
    if depth and depth == 1 then
       if img:nDimension() == 2 then
-         -- all good
+         img = img:view(1, img:size(1), img:size(2))
       elseif img:size(1) == 3 or img:size(1) == 4 then
-	 img = image.rgb2y(img:narrow(1,1,3))[1]
+         img = image.rgb2y(img:narrow(1,1,3))
       elseif img:size(1) == 2 then
          img = img:narrow(1,1,1)
       elseif img:size(1) ~= 1 then
